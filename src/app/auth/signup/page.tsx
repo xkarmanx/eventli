@@ -30,56 +30,79 @@ export default function SignupPage() {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
-  
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
-    if (!form.accepted) {
-      return setError('You must accept the terms.');
+    // kvs: Enhanced client-side validation with specific error messages
+    if (!form.email || !form.password || !form.confirmPassword) {
+      return setError('Please fill in all fields.');
     }
+    
+    if (form.password.length < 6) {
+      return setError('Password must be at least 6 characters long.');
+    }
+    
     if (form.password !== form.confirmPassword) {
       return setError('Passwords do not match.');
     }
-    // validate form
-    if (!form.email || !form.password || !form.confirmPassword)
-        return setError('Please fill in all fields.');
 
-    if (form.password !== form.confirmPassword)
-        return setError('Passwords do not match.');
+    if (!form.accepted) {
+      return setError('You must accept the terms and conditions.');
+    }
 
-    if (!form.accepted)
-        return setError('You must accept the terms and conditions.');
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password
+        })
+      });      const data = await res.json();
 
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify(form)
-    })
-
-    const data = await res.json();
-
-    if (!res.ok)
-      return setError(data.error || 'Something went wrong');
-
-    // After successful signup:
-    router.push('/auth/setup-organization');
-  }
-
-  const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/auth/setup-organization`
+      if (!res.ok) {
+        // kvs: Display the exact error message from the API instead of generic message
+        return setError(data.error || 'Failed to create account. Please try again.');
       }
-    });
-    if (error) setError(error.message);
+
+      // kcs: Success - use redirect from API response or default to seller setup
+      const redirectPath = data.redirect || '/auth/setup-organization';
+      router.push(redirectPath);
+    } catch (err) {
+      console.error('Signup error:', err);
+      // kvs: Show network/connection error message
+      setError('Network error. Please check your connection and try again.');
+    }  }
+
+  // kvs: Handle Google OAuth signup with proper error handling
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback?next=/auth/setup-organization`
+        }
+      });
+      
+      if (error) {
+        // kvs: Display specific Google OAuth error messages
+        setError(error.message || 'Failed to sign up with Google. Please try again.');
+      }
+    } catch (err) {
+      console.error('Google sign up error:', err);
+      // kvs: Show specific error for Google OAuth failures
+      setError('Failed to connect to Google. Please try again.');
+    }
   };
 
   return (
     <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-green-900 to-teal-900'>
       <form onSubmit={handleSubmit} className='bg-white p-8 rounded-2xl shadow-lg w-full max-w-md'>
         <Image src="/logo.svg" alt='Eventli Logo' className='h-10 mb-6 mx-auto' width={101} height={37} />
-        <h1 className='text-2xl text-black font-bold mb-6 text-center'>Create an account</h1>
+        <h1 className='text-2xl text-black font-bold mb-6 text-center'>Create Seller Account</h1>
 
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 text-left mb-1 mt-1">
           Email
@@ -91,17 +114,15 @@ export default function SignupPage() {
           value={form.email}
           onChange={handleChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500 text-black"
-        />
-
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 text-left mb-1 mt-1">
-          Create a password
+        />        <label htmlFor="password" className="block text-sm font-medium text-gray-700 text-left mb-1 mt-1">
+          Create a password (min 6 characters)
         </label>
         <div className="relative">
           <input
             id="password"
             name="password"
             type={showPassword ? 'text' : 'password'}
-            placeholder="Create a password"
+            placeholder="Create a password (min 6 characters)"
             value={form.password}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500 text-black pr-10"
@@ -144,14 +165,18 @@ export default function SignupPage() {
             checked={form.accepted}
             onChange={handleChange}
             className="mr-2"
-          />
-          <p className="text-gray-400">
-            By creating an account, I agree to Eventli Inc's
+          />          <p className="text-gray-400">
+            By creating an account, I agree to Eventli Inc&apos;s
             <a className="text-blue-600 underline ml-1">Terms Of Service and Privacy Policy</a>
           </p>
         </label>
 
-        {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
+        {/* kvs: Enhanced error display with better styling and visibility */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+            {error}
+          </div>
+        )}
 
         <button className="bg-blue-600 text-white py-2 rounded w-full font-semibold">Sign-up</button>
 

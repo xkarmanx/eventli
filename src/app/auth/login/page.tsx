@@ -19,46 +19,77 @@ export default function LoginPage() {
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  };  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-    if (!res.ok) return setError(data.error || 'Something went wrong');
-
-    // Fetch user and profile to determine role
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setError('User not found after login');
+    
+    // kvs: Client-side validation with specific error messages
+    if (!form.email || !form.password) {
+      setError('Please fill in all fields.');
       return;
     }
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
 
-    if (profile?.role === 'SELLER') {
-      router.push('/main/seller-dashboard');
-    } else {
-      router.push('/main/dashboard');
-    }
-  };
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      });
 
-  const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/auth/setup-organization`
+      const data = await res.json();
+      if (!res.ok) {
+        // kvs: Display the exact error message from the API instead of generic message
+        return setError(data.error || 'Login failed. Please try again.');
       }
-    });
-    if (error) setError(error.message);
+
+      // kvs: Fetch user and profile to determine where to redirect
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('User not found after login');
+        return;
+      }
+
+      // kvs: Check if user has completed profile setup
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, company_name')
+        .eq('id', user.id)
+        .single();
+
+      // kvs: If no profile exists or incomplete setup, redirect to setup
+      if (!profile || !profile.company_name) {
+        router.push('/auth/setup-organization');
+      } else if (profile?.role === 'SELLER') {
+        router.push('/main/seller-dashboard');
+      } else {
+        router.push('/main/dashboard');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      // kvs: Show network/connection error message
+      setError('Network error. Please check your connection and try again.');
+    }
+  };  // kvs: Handle Google OAuth login with proper error handling
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback?next=/main/seller-dashboard`
+        }
+      });
+      
+      if (error) {
+        // kvs: Display specific Google OAuth error messages
+        setError(error.message || 'Failed to sign in with Google. Please try again.');
+      }
+    } catch (err) {
+      console.error('Google sign in error:', err);
+      // kvs: Show specific error for Google OAuth failures
+      setError('Failed to connect to Google. Please try again.');
+    }
   };
 
   return (
@@ -71,7 +102,7 @@ export default function LoginPage() {
           height={100}
           className="h-10 mb-6 mx-auto"
         />
-        <h1 className="text-2xl text-black font-bold mb-6 text-center">Login to your account</h1>
+        <h1 className="text-2xl text-black font-bold mb-6 text-center">Seller Login</h1>
 
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 text-left mb-1">
           Email
@@ -111,7 +142,12 @@ export default function LoginPage() {
             Forgot Password?
           </a>
         </div>
-        {error && <p className="text-red-600 text-sm mb-2 mt-2">{error}</p>}
+        {/* kvs: Enhanced error display with better styling and visibility */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm mt-2">
+            {error}
+          </div>
+        )}
         <button className="bg-blue-600 text-white py-2 rounded w-full font-semibold mt-6">
           Login
         </button>
@@ -128,9 +164,8 @@ export default function LoginPage() {
             className="mr-2"
           />
           Sign in with Google
-        </button>
-        <p className="text-center text-black text-sm mt-4">
-          Don't have an account?{" "}
+        </button>        <p className="text-center text-black text-sm mt-4">
+          Don&apos;t have an account?{" "}
           <a href="/auth/signup" className="text-blue-600 font-medium">
             Sign-up
           </a>

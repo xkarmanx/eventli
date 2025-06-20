@@ -39,9 +39,7 @@ export default function SetupOrganizationPage() {
     if (userError || !user) {
       setError('User not authenticated');
       return;
-    }
-
-    // Update profile in Supabase
+    }    // kcs: Update profile in Supabase using the actual database schema
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -51,7 +49,8 @@ export default function SetupOrganizationPage() {
         company_email: form.companyEmail,
         phone_number: form.phoneNumber,
         company_address: form.companyAddress,
-        role: 'SELLER', // Set role as SELLER for organization setup
+        role: 'SELLER', // kcs: Set role as SELLER for organization setup
+        updated_at: new Date().toISOString() // kcs: Update timestamp
       })
       .eq('id', user.id);
 

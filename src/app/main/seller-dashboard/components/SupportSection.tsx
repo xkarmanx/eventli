@@ -68,7 +68,7 @@ export default function SupportSection() {
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Technical issues</h3>
                     <p className="text-sm text-gray-600 mb-4">
-                        Contact us, and we'll promptly resolve your problem.
+                        Contact us, and we&apos;ll promptly resolve your problem.
                     </p>
                     <div className="text-sm space-y-2">
                         <div>

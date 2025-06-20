@@ -1,4 +1,5 @@
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from "@/shared/lib/database/client";
+import { Listing } from "@/shared/types";
 
 const supabase = createSupabaseBrowserClient();
 
@@ -17,7 +18,8 @@ export const createListing = async (formData: FormData, user_id: string) => {
     image_url,
   } = Object.fromEntries(formData)
 
-  const { data, error } = await supabase.from("listing").insert([{
+  // kcs: Updated to use 'listings' table to match the main service
+  const { data, error } = await supabase.from("listings").insert([{
     user_id, 
     title,
     city,
@@ -35,9 +37,8 @@ export const createListing = async (formData: FormData, user_id: string) => {
 }
 
 //Fetch all users listings
-export const getUserListings = async (user_id: string) => {
-  const { data, error } = await supabase
-    .from("listing")
+export const getUserListings = async (user_id: string) => {  const { data, error } = await supabase
+    .from("listings")
     .select("*")
     .eq("user_id", user_id)
     .order("created_at", { ascending: false })
@@ -46,9 +47,9 @@ export const getUserListings = async (user_id: string) => {
 }
 
 //Update listing
-export const updateListing = async (id: string, updates: any) => {
+export const updateListing = async (id: string, updates: Partial<Omit<Listing, 'id' | 'created_at' | 'updated_at'>>) => {
   const { data, error } = await supabase
-    .from("listing")
+    .from("listings")
     .update(updates)
     .eq("id", id)
 
@@ -58,7 +59,7 @@ export const updateListing = async (id: string, updates: any) => {
 //Delete listing
 export const deleteListing = async (id: string) => {
   const { data, error } = await supabase
-    .from("listing")
+    .from("listings")
     .delete()
     .eq("id", id)
 
@@ -81,9 +82,7 @@ export async function uploadImage(file: File, user_id: string) {
     // Make filePath very unique to avoid duplicates and upsert issues
     const filePath = `${user_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-    console.log(`[uploadImage] Uploading file to path: ${filePath}`);
-
-    const { data, error } = await supabase.storage
+    console.log(`[uploadImage] Uploading file to path: ${filePath}`);    const { error } = await supabase.storage
       .from('images')
       .upload(filePath, file, {
         cacheControl: '3600',

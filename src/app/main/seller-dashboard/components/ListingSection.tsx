@@ -2,23 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { FiPlus, FiEdit, FiTrash2, FiArrowLeft } from "react-icons/fi"
-import { createListing, getUserListings, updateListing, deleteListing, uploadImage } from "@/lib/services/listing_crud"
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-
-interface Listing {
-  id: string;
-  title: string;
-  city: string;
-  address: string;
-  price_range: string;
-  event_type: string;
-  serving_style: string;
-  num_of_staff: number;
-  num_of_guests: number;
-  description: string;
-  image_url?: string;
-  created_at: string;
-}
+import { createListing, getUserListings, updateListing, deleteListing, uploadImage } from "@/shared/lib/services/listing"
+import { createSupabaseBrowserClient } from "@/shared/lib/database/client";
+import { User, Listing } from "@/shared/types";
 
 export default function ListingSection() {
   const [currentView, setCurrentView] = useState("dashboard") // 'dashboard', 'add', 'edit', 'editForm', 'delete'
@@ -28,7 +14,7 @@ export default function ListingSection() {
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(false)
   
-  const [user, setUser] = useState<any>(undefined);
+  const [user, setUser] = useState<User | null>(null);
   const supabase = createSupabaseBrowserClient();
 
   // Effect to fetch the current user
@@ -60,30 +46,39 @@ export default function ListingSection() {
     let image_url = null;
 
     const fileInput = e.currentTarget.querySelector('input[name="image_url"]') as HTMLInputElement; 
-    const file = fileInput?.files?.[0];
-
-    if (file && file.size > 0) {
-      const { url, error: uploadError } = await uploadImage(file, userIdForAction);
-
-      if (uploadError) {
+    const file = fileInput?.files?.[0];    if (file && file.size > 0) {
+      try {
+        // kvs: Fixed uploadImage function call - it only takes the file parameter
+        image_url = await uploadImage(file);
+      } catch (uploadError) {
         console.error("Image Upload Error:", uploadError);
         alert("Image upload failed.");
         return;
       }
-      image_url = url;
-    }
+    }    formData.set("image_url", image_url || "");
 
-    formData.set("image_url", image_url || "");
-
-    const { data, error } = await createListing(formData, userIdForAction);
-
-    if (error) {
-      console.error("Error creating listing:", error);
-      alert("There was an error creating the listing.");
-    } else {
+    // kvs: Fixed createListing call - create listing object from FormData
+    const listingData = {
+      title: formData.get("title") as string,
+      city: formData.get("city") as string,
+      address: formData.get("address") as string,
+      price_range: formData.get("price_range") as string,
+      event_type: formData.get("event_type") as string,
+      serving_style: formData.get("serving_style") as string,
+      num_of_staff: parseInt(formData.get("num_of_staff") as string),
+      num_of_guests: parseInt(formData.get("num_of_guests") as string),
+      description: formData.get("description") as string,
+      image_url: image_url || "",
+      seller_id: userIdForAction
+    };    try {
+      // kvs: Fixed createListing call - create listing object from FormData
+      await createListing(listingData);
       alert("Listing created successfully!");
       setRefresh(true);
       handleBackToDashboard();
+    } catch (error) {
+      console.error("Error creating listing:", error);
+      alert("There was an error creating the listing.");
     }
   };
 
@@ -121,47 +116,43 @@ export default function ListingSection() {
     let new_image_url = selectedListing?.image_url || null;
 
     const fileInput = e.currentTarget.querySelector('input[name="image"]') as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-
-    if (file && file.size > 0) {
-        const userIdForUpload = user ? user.id : "df64e4c5-5379-430b-b91f-c63f1dde6eec";
-        const { url, error: uploadError } = await uploadImage(file, userIdForUpload);
-        if (uploadError) {
+    const file = fileInput?.files?.[0];    if (file && file.size > 0) {
+        try {
+            // kvs: Fixed uploadImage function call - it only takes the file parameter
+            new_image_url = await uploadImage(file);
+        } catch (uploadError) {
             console.error("Image Upload Error during update:", uploadError);
             alert("Image upload failed during update.");
             return;
         }
-        new_image_url = url;
     }
-      
-    const updatedListingData = {
-      title: formData.get("title"),
-      city: formData.get("city"),
-      address: formData.get("address"),
-      price_range: formData.get("priceRange"),
-      event_type: formData.get("eventType"),
-      serving_style: formData.get("servingStyle"),
+        const updatedListingData = {
+      title: formData.get("title") as string,
+      city: formData.get("city") as string,
+      address: formData.get("address") as string,
+      price_range: formData.get("priceRange") as string,
+      event_type: formData.get("eventType") as string,
+      serving_style: formData.get("servingStyle") as string,
       num_of_staff: Number(formData.get("numOfStaff")),
       num_of_guests: Number(formData.get("numOfGuests")),
-      description: formData.get("description"),
-      image_url: new_image_url, 
-    }
+      description: formData.get("description") as string,
+      image_url: new_image_url || undefined, 
+    };
 
-    const { data, error } = await updateListing(listingId, updatedListingData)
-
-    if (error) {
-      console.error("Update failed:", error.message)
-      alert("There was an error updating the listing.")
-    } else {
-      console.log("Listing successfully updated")
-      alert("Listing updated successfully!")
-      setCurrentView("edit")
-      setSelectedListing(null)
-      setImagePreview(null) 
-      setRefresh(true)
+    try {
+      // kvs: Fixed updateListing call - it returns data directly, not an object
+      await updateListing(listingId, updatedListingData);
+      console.log("Listing successfully updated");
+      alert("Listing updated successfully!");
+      setCurrentView("edit");
+      setSelectedListing(null);
+      setImagePreview(null);
+      setRefresh(true);
+    } catch (error) {
+      console.error("Update failed:", error);
+      alert("There was an error updating the listing.");
     }
   }
-
   useEffect(() => { 
     const fetchUpdatedListings = async () => { 
       if (user === undefined) return;
@@ -169,13 +160,13 @@ export default function ListingSection() {
       const userIdToFetch = user ? user.id : "df64e4c5-5379-430b-b91f-c63f1dde6eec"; 
       
       setLoading(true);
-      const { data, error } = await getUserListings(userIdToFetch);
-
-      if (error) {
-        console.error("Error fetching updated listings:", error.message);
-        setListings([]);
-      } else {
+      try {
+        // kvs: Fixed getUserListings call - it returns data directly, not an object
+        const data = await getUserListings(userIdToFetch);
         setListings(data || []);
+      } catch (error) {
+        console.error("Error fetching updated listings:", error);
+        setListings([]);
       }
       setLoading(false);
       setRefresh(false); 
@@ -191,23 +182,22 @@ export default function ListingSection() {
     setSelectedListing(null)
     setImagePreview(null)
   }
-
   const handleDeleteListing = async (listing: Listing) => {
     console.log("Delete listing:", listing)
 
     const confirmed = confirm(`Are you sure you want to delete the listing "${listing.title}"? This action cannot be undone.`);
     if (!confirmed) return;
 
-    const { error } = await deleteListing(listing.id);
-
-    if (error) {
-      console.error("Error deleting listing:", error);
-      alert("There was an error deleting the listing.");
-    } else {
+    try {
+      // kvs: Fixed deleteListing call - it returns void, no error object
+      await deleteListing(listing.id);
       alert("Listing deleted successfully!");
       setListings(listings.filter((l) => l.id !== listing.id));
       setCurrentView("dashboard");
       setRefresh(true);
+    } catch (error) {
+      console.error("Error deleting listing:", error);
+      alert("There was an error deleting the listing.");
     }
   }
 
@@ -218,20 +208,19 @@ export default function ListingSection() {
 
   // Effect to fetch initial listings
   useEffect(() => { 
-    const fetchListings = async () => {
-      if (user === undefined) return;
+    const fetchListings = async () => {      if (user === undefined) return;
 
       setLoading(true);
       const userIdToFetch = user ? user.id : "df64e4c5-5379-430b-b91f-c63f1dde6eec";
 
-      const { data, error } = await getUserListings(userIdToFetch);
-
-      if (error) {
-        console.error("Error fetching listings:", error);
-        setListings([]);
-      } else {
+      try {
+        // kvs: Fixed getUserListings call - it returns data directly
+        const data = await getUserListings(userIdToFetch);
         console.log("Fetched listings:", data);
         setListings(data || []);
+      } catch (error) {
+        console.error("Error fetching listings:", error);
+        setListings([]);
       }
       setLoading(false);
     };
@@ -755,8 +744,7 @@ export default function ListingSection() {
       </div>
     </div>
   )
-
-  // Render the appropriate view based on current state
+  // kvs: Fixed the switch statement render logic
   switch (currentView) {
     case "add":
       return renderAddListing()
