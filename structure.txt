@@ -1,0 +1,26 @@
+eventli/
+└─ src/
+   ├─ app/                     # App Router entry-points
+   │  ├─ layout.tsx
+   │  ├─ page.tsx              # landing
+   │  └─ auth/                 # route-group (no URL change)
+   │     ├─ confirm/route.ts   # email-link exchange
+   │     ├─ callback/route.ts  # OAuth callback
+   │     └─ middleware.tsx     # <AuthGate> wrapper (client)
+   ├─ features/
+   │  └─ auth/                 # **all auth logic lives here**
+   │     ├─ ui/                # React components
+   │     │  ├─ LoginForm.tsx
+   │     │  └─ SignupForm.tsx
+   │     ├─ actions.ts         # Server Actions (signUp, signIn, signOut)
+   │     └─ validators.ts      # Zod schemas
+   ├─ shared/
+   │  ├─ ui/…                  # Shadcn primitives you generate
+   │  ├─ supabase/
+   │  │  ├─ client.ts          # browser client
+   │  │  └─ server.ts          # server-side client
+   │  ├─ auth.ts               # `getSession()`, `getUser()`
+   │  └─ database.ts           # generated DB types + helpers
+   ├─ middleware.ts            # cookie-refresh only
+   ├─ types/                   # extra TS types if needed
+   └─ styles/…
