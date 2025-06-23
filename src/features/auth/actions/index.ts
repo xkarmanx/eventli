@@ -11,7 +11,6 @@ const signupSchema = z
     fullName: z.string().min(2, { message: 'Full name is required.' }),
     email: z.string().email({ message: 'Invalid email address.' }),
     password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
-    role: z.enum(['customer', 'seller'], { required_error: 'You must select a role.' }),
   })
 
 export async function signup(formData: FormData) {
@@ -27,7 +26,7 @@ export async function signup(formData: FormData) {
     errorParams.set('errors', fieldErrors)
     return redirect(`/signup?${errorParams.toString()}`)
   }
-    const { fullName, email, password, role } = validatedFields.data
+  const { fullName, email, password } = validatedFields.data
 
   const supabase = await createClient()
 
@@ -36,10 +35,10 @@ export async function signup(formData: FormData) {
     password,
     options: {
       emailRedirectTo: `${origin}/api/auth/callback`,
-      // Pass metadata to the SQL trigger
+      // Pass metadata to the SQL trigger with default customer role
       data: {
         full_name: fullName,
-        role: role,
+        role: 'customer', // Default to customer role
       },
     },
   })

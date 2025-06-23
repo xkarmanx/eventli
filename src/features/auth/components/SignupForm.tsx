@@ -4,7 +4,6 @@ import { useSearchParams } from 'next/navigation'
 import { signup, signInWithGoogle } from '../actions'
 import { Label } from '@/shared/components/ui/label'
 import { Input } from '@/shared/components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@/shared/components/ui/radio-group'
 import { Button } from '@/shared/components/ui/button'
 import { useState } from 'react'
 
@@ -81,20 +80,6 @@ export function SignupForm() {
           <p className="text-xs text-muted-foreground">
             Must be at least 8 characters long
           </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label>I am a...</Label>
-          <RadioGroup name="role" className="flex gap-6">
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="customer" id="customer" required disabled={isLoading} />
-              <Label htmlFor="customer" className="font-normal">Customer</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="seller" id="seller" required disabled={isLoading} />
-              <Label htmlFor="seller" className="font-normal">Service Provider</Label>
-            </div>
-          </RadioGroup>
         </div>
         
         <Button type="submit" className="w-full" disabled={isLoading}>
