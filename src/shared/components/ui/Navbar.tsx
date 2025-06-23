@@ -1,9 +1,15 @@
+'use client'
+
+import { useState } from "react"
 import { Search, Filter } from "lucide-react"
 import { Button } from "@/shared/components/core/Button"
 import Image from "next/image"
 import Link from "next/link"
+import AuthModal from "./AuthModal"
 
 export default function Navbar() {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -48,18 +54,33 @@ export default function Navbar() {
           </div>
         </div>        {/* Right Section */}
         <div className="flex items-center space-x-4">
-          <Link href="/login">
-            <Button variant="ghost" className="text-gray-700 hover:text-gray-900 px-4 py-2 text-sm font-medium">
-              Login
-            </Button>
-          </Link>
-          <Link href="/signup">
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full text-sm font-medium">
-              Sign up
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            className="text-gray-700 hover:text-gray-900 px-4 py-2 text-sm font-medium"
+            onClick={() => setIsLoginModalOpen(true)}
+          >
+            Login
+          </Button>
+          <Button 
+            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full text-sm font-medium"
+            onClick={() => setIsSignupModalOpen(true)}
+          >
+            Sign up
+          </Button>
         </div>
       </div>
+
+      {/* Auth Modals */}
+      <AuthModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+        type="login" 
+      />
+      <AuthModal 
+        isOpen={isSignupModalOpen} 
+        onClose={() => setIsSignupModalOpen(false)} 
+        type="signup" 
+      />
     </header>
   )
 }
