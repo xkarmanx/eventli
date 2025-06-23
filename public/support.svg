@@ -1,0 +1,9 @@
+<svg width="800" height="800" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff" style="--darkreader-inline-fill:var(--darkreader-background-000000, #000000)">
+  <g stroke-width="0"/>
+  <g stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+    <circle cx="12" cy="12" r="4" transform="rotate(-45 11.985 12.036)" style="--darkreader-inline-stroke:var(--darkreader-text-000000, #e8e6e3)"/>
+    <circle cx="12" cy="12" r="10" transform="rotate(-45 11.985 12.036)" style="--darkreader-inline-stroke:var(--darkreader-text-000000, #e8e6e3)"/>
+    <path style="--darkreader-inline-stroke:var(--darkreader-border-000000, #8c8273)" d="m5 5 4 4m6 0 4-4m-4 10 4 4M9 15l-4 4"/>
+  </g>
+</svg>

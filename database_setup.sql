@@ -368,3 +368,12 @@ CREATE POLICY "Users can delete own listing images" ON storage.objects
     bucket_id = 'listing-images' AND
     auth.uid()::text = (storage.foldername(name))[1]
   );
+
+
+  -- New Changes:
+
+ALTER TABLE public.profiles
+ADD COLUMN is_setup_complete BOOLEAN DEFAULT FALSE;
+
+-- Add the missing is_setup_complete column to profiles table
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_setup_complete BOOLEAN DEFAULT FALSE;

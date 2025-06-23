@@ -26,6 +26,7 @@ export interface Database {
           location: string | null
           stripe_customer_id: string | null
           created_at: string | null
+          is_setup_complete: boolean | null // Add this line
         }
         Insert: {
           id: string
@@ -39,6 +40,7 @@ export interface Database {
           location?: string | null
           stripe_customer_id?: string | null
           created_at?: string | null
+          is_setup_complete?: boolean | null // Add this line
         }
         Update: {
           id?: string
@@ -52,6 +54,7 @@ export interface Database {
           location?: string | null
           stripe_customer_id?: string | null
           created_at?: string | null
+          is_setup_complete?: boolean | null // Add this line
         }
         Relationships: [
           {
