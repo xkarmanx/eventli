@@ -55,7 +55,7 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
     ? 'Choose how you want to sign in' 
     : 'Choose how you want to get started'
   return (    <div 
-      className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
+      className={`fixed inset-0 bg-gray-100/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
         isOpen ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={handleBackdropClick}
