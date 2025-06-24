@@ -10,7 +10,7 @@ import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { login, signInWithGoogle } from '@/features/auth/actions'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 
 // Google Icon Component for consistent styling
 const GoogleIcon = () => (
@@ -25,6 +25,7 @@ const GoogleIcon = () => (
 export function LoginForm() {
   const [loading, setLoading] = React.useState(false)
   const [googleLoading, setGoogleLoading] = React.useState(false)
+  const [showPassword, setShowPassword] = React.useState(false)
   const searchParams = useSearchParams()
 
   React.useEffect(() => {
@@ -81,7 +82,25 @@ export function LoginForm() {
                   Forgot password?
                 </Link>
               </div>
-              <Input id="password" name="password" type="password" placeholder="••••••••" required disabled={loading} className="h-10 text-sm" />
+              <div className="relative">
+                <Input 
+                  id="password" 
+                  name="password" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="••••••••" 
+                  required 
+                  disabled={loading} 
+                  className="h-10 text-sm pr-10 [&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden" 
+                />
+                <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
             <Button 
               type="submit" 
