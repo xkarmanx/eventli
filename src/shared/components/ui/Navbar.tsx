@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Search, Filter } from "lucide-react"
-import { Button } from "@/shared/components/core/Button"
+import { Button } from "@/shared/components/ui/button" // ✅ CHANGED: Import from ui/button instead of core/Button
 import Image from "next/image"
 import Link from "next/link"
 import AuthModal from "./AuthModal"
@@ -13,7 +13,6 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onFilterChange }: NavbarProps) {
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
 
@@ -70,13 +69,11 @@ export default function Navbar({ onFilterChange }: NavbarProps) {
 
         {/* Right Section */}
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            className="text-gray-700 hover:text-gray-900 px-4 py-2 text-sm font-medium"
-            onClick={() => setIsLoginModalOpen(true)}
-          >
-            Login
+          {/* ✅ Login button with asChild prop - now works! */}
+          <Button asChild variant="ghost" className="text-gray-700 hover:text-gray-900 px-4 py-2 text-sm font-medium">
+            <Link href="/login">Login</Link>
           </Button>
+          {/* Signup button */}
           <Button 
             className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full text-sm font-medium"
             onClick={() => setIsSignupModalOpen(true)}
@@ -86,12 +83,7 @@ export default function Navbar({ onFilterChange }: NavbarProps) {
         </div>
       </div>
 
-      {/* Auth Modals */}
-      <AuthModal 
-        isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
-        type="login" 
-      />
+      {/* Signup Modal Only */}
       <AuthModal 
         isOpen={isSignupModalOpen} 
         onClose={() => setIsSignupModalOpen(false)} 
@@ -107,3 +99,5 @@ export default function Navbar({ onFilterChange }: NavbarProps) {
     </header>
   )
 }
+
+// cspell:words Eventli
