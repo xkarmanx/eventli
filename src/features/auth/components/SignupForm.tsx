@@ -8,10 +8,10 @@ import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Separator } from '@/shared/components/ui/separator'
 import { toast } from "sonner"
+import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { PasswordStrength } from './PasswordStrength'
-import { User, Briefcase, Loader2 } from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 // Google Icon Component for consistent styling
@@ -24,12 +24,29 @@ const GoogleIcon = () => (
     </svg>
 );
 
-
 export function SignupForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [loading, setLoading] = React.useState(false);
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [password, setPassword] = React.useState('');
-  const [role, setRole] = React.useState<'customer' | 'seller'>('customer');
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [role, setRole] = React.useState<string | null>(null);
+  const [isClient, setIsClient] = React.useState(false);
+  
+  // Hydration-safe way to get the role parameter
+  React.useEffect(() => {
+    setIsClient(true);
+    const roleParam = searchParams.get('role');
+    setRole(roleParam);
+    
+    // If no role is in the URL, redirect back to the home page to force a selection.
+    // This is a security measure to ensure no one lands on this page directly.
+    if (!roleParam) {
+      router.push('/');
+    }
+  }, [searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -37,10 +54,17 @@ export function SignupForm() {
     toast.info("Creating your account...");
     try {
       const formData = new FormData(e.currentTarget);
-      formData.append('role', role); // Manually append the selected role
       await signup(formData);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An unknown error occurred during signup.");
+      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
+        // ✅ Handle success case - show success message and redirect to login
+        toast.success("Account created! Please check your email to confirm your account.");
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        toast.error(error instanceof Error ? error.message : "An unknown error occurred during signup.");
+      }
     } finally {
       setLoading(false);
     }
@@ -56,86 +80,94 @@ export function SignupForm() {
        setGoogleLoading(false);
     }
   }
+  // Show loading state during hydration or when role is not determined
+  if (!isClient || !role) {
+    return (
+        <div className="flex items-center justify-center text-white">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="ml-4">Loading...</p>
+        </div>
+    );
+  }
 
   return (
-    <Card className="w-full max-w-lg shadow-2xl rounded-2xl bg-white/95 backdrop-blur-xl border-white/20">
-        <CardHeader className="text-center p-8 pb-4">
+    <Card className="w-full max-w-md bg-white shadow-md rounded-lg border">
+        <CardHeader className="text-center p-4">
             <Link href="/" className="inline-block mx-auto">
-                <Image src="/logo.svg" alt="Eventli Logo" width={48} height={48} className="h-12 w-auto" />
+                <Image src="/logo.svg" alt="Eventli Logo" width={32} height={32} className="h-8 w-auto" />
             </Link>
-            <CardTitle className="text-3xl font-bold text-gray-800 pt-4">Create your account</CardTitle>
-            <CardDescription className="pt-1 text-base">Join the premier marketplace for event services.</CardDescription>
+            <CardTitle className="text-xl font-bold text-gray-900 pt-3">Create your {role} account</CardTitle>
+            <CardDescription className="pt-1 text-sm text-gray-600">Join the premier marketplace for event services.</CardDescription>
         </CardHeader>
-        <CardContent className="p-8 pt-2">
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 gap-6">
-                    <div className="space-y-2">
+        <CardContent className="p-6 pt-0">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Hidden input to pass the role to the server action */}
+                <input type="hidden" name="role" value={role} />
+
+                <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-1.5">
                         <Label htmlFor="fullName">Full Name</Label>
-                        <Input id="fullName" name="fullName" placeholder="Enter your full name" required disabled={loading} className="py-3 px-4 text-base" />
+                        <Input id="fullName" name="fullName" placeholder="Enter your full name" required disabled={loading} className="h-10 text-sm" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <Label htmlFor="email">Email Address</Label>
-                        <Input id="email" name="email" type="email" placeholder="you@example.com" required disabled={loading} className="py-3 px-4 text-base"/>
+                        <Input id="email" name="email" type="email" placeholder="you@example.com" required disabled={loading} className="h-10 text-sm"/>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <Label htmlFor="password">Password</Label>
-                        <Input 
-                          id="password" 
-                          name="password" 
-                          type="password" 
-                          placeholder="Create a strong password" 
-                          required 
-                          disabled={loading}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="py-3 px-4 text-base"
-                        />
+                        <div className="relative">
+                          <Input 
+                            id="password" 
+                            name="password" 
+                            type={showPassword ? "text" : "password"} 
+                            placeholder="Create a strong password" 
+                            required 
+                            disabled={loading}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="h-10 text-sm pr-10 [&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden"
+                          />
+                          <button 
+                              type="button" 
+                              onClick={() => setShowPassword(!showPassword)} 
+                              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                     </div>
                 </div>
+                  <PasswordStrength password={password} />
                 
-                <PasswordStrength password={password} />
-                
-                <div className="space-y-3">
-                  <Label>How will you be using Eventli?</Label>
-                  {/* Using custom state instead of RadioGroup for more flexible styling */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <button type="button" onClick={() => setRole('customer')}
-                        className={cn(
-                          "flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center cursor-pointer transition-all duration-200",
-                           role === 'customer' ? 'border-primary bg-primary/5' : 'border-muted hover:bg-accent'
-                        )}>
-                          <User className="h-6 w-6 mb-2 text-primary" />
-                          <span className="font-semibold text-sm">I'm a Customer</span>
-                          <span className="text-xs text-muted-foreground">Booking services</span>
-                      </button>
-                      <button type="button" onClick={() => setRole('seller')}
-                        className={cn(
-                          "flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center cursor-pointer transition-all duration-200",
-                           role === 'seller' ? 'border-primary bg-primary/5' : 'border-muted hover:bg-accent'
-                        )}>
-                          <Briefcase className="h-6 w-6 mb-2 text-primary" />
-                           <span className="font-semibold text-sm">I'm a Provider</span>
-                           <span className="text-xs text-muted-foreground">Offering services</span>
-                      </button>
-                  </div>
-                </div>
-                
-                <Button type="submit" className="w-full bg-[var(--action-blue)] hover:bg-[var(--action-blue)]/90 font-semibold py-3 text-base h-auto" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  className="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
+                  disabled={loading}
+                >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Create Account
                 </Button>
             </form>
-            <div className="relative my-6">
+            
+            <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
-                    <Separator />
+                    <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-muted-foreground">OR</span>
+                    <span className="bg-white px-2 text-muted-foreground">or</span>
                 </div>
             </div>
-            <Button variant="outline" className="w-full h-auto py-3 text-base" onClick={handleGoogleSignIn} disabled={loading || googleLoading}>
+            
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading || googleLoading}>
                 {googleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
                 Sign Up with Google
             </Button>
+            <p className="text-center text-sm text-gray-600 mt-6">
+                Already have an account?{' '}
+                <Link href="/login" className="font-semibold text-teal-600 hover:text-teal-700 transition">
+                    Sign In
+                </Link>
+            </p>
         </CardContent>
     </Card>
   )
