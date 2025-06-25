@@ -78,3 +78,5 @@ export const mockServices: Service[] = [
     image: "/assets/pexels-yankrukov-8867241 1.png",
   },
 ];
+
+//to be replaced with actual data from the database
