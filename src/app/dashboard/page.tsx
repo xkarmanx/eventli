@@ -24,7 +24,7 @@ export default async function DashboardPage() {
 
   // Central logic: Redirect seller to setup if their profile is incomplete
   if (profile?.role === 'seller' && !profile.is_setup_complete) {
-    return redirect('/auth/setup-seller')
+    return redirect('/setup-seller') // ✅ Fixed: Remove /auth prefix
   }
 
   return (

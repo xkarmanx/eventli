@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       // Check if user has a profile (for Google OAuth users)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, role, is_setup_complete')
         .eq('id', data.user.id)
         .single()
 
@@ -27,11 +27,19 @@ export async function GET(request: Request) {
             id: data.user.id,
             full_name: data.user.user_metadata.full_name || data.user.user_metadata.name || null,
             role: 'customer', // Default role for Google OAuth users
+            is_setup_complete: true, // Customers are complete by default
           })
 
         if (profileError) {
           console.error('Error creating profile:', profileError)
         }
+        
+        return NextResponse.redirect(`${origin}${next}`)
+      }
+
+      // If seller hasn't completed setup, redirect to setup page
+      if (profile.role === 'seller' && !profile.is_setup_complete) {
+        return NextResponse.redirect(`${origin}/setup-seller`)
       }
 
       return NextResponse.redirect(`${origin}${next}`)
