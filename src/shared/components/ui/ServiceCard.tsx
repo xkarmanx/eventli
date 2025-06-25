@@ -4,11 +4,23 @@ import { Service } from "@/shared/lib/mockData"
 
 interface ServiceCardProps {
   service: Service;
+  onViewClick?: (service: Service) => void;
 }
 
-export default function ServiceCard({ service }: ServiceCardProps) {
+export default function ServiceCard({ service, onViewClick }: ServiceCardProps) {
+  const handleViewClick = () => {
+    onViewClick?.(service);
+  };
+
+  const handleCardClick = () => {
+    onViewClick?.(service);
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+    <div 
+      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+      onClick={handleCardClick}
+    >
       <div className="flex space-x-4">
         {/* Service Image */}
         <div className="flex-shrink-0">
@@ -32,7 +44,13 @@ export default function ServiceCard({ service }: ServiceCardProps) {
                 {service.price}
               </p>
             </div>
-            <button className="border border-black text-black px-4 py-1.5 rounded-full text-sm font-medium flex-shrink-0 hover:bg-gray-50 transition-colors">
+            <button 
+              className="border border-black text-black px-4 py-1.5 rounded-full text-sm font-medium flex-shrink-0 hover:bg-gray-50 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent card click when button is clicked
+                handleViewClick();
+              }}
+            >
               View
             </button>
           </div>

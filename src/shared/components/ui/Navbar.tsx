@@ -6,10 +6,21 @@ import { Button } from "@/shared/components/core/Button"
 import Image from "next/image"
 import Link from "next/link"
 import AuthModal from "./AuthModal"
+import FilterModal, { FilterValues } from "./FilterModal"
 
-export default function Navbar() {
+interface NavbarProps {
+  onFilterChange?: (filters: FilterValues) => void
+}
+
+export default function Navbar({ onFilterChange }: NavbarProps) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+
+  const handleApplyFilters = (filters: FilterValues) => {
+    onFilterChange?.(filters)
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -48,11 +59,16 @@ export default function Navbar() {
             <button className="bg-teal-600 hover:bg-teal-700 rounded-full p-2 w-8 h-8 flex items-center justify-center">
               <Search className="w-4 h-4 text-white" />
             </button>
-            <button className="bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 rounded-full p-2 w-8 h-8 flex items-center justify-center">
+            <button 
+              className="bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 rounded-full p-2 w-8 h-8 flex items-center justify-center"
+              onClick={() => setIsFilterModalOpen(true)}
+            >
               <Filter className="w-4 h-4" />
             </button>
           </div>
-        </div>        {/* Right Section */}
+        </div>
+
+        {/* Right Section */}
         <div className="flex items-center space-x-4">
           <Button 
             variant="ghost" 
@@ -80,6 +96,13 @@ export default function Navbar() {
         isOpen={isSignupModalOpen} 
         onClose={() => setIsSignupModalOpen(false)} 
         type="signup" 
+      />
+
+      {/* Filter Modal */}
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleApplyFilters}
       />
     </header>
   )
