@@ -27,20 +27,26 @@ const GoogleIcon = () => (
 export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const role = searchParams.get('role');
-
+  
   const [loading, setLoading] = React.useState(false);
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
+  const [role, setRole] = React.useState<string | null>(null);
+  const [isClient, setIsClient] = React.useState(false);
   
-  // If no role is in the URL, redirect back to the home page to force a selection.
-  // This is a security measure to ensure no one lands on this page directly.
+  // Hydration-safe way to get the role parameter
   React.useEffect(() => {
-    if (!role) {
+    setIsClient(true);
+    const roleParam = searchParams.get('role');
+    setRole(roleParam);
+    
+    // If no role is in the URL, redirect back to the home page to force a selection.
+    // This is a security measure to ensure no one lands on this page directly.
+    if (!roleParam) {
       router.push('/');
     }
-  }, [role, router]);
+  }, [searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,9 +80,8 @@ export function SignupForm() {
        setGoogleLoading(false);
     }
   }
-
-  // If the role is not yet determined (e.g., during initial render), show a loader.
-  if (!role) {
+  // Show loading state during hydration or when role is not determined
+  if (!isClient || !role) {
     return (
         <div className="flex items-center justify-center text-white">
             <Loader2 className="h-8 w-8 animate-spin" />
