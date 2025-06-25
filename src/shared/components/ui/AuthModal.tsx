@@ -17,6 +17,7 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
   useEffect(() => {
     setMounted(true)
   }, [])
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -54,7 +55,9 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
   const subtitle = type === 'login' 
     ? 'Choose how you want to sign in' 
     : 'Choose how you want to get started'
-  return (    <div 
+
+  return (
+    <div 
       className={`fixed inset-0 bg-gray-100/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
         isOpen ? 'opacity-100' : 'opacity-0'
       }`}
@@ -81,9 +84,11 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
           <div className="text-center mb-8">
             <h2 id="auth-modal-title" className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
             <p id="auth-modal-description" className="text-gray-600">{subtitle}</p>
-          </div>          <div className="space-y-4">
-            {/* Buyer Option */}
-            <Link href={`/${type}`} onClick={onClose} className="block">
+          </div>
+
+          <div className="space-y-4">
+            {/* Customer/Buyer Option */}
+            <Link href="/signup?role=customer" onClick={onClose} className="block">
               <div className="group border-2 border-gray-200 rounded-xl p-6 hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.02]">
                 <div className="flex items-center space-x-4">
                   <div className="bg-teal-100 group-hover:bg-teal-200 p-3 rounded-full transition-colors">
@@ -91,7 +96,7 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-teal-700 transition-colors">
-                      {type === 'login' ? 'Continue as Buyer' : 'Sign up as Buyer'}
+                      Sign up as Customer
                     </h3>
                     <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
                       Find and book amazing services for your events
@@ -105,7 +110,7 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
             </Link>
 
             {/* Seller Option */}
-            <Link href={type === 'login' ? '/login?type=seller' : '/setup-seller'} onClick={onClose} className="block">
+            <Link href="/signup?role=seller" onClick={onClose} className="block">
               <div className="group border-2 border-gray-200 rounded-xl p-6 hover:border-purple-500 hover:bg-purple-50 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.02]">
                 <div className="flex items-center space-x-4">
                   <div className="bg-purple-100 group-hover:bg-purple-200 p-3 rounded-full transition-colors">
@@ -113,7 +118,7 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-purple-700 transition-colors">
-                      {type === 'login' ? 'Continue as Seller' : 'Sign up as Seller'}
+                      Sign up as Service Provider
                     </h3>
                     <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
                       Offer your services and grow your business
@@ -130,17 +135,14 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-200 text-center">
             <p className="text-sm text-gray-600">
-              {type === 'login' ? "Don't have an account? " : "Already have an account? "}
-              <button
-                onClick={() => {
-                  // This would switch between login and signup modals
-                  // For now, we'll just close and let user click the other button
-                  onClose()
-                }}
+              Already have an account?{' '}
+              <Link
+                href="/login"
+                onClick={onClose}
                 className="text-teal-600 hover:text-teal-700 font-medium"
               >
-                {type === 'login' ? 'Sign up' : 'Log in'}
-              </button>
+                Log in
+              </Link>
             </p>
           </div>
         </div>

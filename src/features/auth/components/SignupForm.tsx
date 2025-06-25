@@ -8,6 +8,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Separator } from '@/shared/components/ui/separator'
 import { toast } from "sonner"
+import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { PasswordStrength } from './PasswordStrength'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
@@ -23,12 +24,24 @@ const GoogleIcon = () => (
     </svg>
 );
 
-
 export function SignupForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = searchParams.get('role');
+
   const [loading, setLoading] = React.useState(false);
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
+  
+  // If no role is in the URL, redirect back to the home page to force a selection.
+  // This is a security measure to ensure no one lands on this page directly.
+  React.useEffect(() => {
+    if (!role) {
+      router.push('/');
+    }
+  }, [role, router]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -37,7 +50,15 @@ export function SignupForm() {
       const formData = new FormData(e.currentTarget);
       await signup(formData);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An unknown error occurred during signup.");
+      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
+        // ✅ Handle success case - show success message and redirect to login
+        toast.success("Account created! Please check your email to confirm your account.");
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        toast.error(error instanceof Error ? error.message : "An unknown error occurred during signup.");
+      }
     } finally {
       setLoading(false);
     }
@@ -54,17 +75,30 @@ export function SignupForm() {
     }
   }
 
+  // If the role is not yet determined (e.g., during initial render), show a loader.
+  if (!role) {
+    return (
+        <div className="flex items-center justify-center text-white">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="ml-4">Loading...</p>
+        </div>
+    );
+  }
+
   return (
     <Card className="w-full max-w-md bg-white shadow-md rounded-lg border">
         <CardHeader className="text-center p-4">
             <Link href="/" className="inline-block mx-auto">
                 <Image src="/logo.svg" alt="Eventli Logo" width={32} height={32} className="h-8 w-auto" />
             </Link>
-            <CardTitle className="text-xl font-bold text-gray-900 pt-3">Create your account</CardTitle>
+            <CardTitle className="text-xl font-bold text-gray-900 pt-3">Create your {role} account</CardTitle>
             <CardDescription className="pt-1 text-sm text-gray-600">Join the premier marketplace for event services.</CardDescription>
         </CardHeader>
         <CardContent className="p-6 pt-0">
             <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Hidden input to pass the role to the server action */}
+                <input type="hidden" name="role" value={role} />
+
                 <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-1.5">
                         <Label htmlFor="fullName">Full Name</Label>
