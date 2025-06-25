@@ -12,7 +12,7 @@ const requirements: PasswordRequirement[] = [
   { label: '8 or more characters', regex: /.{8,}/ },
   { label: 'One uppercase letter', regex: /[A-Z]/ },
   { label: 'One lowercase letter', regex: /[a-z]/ },
-  { label: 'One number or symbol', regex: /[\d\W]/ },
+  { label: 'One number and one symbol', regex: /(?=.*\d)(?=.*[\W])/ }, // ✅ FIXED: requires BOTH number AND symbol
 ];
 
 type PasswordStrengthProps = {

@@ -1,9 +1,25 @@
+'use client'
+
+import { useState } from "react"
 import { Search, Filter } from "lucide-react"
-import { Button } from "@/shared/components/core/Button"
+import { Button } from "@/shared/components/ui/button" // ✅ CHANGED: Import from ui/button instead of core/Button
 import Image from "next/image"
 import Link from "next/link"
+import AuthModal from "./AuthModal"
+import FilterModal, { FilterValues } from "./FilterModal"
 
-export default function Navbar() {
+interface NavbarProps {
+  onFilterChange?: (filters: FilterValues) => void
+}
+
+export default function Navbar({ onFilterChange }: NavbarProps) {
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+
+  const handleApplyFilters = (filters: FilterValues) => {
+    onFilterChange?.(filters)
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -42,24 +58,46 @@ export default function Navbar() {
             <button className="bg-teal-600 hover:bg-teal-700 rounded-full p-2 w-8 h-8 flex items-center justify-center">
               <Search className="w-4 h-4 text-white" />
             </button>
-            <button className="bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 rounded-full p-2 w-8 h-8 flex items-center justify-center">
+            <button 
+              className="bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 rounded-full p-2 w-8 h-8 flex items-center justify-center"
+              onClick={() => setIsFilterModalOpen(true)}
+            >
               <Filter className="w-4 h-4" />
             </button>
           </div>
-        </div>        {/* Right Section */}
+        </div>
+
+        {/* Right Section */}
         <div className="flex items-center space-x-4">
-          <Link href="/login">
-            <Button variant="ghost" className="text-gray-700 hover:text-gray-900 px-4 py-2 text-sm font-medium">
-              Login
-            </Button>
-          </Link>
-          <Link href="/signup">
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full text-sm font-medium">
-              Sign up
-            </Button>
-          </Link>
+          {/* ✅ Login button with asChild prop - now works! */}
+          <Button asChild variant="ghost" className="text-gray-700 hover:text-gray-900 px-4 py-2 text-sm font-medium">
+            <Link href="/login">Login</Link>
+          </Button>
+          {/* Signup button */}
+          <Button 
+            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full text-sm font-medium"
+            onClick={() => setIsSignupModalOpen(true)}
+          >
+            Sign up
+          </Button>
         </div>
       </div>
+
+      {/* Signup Modal Only */}
+      <AuthModal 
+        isOpen={isSignupModalOpen} 
+        onClose={() => setIsSignupModalOpen(false)} 
+        type="signup" 
+      />
+
+      {/* Filter Modal */}
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleApplyFilters}
+      />
     </header>
   )
 }
+
+// cspell:words Eventli

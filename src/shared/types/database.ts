@@ -15,7 +15,7 @@ export interface Database {
     Tables: {
       profiles: {
         Row: {
-          id: string // PK, references auth.users.id
+          id: string
           updated_at: string | null
           full_name: string | null
           avatar_url: string | null
@@ -26,7 +26,7 @@ export interface Database {
           location: string | null
           stripe_customer_id: string | null
           created_at: string | null
-          is_setup_complete: boolean | null // Add this line
+          is_setup_complete: boolean | null
         }
         Insert: {
           id: string
@@ -40,7 +40,7 @@ export interface Database {
           location?: string | null
           stripe_customer_id?: string | null
           created_at?: string | null
-          is_setup_complete?: boolean | null // Add this line
+          is_setup_complete?: boolean | null
         }
         Update: {
           id?: string
@@ -54,7 +54,7 @@ export interface Database {
           location?: string | null
           stripe_customer_id?: string | null
           created_at?: string | null
-          is_setup_complete?: boolean | null // Add this line
+          is_setup_complete?: boolean | null
         }
         Relationships: [
           {
@@ -67,7 +67,7 @@ export interface Database {
       }
       categories: {
         Row: {
-          id: string // PK
+          id: string
           name: string
           description: string | null
           created_at: string | null
@@ -88,9 +88,9 @@ export interface Database {
       }
       listings: {
         Row: {
-          id: string // PK
-          seller_id: string // FK to profiles
-          category_id: string | null // FK to categories
+          id: string
+          seller_id: string
+          category_id: string | null
           title: string
           description: string | null
           image_url: string | null
@@ -149,7 +149,7 @@ export interface Database {
       }
       failed_login_attempts: {
         Row: {
-          id: string // PK
+          id: string
           ip_address: string
           user_email: string | null
           created_at: string | null
