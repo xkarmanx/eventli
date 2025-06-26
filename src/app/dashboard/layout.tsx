@@ -38,8 +38,16 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50/50">
-      {isCustomer ? <CustomerSidebar /> : <SellerSidebar />}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8">
+      {/* Mobile backdrop overlay */}
+      <div className="lg:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity" id="sidebar-backdrop"></div>
+      
+      {/* Sidebar - responsive behavior */}
+      <div className="relative z-50">
+        {isCustomer ? <CustomerSidebar /> : <SellerSidebar />}
+      </div>
+      
+      {/* Main content area */}
+      <main className="flex-1 w-full min-w-0 p-3 sm:p-4 md:p-6 lg:p-8">
         {children}
       </main>
     </div>

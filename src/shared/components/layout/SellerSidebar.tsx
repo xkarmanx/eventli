@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
-import { useState } from "react";
+import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 const navItems = [
@@ -15,39 +15,85 @@ const navItems = [
 
 export default function SellerSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Handle mobile menu backdrop click
+  useEffect(() => {
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (backdrop) {
+      if (mobileOpen) {
+        backdrop.classList.remove('opacity-0', 'pointer-events-none');
+        backdrop.classList.add('opacity-100');
+        backdrop.onclick = () => setMobileOpen(false);
+        document.body.style.overflow = 'hidden';
+      } else {
+        backdrop.classList.add('opacity-0', 'pointer-events-none');
+        backdrop.classList.remove('opacity-100');
+        backdrop.onclick = null;
+        document.body.style.overflow = 'unset';
+      }
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileOpen]);
+
   return (
-    // Sidebar container (collapsible)
-    <aside
-      className={`bg-white flex flex-col py-6 px-4 border-r border-gray-200 shadow-lg transition-all duration-300 ease-in-out ${
-        collapsed ? "w-20" : "w-64"
-      }`}
-    >
-      {/* Header Section */}
-      <div className="flex-1">
-        {/* Logo/Brand Area with Collapse Button */}
-        <div className={`mb-6 flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
-          {!collapsed && (
-            <Link href="/" className="flex-1">
-              <Image
-                src="/logo.svg"
-                alt="Eventli Logo"
-                width={200}
-                height={32}
-                className="h-10"
-              />
-            </Link>
-          )}
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200 hover:bg-gray-50"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label="Toggle menu"
+      >
+        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* Sidebar */}
+      <aside
+        className={`
+          bg-white flex flex-col py-4 sm:py-6 px-3 sm:px-4 border-r border-gray-200 shadow-lg transition-all duration-300 ease-in-out
+          ${collapsed ? "w-16 sm:w-20" : "w-64 sm:w-72"}
           
-          {/* Collapse Button */}
-          <button
-            className="cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 ease-in-out group flex-shrink-0"
-            onClick={() => setCollapsed((prev) => !prev)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            type="button"
-          >
-            {collapsed ? (
+          /* Mobile styles */
+          fixed lg:relative top-0 left-0 h-full z-40
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          
+          /* Desktop styles */
+          lg:block
+        `}
+      >
+        {/* Header Section */}
+        <div className="flex-1">
+          {/* Logo/Brand Area with Collapse Button */}
+          <div className={`mb-4 sm:mb-6 flex items-center ${collapsed ? "justify-center" : "justify-between"} mt-12 lg:mt-0`}>
+            {!collapsed && (
+              <Link href="/" className="flex-1">
+                <Image
+                  src="/logo.svg"
+                  alt="Eventli Logo"
+                  width={200}
+                  height={32}
+                  className="h-8 sm:h-10"
+                />
+              </Link>
+            )}
+            
+            {/* Collapse Button - Hidden on mobile */}
+            <button
+              className="hidden lg:block cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 ease-in-out group flex-shrink-0"
+              onClick={() => setCollapsed((prev) => !prev)}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              type="button"
+            >
+              {collapsed ? (
               <ChevronRight size={18} className="text-gray-600 group-hover:text-teal-700 transition-colors" />
             ) : (
               <ChevronLeft size={18} className="text-gray-600 group-hover:text-teal-700 transition-colors" />
@@ -68,7 +114,7 @@ export default function SellerSidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ease-in-out
+                className={`group flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg transition-all duration-200 ease-in-out text-sm sm:text-base
                   ${
                     isActive
                       ? "bg-teal-600 text-white font-semibold shadow-md"
@@ -103,7 +149,7 @@ export default function SellerSidebar() {
       <div className="mt-auto pt-4 border-t border-gray-200">
         <a
           href="/api/auth/signout"
-          className={`group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ease-in-out text-gray-700 hover:bg-red-50 hover:text-red-600 cursor-pointer
+          className={`group flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg transition-all duration-200 ease-in-out text-gray-700 hover:bg-red-50 hover:text-red-600 cursor-pointer text-sm sm:text-base
             ${collapsed ? "justify-center px-2" : ""}
           `}
           title={collapsed ? "Logout" : undefined}
@@ -120,5 +166,6 @@ export default function SellerSidebar() {
         </a>
       </div>
     </aside>
+    </>
   );
 }
