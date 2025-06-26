@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { LayoutDashboard, User, Calendar, LifeBuoy, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard/seller", icon: LayoutDashboard },
-  { name: "Listings", href: "/dashboard/seller/listings", icon: List },
-  { name: "Profile", href: "/dashboard/seller/profile", icon: User },
-  { name: "Support", href: "/dashboard/seller/support", icon: LifeBuoy },
+  { name: "Dashboard", href: "/dashboard/customer", icon: LayoutDashboard },
+  { name: "Profile", href: "/dashboard/customer/profile", icon: User },
+  { name: "Bookings", href: "/dashboard/customer/bookings", icon: Calendar },
+  { name: "Support", href: "/dashboard/customer/support", icon: LifeBuoy },
 ];
 
-export default function SellerSidebar() {
+export default function CustomerSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -48,9 +48,9 @@ export default function SellerSidebar() {
             type="button"
           >
             {collapsed ? (
-              <ChevronRight size={18} className="text-gray-600 group-hover:text-teal-700 transition-colors" />
+              <ChevronRight size={25} className="text-gray-600 group-hover:text-teal-700 transition-colors" />
             ) : (
-              <ChevronLeft size={18} className="text-gray-600 group-hover:text-teal-700 transition-colors" />
+              <ChevronLeft size={25} className="text-gray-600 group-hover:text-teal-700 transition-colors" />
             )}
           </button>
         </div>
@@ -60,7 +60,7 @@ export default function SellerSidebar() {
           {navItems.map((item) => {
             // Check if the nav item is active
             const isActive = pathname == item.href;
-
+            
             const Icon = item.icon;
 
             // Render each navigation link with icon and label
