@@ -7,7 +7,7 @@ import { useState } from "react";
 import Image from "next/image";
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/dashboard/seller", icon: LayoutDashboard },
   { name: "Listings", href: "/dashboard/seller/listings", icon: List },
   { name: "Profile", href: "/dashboard/seller/profile", icon: User },
   { name: "Support", href: "/dashboard/seller/support", icon: LifeBuoy },
