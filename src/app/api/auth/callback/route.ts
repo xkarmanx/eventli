@@ -33,7 +33,7 @@ export async function GET(request: Request) {
         if (profileError) {
           console.error('Error creating profile:', profileError)
         }
-        
+
         return NextResponse.redirect(`${origin}${next}`)
       }
 
