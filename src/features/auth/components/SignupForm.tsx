@@ -1,6 +1,5 @@
 'use client';
 
-import clsx from 'clsx';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -12,6 +11,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import { cn } from '@/shared/lib/utils';
 import { signInWithGoogle, signup } from '../actions';
 import { PasswordStrength } from './PasswordStrength';
 
@@ -228,6 +228,9 @@ export function SignupForm() {
           {/* reCAPTCHA component */}
           {RECAPTCHA_SITE_KEY ? (
             <ReCaptchaComponent
+              // 'my-auto mx-10' is the tailwind CSS equivalent of `margin: auto 2.5rem`
+              className='inline-block my-auto mx-10 mb-2'
+              id='recaptcha'
               ref={recaptchaRef}
               sitekey={RECAPTCHA_SITE_KEY}
               onChange={handleCaptchaChange}
@@ -241,7 +244,7 @@ export function SignupForm() {
 
           <Button
             type='submit'
-            className={clsx(
+            className={cn(
               'w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-semibold',
               'shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02]'
             )}
