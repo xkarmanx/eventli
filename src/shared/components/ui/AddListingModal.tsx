@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Upload } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
+import { createListing, uploadListingImage, updateListing } from "@/features/services/listing_crud";
+import { useSession } from "@supabase/auth-helpers-react"
 
 interface AddListingModalProps {
   isOpen: boolean
@@ -42,9 +44,14 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [description, setDescription] = useState('')
 
+  const [loading, setLoading] = useState(false);
+
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{[key: string]: string}>({})
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const session = useSession();
 
   useEffect(() => {
     if (!isOpen) return
@@ -115,12 +122,51 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     return Object.keys(newErrors).length === 0
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validate()) return
-    // Normally, send the form data here after sanitation
-    onClose()
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+
+    //Checking if user is logged in
+    if (!session?.user?.id) {
+      alert("User not logged in.");
+      return;
+    }
+
+  setSubmitError(null);
+
+  if (!validate()) return;
+  setLoading(true);
+
+  try {
+    // 1. Create the listing without image_url to get the id
+    const listingData = {
+      seller_id: session.user.id,
+      title,
+      city,
+      address,
+      price: Number(priceRange),
+      event_type: eventType === "Other" ? customEventType : eventType,
+      serving_style: servingStyle,
+      num_staff: Number(numStaff),
+      num_guests: Number(numGuests),
+      description,
+    };
+    const createdListing = await createListing(listingData);
+
+    // 2. Upload image and update listing with image_url
+    if (image && createdListing.id) {
+      const imageUrl = await uploadListingImage(image, createdListing.id);
+      await updateListing(createdListing.id, { image_url: imageUrl });
+    }
+
+    onClose();
+  } 
+  catch (err: any) {
+    setSubmitError(err.message || "Failed to create listing.");
+  } 
+  finally {
+    setLoading(false);
   }
+}
 
   return (
     <div
