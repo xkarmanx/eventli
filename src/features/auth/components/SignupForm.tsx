@@ -7,13 +7,13 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React from 'react';
 import { toast } from 'sonner';
+import ReCaptchaComponent, { ReCaptchaComponentRef } from '@/shared/components/ReCaptchaInstance';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { signInWithGoogle, signup } from '../actions';
 import { PasswordStrength } from './PasswordStrength';
-import ReCaptchaComponent, { ReCaptchaComponentRef } from '@/shared/components/ReCaptchaInstance';
 
 // Google Icon Component for consistent styling
 const GoogleIcon = () => (
@@ -74,7 +74,7 @@ export function SignupForm() {
     const roleParam = searchParams.get('role');
     setRole(roleParam);
 
-    // If no role is in the URL, redirect back to the home page to force a selection.
+    // If no role is in the URL, redirect back to the homepage to force a selection.
     // This is a security measure to ensure no one lands on this page directly.
     if (!roleParam) router.push('/');
   }, [searchParams, router]);
