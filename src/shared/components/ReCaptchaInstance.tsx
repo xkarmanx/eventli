@@ -72,6 +72,6 @@ const ReCaptchaComponent = forwardRef<ReCaptchaComponentRef, Props>(
 );
 
 // Only for debugging purposes, doesn't affect the component's functionality.
-ReCaptchaComponent.displayName = 'ReCaptchaInstance';
+ReCaptchaComponent.displayName = 'ReCaptchaComponent';
 
 export default ReCaptchaComponent;
