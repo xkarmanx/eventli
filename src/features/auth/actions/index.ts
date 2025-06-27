@@ -61,7 +61,7 @@ export async function signup(formData: FormData) {
 
   // ✅ Don't redirect immediately - let user check email first
   revalidatePath('/', 'layout')
-  
+
   // Show success message instead of redirecting
   throw new Error('SUCCESS: Please check your email to confirm your account before signing in.')
 }
