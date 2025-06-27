@@ -126,10 +126,10 @@ async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
 
     //Checking if user is logged in
-    if (!session?.user?.id) {
-      alert("User not logged in.");
-      return;
-    }
+    // if (!session?.user?.id) {
+    //   alert("User not logged in.");
+    //   return;
+    // }
 
   setSubmitError(null);
 
@@ -139,17 +139,17 @@ async function handleSubmit(e: React.FormEvent) {
   try {
     // 1. Create the listing without image_url to get the id
     const listingData = {
-      seller_id: session.user.id,
+      seller_id: session?.user.id || "a4fef5aa-c7cd-4c75-9a89-1273bd66cbcd",
       title,
-      city,
-      address,
+      description,
       price: Number(priceRange),
+      location: `${city}, ${address}`,
       event_type: eventType === "Other" ? customEventType : eventType,
       serving_style: servingStyle,
       num_staff: Number(numStaff),
       num_guests: Number(numGuests),
-      description,
     };
+    console.log("listingData", listingData);
     const createdListing = await createListing(listingData);
 
     // 2. Upload image and update listing with image_url

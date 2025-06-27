@@ -64,14 +64,25 @@ export async function deleteListing(id: string) {
 // IMAGE UPLOAD
 export async function uploadListingImage(file: File, listingId: string) {
   const supabase = await createClient();
-  const filePath = `listings/${listingId}/${file.name}`;
+
+  // Sanitize file name
+  const ext = file.name.split('.').pop();
+  const base = file.name
+    .replace(/\.[^/.]+$/, "")         // Remove extension
+    .replace(/[^a-zA-Z0-9_-]/g, "_"); // Replace non-alphanumeric with _
+    
+  const safeFileName = `${base}_${Date.now()}.${ext}`;
+  const filePath = `listings/${listingId}/${safeFileName}`;
+
   const { data, error } = await supabase.storage
-    .from("images")
+    .from("listing-images")
     .upload(filePath, file, { upsert: true });
   if (error) throw error;
+
   // Get public URL
   const { data: publicUrlData } = supabase.storage
-    .from("images")
+    .from("listing-images")
     .getPublicUrl(filePath);
+
   return publicUrlData?.publicUrl;
 }

@@ -12,8 +12,6 @@ export default function ListingsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  
-
   return (
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
       {/* Header Section */}
