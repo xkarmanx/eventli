@@ -14,7 +14,10 @@ const eslintConfig = [
   ...compat.config({
     extends: [
       'next/core-web-vitals'
-    ]
+    ],
+    rules: {
+      'react/display-name': 'off'
+    }
   })
   // reactHooks.configs['recommended-latest']
 ];
