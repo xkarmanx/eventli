@@ -1,5 +1,6 @@
 'use client';
 
+import clsx from 'clsx';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -12,6 +13,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { signInWithGoogle, signup } from '../actions';
 import { PasswordStrength } from './PasswordStrength';
+import ReCaptchaComponent, { ReCaptchaComponentRef } from '@/shared/components/ReCaptchaInstance';
 
 // Google Icon Component for consistent styling
 const GoogleIcon = () => (
@@ -46,6 +48,26 @@ export function SignupForm() {
   const [role, setRole] = React.useState<string | null>(null);
   const [isClient, setIsClient] = React.useState(false);
 
+  // State for the reCAPTCHA component
+  const [recaptchaToken, setRecaptchaToken] = React.useState<string | null>(null);
+  const [isCaptchaVerified, setIsCaptchaVerified] = React.useState<boolean>(false);
+  const recaptchaRef = React.useRef<ReCaptchaComponentRef>(null); // Ref for reCAPTCHA component
+
+  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+
+  function handleCaptchaChange(token: string | null) {
+    console.log('reCAPTCHA token:', token);
+    setRecaptchaToken(token);
+    setIsCaptchaVerified(!!token); // true if token exists, false otherwise
+  }
+
+  function handleCaptchaExpired() {
+    console.warn('reCAPTCHA token expired. Please re-verify.');
+    setRecaptchaToken(null);
+    setIsCaptchaVerified(false);
+    recaptchaRef.current?.reset(); // Reset the reCAPTCHA widget
+  }
+
   // Hydration-safe way to get the role parameter
   React.useEffect(() => {
     setIsClient(true);
@@ -54,40 +76,52 @@ export function SignupForm() {
 
     // If no role is in the URL, redirect back to the home page to force a selection.
     // This is a security measure to ensure no one lands on this page directly.
-    if (!roleParam) {
-      router.push('/');
-    }
+    if (!roleParam) router.push('/');
   }, [searchParams, router]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     toast.info('Creating your account...');
     try {
       const formData = new FormData(e.currentTarget);
+      formData.append('recaptchaToken', recaptchaToken as string | Blob);
+
       await signup(formData);
+
+      // ✅ Handle success case - show success message and redirect to login
+      toast.success('Account created! Please check your email to confirm your account.');
+      // Reset reCAPTCHA and form after successful submission
+      setRecaptchaToken(null);
+      setIsCaptchaVerified(false);
+      recaptchaRef.current?.reset();
+      // Clear form fields if desired
+      setPassword(''); // Clear password field, other fields are handled by form
+      e.currentTarget.reset(); // Resets all form fields
+
+      setTimeout(() => router.push('/login'), 2000);
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
         // ✅ Handle success case - show success message and redirect to login
-        toast.success(
-          'Account created! Please check your email to confirm your account.'
-        );
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
+        toast.success('Account created! Please check your email to confirm your account.');
+        setTimeout(() => router.push('/login'), 2000);
       } else {
         toast.error(
           error instanceof Error
             ? error.message
             : 'An unknown error occurred during signup.'
         );
+        // In case of failure, reset reCAPTCHA and form
+        setRecaptchaToken(null);
+        setIsCaptchaVerified(false);
+        recaptchaRef.current?.reset();
       }
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleGoogleSignIn = async () => {
+  async function handleGoogleSignIn() {
     setGoogleLoading(true);
     toast.info('Redirecting to Google...');
     try {
@@ -98,16 +132,16 @@ export function SignupForm() {
       );
       setGoogleLoading(false);
     }
-  };
+  }
+
   // Show loading state during hydration or when role is not determined
-  if (!isClient || !role) {
+  if (!isClient || !role)
     return (
       <div className='flex items-center justify-center text-white'>
         <Loader2 className='h-8 w-8 animate-spin' />
         <p className='ml-4'>Loading...</p>
       </div>
     );
-  }
 
   return (
     <Card className='w-full max-w-md bg-white shadow-md rounded-lg border'>
@@ -128,6 +162,7 @@ export function SignupForm() {
           Join the premier marketplace for event services.
         </CardDescription>
       </CardHeader>
+
       <CardContent className='p-6 pt-0'>
         <form onSubmit={handleSubmit} className='space-y-4'>
           {/* Hidden input to pass the role to the server action */}
@@ -145,6 +180,7 @@ export function SignupForm() {
                 className='h-10 text-sm'
               />
             </div>
+
             <div className='space-y-1.5'>
               <Label htmlFor='email'>Email Address</Label>
               <Input
@@ -157,6 +193,7 @@ export function SignupForm() {
                 className='h-10 text-sm'
               />
             </div>
+
             <div className='space-y-1.5'>
               <Label htmlFor='password'>Password</Label>
               <div className='relative'>
@@ -185,12 +222,30 @@ export function SignupForm() {
               </div>
             </div>
           </div>
+
           <PasswordStrength password={password} />
+
+          {/* reCAPTCHA component */}
+          {RECAPTCHA_SITE_KEY ? (
+            <ReCaptchaComponent
+              ref={recaptchaRef}
+              sitekey={RECAPTCHA_SITE_KEY}
+              onChange={handleCaptchaChange}
+              onExpired={handleCaptchaExpired}
+            />
+          ) : (
+            <p className='text-sm text-red-500'>
+              reCAPTCHA site key is missing. Please set NEXT_PUBLIC_RECAPTCHA_SITE_KEY.
+            </p>
+          )}
 
           <Button
             type='submit'
-            className='w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02]'
-            disabled={loading}
+            className={clsx(
+              'w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-semibold',
+              'shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02]'
+            )}
+            disabled={loading || !isCaptchaVerified}
           >
             {loading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
             Create Account
@@ -219,6 +274,7 @@ export function SignupForm() {
           )}
           Sign Up with Google
         </Button>
+
         <p className='text-center text-sm text-gray-600 mt-6'>
           Already have an account?{' '}
           <Link
