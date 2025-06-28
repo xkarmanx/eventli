@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css';
 import { X, Upload } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { createListing, uploadListingImage, updateListing } from "@/features/services/listing_crud";
@@ -48,6 +50,7 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [cancelConfirmation, setCancelConfirmation] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -116,10 +119,31 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     return Object.keys(newErrors).length === 0
   }
 
+  const handleConfirmClose = () => {
+    if (
+      title ||
+      city ||
+      address ||
+      priceRange ||
+      eventType ||
+      customEventType ||
+      servingStyle ||
+      numStaff ||
+      numGuests ||
+      image ||
+      description
+    ) 
+    {
+      setCancelConfirmation(true);
+    }
+    else {
+      onClose();
+    }
+  }
+
 async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
 
-  //Checking if user is logged in
   if (!session?.user?.id) {
     alert("User not logged in.");
     return;
@@ -133,7 +157,7 @@ async function handleSubmit(e: React.FormEvent) {
   try {
     // 1. Create the listing without image_url to get the id
     const listingData = {
-      seller_id: session?.user.id,
+      seller_id: session.user.id,
       title,
       description,
       price: Number(priceRange),
@@ -152,8 +176,8 @@ async function handleSubmit(e: React.FormEvent) {
       await updateListing(createdListing.id, { image_url: imageUrl });
     }
 
-    alert("Listing created successfully!");
     onClose();
+    toast.success("Listing created successfully!");
   } 
   catch (err: any) {
     setSubmitError(err.message || "Failed to create listing.");
@@ -172,7 +196,7 @@ async function handleSubmit(e: React.FormEvent) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={handleConfirmClose}
           className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10 bg-white shadow"
           aria-label="Close modal"
         >
@@ -375,7 +399,7 @@ async function handleSubmit(e: React.FormEvent) {
               <Button 
                 type="button" 
                 variant="secondary" 
-                onClick={onClose}
+                onClick={handleConfirmClose}
                 className="border border-gray-300 hover:bg-gray-100"
               >
                 Cancel
@@ -390,6 +414,33 @@ async function handleSubmit(e: React.FormEvent) {
             </div>
           </form>
         </div>
+        {/* Cancel Confirmation Pop-up */}
+        {cancelConfirmation && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-xl p-8 max-w-xs w-full flex flex-col items-center">
+              <div className="font-semibold mb-2 text-center">
+                You have unsaved changes.<br />Are you sure you want to close?
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  className="border border-gray-300 hover:bg-gray-100" 
+                  variant="secondary" 
+                  onClick={() => setCancelConfirmation(false)}
+                  >
+                  No
+                </Button>
+                <Button 
+                  className="border border-gray-300 hover:bg-red-300 bg-red-500 text-white" 
+                  variant="destructive" 
+                  onClick={() => { setCancelConfirmation(false); 
+                  onClose(); }}
+                  >
+                  Yes
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

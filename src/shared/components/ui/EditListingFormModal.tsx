@@ -5,6 +5,7 @@ import { X, Upload } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { updateListing, uploadListingImage } from "@/features/services/listing_crud";
 import { useSession } from "@supabase/auth-helpers-react";
+import { toast } from 'react-toastify';
 
 interface EditListingFormModalProps {
   isOpen: boolean;
@@ -124,7 +125,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
         updates.image_url = imageUrl;
       }
       const updated = await updateListing(listing.id, updates);
-      alert("Listing updated successfully!");
+      toast.success("Listing updated successfully!");
       onUpdated(updated);
       onClose();
     } catch (err: any) {

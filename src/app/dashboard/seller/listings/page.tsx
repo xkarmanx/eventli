@@ -6,6 +6,8 @@ import { Button } from "@/shared/components/ui/button";
 import AddListingModal from "@/shared/components/ui/AddListingModal";
 import EditListingModal from "@/shared/components/ui/EditListingModal";
 import DeleteListingModal from "@/shared/components/ui/DeleteListingModal";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function ListingsPage() {
   const [addOpen, setAddOpen] = useState(false);
@@ -106,6 +108,9 @@ export default function ListingsPage() {
       <AddListingModal isOpen={addOpen} onClose={() => setAddOpen(false)} />
       <EditListingModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
       <DeleteListingModal isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} />
+
+      {/* Success Message */}
+      <ToastContainer position="top-center" autoClose={2000} />
     </div>
   );
 }
