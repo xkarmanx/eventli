@@ -50,6 +50,8 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const [cancelConfirmation, setCancelConfirmation] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const session = useSession();
@@ -78,10 +80,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     if (file && file.type.startsWith("image/")) {
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
-    } else {
-      setImage(null);
-      setImagePreview(listing.image_url || null);
-    }
+    } 
   };
 
   const validate = () => {
@@ -100,6 +99,30 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const handleConfirmClose = () => {
+    const hasChanged =
+        title !== (listing.title || "") ||
+        city !== (listing.location?.split(", ")[0] || "") ||
+        address !== (listing.location?.split(", ")[1] || "") ||
+        priceRange !== (listing.price?.toString() || "") ||
+        eventType !== (listing.event_type || "") ||
+        (eventType === "Other"
+        ? customEventType !== (eventTypes.includes(listing.event_type) ? "" : listing.event_type || "")
+        : false) ||
+        servingStyle !== (listing.serving_style || "") ||
+        numStaff !== (listing.num_staff?.toString() || "") ||
+        numGuests !== (listing.num_guests?.toString() || "") ||
+        description !== (listing.description || "") ||
+        image !== null;
+
+    if (hasChanged) {
+      setCancelConfirmation(true);
+    }
+    else {
+      onClose();
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -144,7 +167,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={handleConfirmClose}
           className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10 bg-white shadow"
           aria-label="Close modal"
         >
@@ -347,7 +370,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
               <Button
                 type="button"
                 variant="secondary"
-                onClick={onClose}
+                onClick={handleConfirmClose}
                 className="border border-gray-300 hover:bg-gray-100"
               >
                 Cancel
@@ -364,6 +387,33 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
             {submitError && <div className="text-sm text-red-600 mt-2">{submitError}</div>}
           </form>
         </div>
+        {/* Cancel Confirmation Pop-up */}
+        {cancelConfirmation && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-xl p-8 max-w-xs w-full flex flex-col items-center">
+              <div className="font-semibold mb-2 text-center">
+                You have unsaved changes.<br />Are you sure you want to close?
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  className="border border-gray-300 hover:bg-gray-100" 
+                  variant="secondary" 
+                  onClick={() => setCancelConfirmation(false)}
+                  >
+                  No
+                </Button>
+                <Button 
+                  className="border border-gray-300 hover:bg-red-300 bg-red-500 text-white" 
+                  variant="destructive" 
+                  onClick={() => { setCancelConfirmation(false); 
+                  onClose(); }}
+                  >
+                  Yes
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
