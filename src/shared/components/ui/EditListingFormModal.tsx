@@ -1,14 +1,16 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useRef } from 'react'
-import { X, Upload } from 'lucide-react'
-import { Button } from '@/shared/components/ui/button'
-import { createListing, uploadListingImage, updateListing } from "@/features/services/listing_crud";
-import { useSession } from "@supabase/auth-helpers-react"
+import { useState, useEffect, useRef } from "react";
+import { X, Upload } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { updateListing, uploadListingImage } from "@/features/services/listing_crud";
+import { useSession } from "@supabase/auth-helpers-react";
 
-interface AddListingModalProps {
-  isOpen: boolean
-  onClose: () => void
+interface EditListingFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  listing: any;
+  onUpdated: (updatedListing: any) => void;
 }
 
 const eventTypes = [
@@ -16,152 +18,121 @@ const eventTypes = [
   "Wedding",
   "Corporate",
   "Concert",
-  "Other"
-]
+  "Other",
+];
 
 const servingStyles = [
   "Buffet",
   "Plated",
   "Cocktail",
-  "Family Style"
-]
+  "Family Style",
+];
 
 function sanitizeText(text: string) {
-  return text.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  return text.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export default function AddListingModal({ isOpen, onClose }: AddListingModalProps) {
-  const [title, setTitle] = useState('')
-  const [city, setCity] = useState('')
-  const [address, setAddress] = useState('')
-  const [priceRange, setPriceRange] = useState('')
-  const [eventType, setEventType] = useState('')
-  const [customEventType, setCustomEventType] = useState('')
-  const [servingStyle, setServingStyle] = useState('')
-  const [numStaff, setNumStaff] = useState('')
-  const [numGuests, setNumGuests] = useState('')
-  const [image, setImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [description, setDescription] = useState('')
+export default function EditListingFormModal({ isOpen, onClose, listing, onUpdated }: EditListingFormModalProps) {
+  const [title, setTitle] = useState(listing.title || "");
+  const [city, setCity] = useState(listing.location?.split(", ")[0] || "");
+  const [address, setAddress] = useState(listing.location?.split(", ")[1] || "");
+  const [priceRange, setPriceRange] = useState(listing.price?.toString() || "");
+  const [eventType, setEventType] = useState(listing.event_type || "");
+  const [customEventType, setCustomEventType] = useState(eventTypes.includes(listing.event_type) ? "" : listing.event_type || "");
+  const [servingStyle, setServingStyle] = useState(listing.serving_style || "");
+  const [numStaff, setNumStaff] = useState(listing.num_staff?.toString() || "");
+  const [numGuests, setNumGuests] = useState(listing.num_guests?.toString() || "");
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(listing.image_url || null);
+  const [description, setDescription] = useState(listing.description || "");
 
   const [loading, setLoading] = useState(false);
-
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{[key: string]: string}>({})
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const session = useSession();
 
   useEffect(() => {
-    if (!isOpen) return
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleEscKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', handleEscKey)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, onClose])
+    if (!isOpen) return;
+    setTitle(listing.title || "");
+    setCity(listing.location?.split(", ")[0] || "");
+    setAddress(listing.location?.split(", ")[1] || "");
+    setPriceRange(listing.price?.toString() || "");
+    setEventType(listing.event_type || "");
+    setCustomEventType(eventTypes.includes(listing.event_type) ? "" : listing.event_type || "");
+    setServingStyle(listing.serving_style || "");
+    setNumStaff(listing.num_staff?.toString() || "");
+    setNumGuests(listing.num_guests?.toString() || "");
+    setImage(null);
+    setImagePreview(listing.image_url || null);
+    setDescription(listing.description || "");
+    setErrors({});
+  }, [isOpen, listing]);
 
-  useEffect(() => {
-    // Reset form when modal closes
-    if (!isOpen) {
-      setTitle('')
-      setCity('')
-      setAddress('')
-      setPriceRange('')
-      setEventType('')
-      setCustomEventType('')
-      setServingStyle('')
-      setNumStaff('')
-      setNumGuests('')
-      setImage(null)
-      setImagePreview(null)
-      setDescription('')
-      setErrors({})
-    }
-  }, [isOpen])
-
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file && (file.type.startsWith("image/"))) {
-      setImage(file)
-      setImagePreview(URL.createObjectURL(file))
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
     } else {
-      setImage(null)
-      setImagePreview(null)
+      setImage(null);
+      setImagePreview(listing.image_url || null);
     }
-  }
+  };
 
   const validate = () => {
-    const newErrors: {[key: string]: string} = {}
-    if (!title.trim()) newErrors.title = "Title is required"
-    if (!city.trim()) newErrors.city = "City is required"
-    if (!address.trim()) newErrors.address = "Address is required"
-    if (!priceRange || isNaN(Number(priceRange)) || Number(priceRange) < 1) newErrors.priceRange = "Valid price range is required"
-    if (!eventType) newErrors.eventType = "Event type is required"
-    if (eventType === "Other" && !customEventType.trim()) newErrors.customEventType = "Please specify the event type"
-    if (!servingStyle) newErrors.servingStyle = "Serving style is required"
-    if (!numStaff || isNaN(Number(numStaff)) || Number(numStaff) < 1) newErrors.numStaff = "Valid number of staff is required"
-    if (!numGuests || isNaN(Number(numGuests)) || Number(numGuests) < 1) newErrors.numGuests = "Valid number of guests is required"
-    if (!image) newErrors.image = "Image is required"
-    if (!description.trim()) newErrors.description = "Description is required"
-    if (description.length > 500) newErrors.description = "Description must be 500 characters or less"
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    const newErrors: { [key: string]: string } = {};
+    if (!title.trim()) newErrors.title = "Title is required";
+    if (!city.trim()) newErrors.city = "City is required";
+    if (!address.trim()) newErrors.address = "Address is required";
+    if (!priceRange || isNaN(Number(priceRange)) || Number(priceRange) < 1) newErrors.priceRange = "Valid price range is required";
+    if (!eventType) newErrors.eventType = "Event type is required";
+    if (eventType === "Other" && !customEventType.trim()) newErrors.customEventType = "Please specify the event type";
+    if (!servingStyle) newErrors.servingStyle = "Serving style is required";
+    if (!numStaff || isNaN(Number(numStaff)) || Number(numStaff) < 1) newErrors.numStaff = "Valid number of staff is required";
+    if (!numGuests || isNaN(Number(numGuests)) || Number(numGuests) < 1) newErrors.numGuests = "Valid number of guests is required";
+    if (!description.trim()) newErrors.description = "Description is required";
+    if (description.length > 500) newErrors.description = "Description must be 500 characters or less";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
 
-  //Checking if user is logged in
-  if (!session?.user?.id) {
-    alert("User not logged in.");
-    return;
-  }
+    setSubmitError(null);
 
-  setSubmitError(null);
+    if (!validate()) return;
+    setLoading(true);
 
-  if (!validate()) return;
-  setLoading(true);
-
-  try {
-    // 1. Create the listing without image_url to get the id
-    const listingData = {
-      seller_id: session?.user.id,
-      title,
-      description,
-      price: Number(priceRange),
-      location: `${city}, ${address}`,
-      event_type: eventType === "Other" ? customEventType : eventType,
-      serving_style: servingStyle,
-      num_staff: Number(numStaff),
-      num_guests: Number(numGuests),
-    };
-    console.log("listingData", listingData);
-    const createdListing = await createListing(listingData);
-
-    // 2. Upload image and update listing with image_url
-    if (image && createdListing.id) {
-      const imageUrl = await uploadListingImage(image, createdListing.id);
-      await updateListing(createdListing.id, { image_url: imageUrl });
+    try {
+      const updates: any = {
+        title,
+        description,
+        price: Number(priceRange),
+        location: `${city}, ${address}`,
+        event_type: eventType === "Other" ? customEventType : eventType,
+        serving_style: servingStyle,
+        num_staff: Number(numStaff),
+        num_guests: Number(numGuests),
+      };
+      if (image) {
+        const imageUrl = await uploadListingImage(image, listing.id);
+        updates.image_url = imageUrl;
+      }
+      const updated = await updateListing(listing.id, updates);
+      alert("Listing updated successfully!");
+      onUpdated(updated);
+      onClose();
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to update listing.");
+    } finally {
+      setLoading(false);
     }
-
-    alert("Listing created successfully!");
-    onClose();
-  } 
-  catch (err: any) {
-    setSubmitError(err.message || "Failed to create listing.");
-  } 
-  finally {
-    setLoading(false);
   }
-}
 
   return (
     <div
@@ -180,7 +151,7 @@ async function handleSubmit(e: React.FormEvent) {
         </button>
         {/* Modal Content */}
         <div className="p-8">
-          <h2 className="text-2xl font-bold mb-6">Add a Listing</h2>
+          <h2 className="text-2xl font-bold mb-6">Edit Listing</h2>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-title">
@@ -329,7 +300,7 @@ async function handleSubmit(e: React.FormEvent) {
             </div>
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-image">
-                Image<span className="text-red-500">*</span>
+                Image
               </label>
               <div className="flex gap-4 items-center">
                 <input
@@ -372,25 +343,27 @@ async function handleSubmit(e: React.FormEvent) {
               {errors.description && <div className="text-sm text-red-600 mt-1">{errors.description}</div>}
             </div>
             <div className="flex gap-2 justify-end">
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={onClose}
                 className="border border-gray-300 hover:bg-gray-100"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 variant="default"
                 className="border border-gray-300 hover:bg-gray-100"
+                disabled={loading}
               >
-                Add Listing
+                {loading ? "Saving..." : "Save Changes"}
               </Button>
             </div>
+            {submitError && <div className="text-sm text-red-600 mt-2">{submitError}</div>}
           </form>
         </div>
       </div>
     </div>
-  )
+  );
 }
