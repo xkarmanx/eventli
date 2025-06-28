@@ -19,14 +19,9 @@ export default function EditListingModal({ isOpen, onClose }: EditListingModalPr
 
   const session = useSession();
 
-  if (!session?.user?.id) {
-    alert("User not logged in.");
-    return;
-  }
-
   // Fetch listings when modal opens
   useEffect(() => {
-    if (isOpen && session.user.id) {
+    if (isOpen && session?.user.id) {
       setFetchError(null);
       getListings(session.user.id)
         .then(setListings)

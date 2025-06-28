@@ -16,25 +16,25 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    //redirect('/login');
+    redirect('/login');
   }
 
   // Fetch user profile to determine role -Joshua :)
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
-    .eq('id', user?.id)
+    .eq('id', user.id)
     .single();
 
   if (!profile) {
-    //redirect('/login'); // fallback
+    redirect('/login'); // fallback
   }
   // You could potentially fetch the profile here and redirect if not a seller,
   // but for now, we'll let individual pages handle their content.
 
 
   //I added this so it renders the appropriate sidebar according to which user role the person is logged in -Joshua 
-  const isCustomer = profile?.role === "customer";
+  const isCustomer = profile.role === "customer";
 
   return (
     <div className="flex min-h-screen bg-gray-50/50">
