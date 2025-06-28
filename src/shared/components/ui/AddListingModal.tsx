@@ -125,11 +125,11 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
 async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
 
-    //Checking if user is logged in
-    // if (!session?.user?.id) {
-    //   alert("User not logged in.");
-    //   return;
-    // }
+  //Checking if user is logged in
+  if (!session?.user?.id) {
+    alert("User not logged in.");
+    return;
+  }
 
   setSubmitError(null);
 
@@ -139,7 +139,7 @@ async function handleSubmit(e: React.FormEvent) {
   try {
     // 1. Create the listing without image_url to get the id
     const listingData = {
-      seller_id: session?.user.id || "a4fef5aa-c7cd-4c75-9a89-1273bd66cbcd",
+      seller_id: session?.user.id,
       title,
       description,
       price: Number(priceRange),
@@ -378,10 +378,19 @@ async function handleSubmit(e: React.FormEvent) {
               {errors.description && <div className="text-sm text-red-600 mt-1">{errors.description}</div>}
             </div>
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="secondary" onClick={onClose}>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={onClose}
+                className="border border-gray-300 hover:bg-gray-100"
+              >
                 Cancel
               </Button>
-              <Button type="submit" variant="default">
+              <Button 
+                type="submit" 
+                variant="default"
+                className="border border-gray-300 hover:bg-gray-100"
+              >
                 Add Listing
               </Button>
             </div>
