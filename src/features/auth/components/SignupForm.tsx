@@ -88,18 +88,6 @@ export function SignupForm() {
       formData.append('recaptchaToken', recaptchaToken as string | Blob);
 
       await signup(formData);
-
-      // ✅ Handle success case - show success message and redirect to login
-      toast.success('Account created! Please check your email to confirm your account.');
-      // Reset reCAPTCHA and form after successful submission
-      setRecaptchaToken(null);
-      setIsCaptchaVerified(false);
-      recaptchaRef.current?.reset();
-      // Clear form fields if desired
-      setPassword(''); // Clear password field, other fields are handled by form
-      e.currentTarget.reset(); // Resets all form fields
-
-      setTimeout(() => router.push('/login'), 2000);
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
         // ✅ Handle success case - show success message and redirect to login
@@ -128,7 +116,9 @@ export function SignupForm() {
       await signInWithGoogle();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to sign in with Google'
+        error instanceof Error
+          ? error.message
+          : 'Failed to sign in with Google'
       );
       setGoogleLoading(false);
     }

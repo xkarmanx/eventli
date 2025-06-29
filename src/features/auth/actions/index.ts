@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { createClient } from '@/shared/lib/supabase/server';
 
 /* -------------------------------------------------------------------------- */
-/* Schema (strong password policy + role required)                            */
+/* SignUp Schema (strong password policy + role required)                            */
 /* -------------------------------------------------------------------------- */
 const signupSchema = z.object({
   fullName: z.string().min(2, {
@@ -37,6 +37,21 @@ const signupSchema = z.object({
   recaptchaToken: z.string().min(1, {
     message: 'reCAPTCHA verification is required.'
   }) // Add recaptchaToken to schema
+});
+
+/* -------------------------------------------------------------------------- */
+/* Login Schema                                                               */
+/* -------------------------------------------------------------------------- */
+const loginSchema = z.object({
+  email: z.string().email({
+    message: 'Invalid email address.'
+  }),
+  password: z.string().min(1, {
+    message: 'Password is required.'
+  }),
+  recaptchaToken: z.string().min(1, {
+    message: 'reCAPTCHA verification is required.'
+  })
 });
 
 type ReCaptchaVerificationResponse = {
@@ -74,13 +89,13 @@ export async function signup(formData: FormData) {
     throw new Error('Server configuration error: reCAPTCHA secret key is missing.');
 
   try {
-    const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify'
+    const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
     const verificationResponse = await axios.post(verificationUrl, null, {
       params: {
         secret: RECAPTCHA_SECRET_KEY as string,
         response: recaptchaToken
       }
-    })
+    });
 
     const reCaptchaData: ReCaptchaVerificationResponse = verificationResponse.data;
 
@@ -126,8 +141,44 @@ export async function signup(formData: FormData) {
 /* Login                                                                      */
 /* -------------------------------------------------------------------------- */
 export async function login(formData: FormData) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
+  const fromEntries = Object.fromEntries(formData.entries());
+  const validated = loginSchema.safeParse(fromEntries);
+
+  // const email = formData.get('email') as string;
+  // const password = formData.get('password') as string;
+
+  if (!validated.success) {
+    const combined = Object.values(validated.error.flatten().fieldErrors).flat().join(' ');
+    throw new Error(combined || 'Invalid login data. Please check your inputs and try again.');
+  }
+
+  const { email, password, recaptchaToken } = validated.data;
+
+  // Verify reCAPTCHA secret key is in environmental variables
+  if (!RECAPTCHA_SECRET_KEY)
+    throw new Error('Server configuration error: reCAPTCHA secret key is missing.');
+
+  try {
+    const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
+    const verificationResponse = await axios.post(verificationUrl, null, {
+      params: {
+        secret: RECAPTCHA_SECRET_KEY as string,
+        response: recaptchaToken
+      }
+    });
+
+    const reCaptchaData: ReCaptchaVerificationResponse = verificationResponse.data;
+
+    if (!reCaptchaData.success) {
+      console.error('reCAPTCHA verification failed:', reCaptchaData['error-codes']);
+      throw new Error('reCAPTCHA verification failed. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error during reCAPTCHA verification request:', error);
+    throw new Error('Failed to verify reCAPTCHA. Please try again.')
+  }
+
+  // ✅ Continue with login after successful reCAPTCHA verification
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
