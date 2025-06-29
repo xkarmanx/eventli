@@ -368,3 +368,32 @@ CREATE POLICY "Users can delete own listing images" ON storage.objects
     bucket_id = 'listing-images' AND
     auth.uid()::text = (storage.foldername(name))[1]
   );
+
+
+  -- New Changes:
+
+ALTER TABLE public.profiles
+ADD COLUMN is_setup_complete BOOLEAN DEFAULT FALSE;
+
+-- Add the missing is_setup_complete column to profiles table
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_setup_complete BOOLEAN DEFAULT FALSE;
+
+-- Karman : Created a function for new users to get their metadata and autofill and also make sure sellers setup profile first.
+
+-- Update the handle_new_user function in your database
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, full_name, role, is_setup_complete)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+        COALESCE(NEW.raw_user_meta_data->>'role', 'customer'),
+        CASE 
+            WHEN COALESCE(NEW.raw_user_meta_data->>'role', 'customer') = 'customer' THEN true
+            ELSE false
+        END
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

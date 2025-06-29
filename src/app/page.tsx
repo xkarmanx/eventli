@@ -1,58 +1,51 @@
-import Link from 'next/link'
-import { createClient } from '@/shared/lib/supabase/server'
-import { Button } from '@/shared/components/ui/button'
-import LogoutButton from '@/shared/components/LogoutButton'
+'use client'
 
-export default async function Index() {
-  const supabase = await createClient()
+import { useState } from 'react'
+import Navbar from "@/shared/components/ui/Navbar"
+import CategoryNavigation from "@/shared/components/ui/CategoryNavigation"
+import ServicesGrid from "@/shared/components/ui/ServicesGrid"
+import { mockServices } from "@/shared/lib/mockData"
+import { FilterValues } from "@/shared/components/ui/FilterModal"
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export default function HomePage() {
+  const [filteredServices, setFilteredServices] = useState(mockServices)
+
+  const handleFilterChange = (filters: FilterValues) => {
+    let filtered = [...mockServices]
+
+    // Filter by guest number
+    if (filters.guestNumber) {
+      filtered = filtered.filter(service => {
+        if (filters.guestNumber === 'under-20') return service.guests.includes('20') || service.guests.includes('10')
+        if (filters.guestNumber === '20-40') return service.guests.includes('40')
+        if (filters.guestNumber === '40-60') return service.guests.includes('60')
+        if (filters.guestNumber === '60-100') return service.guests.includes('100')
+        if (filters.guestNumber === 'over-100') return service.guests.includes('100') || service.guests.includes('150')
+        return true
+      })
+    }
+
+    // Filter by price range
+    if (filters.priceRange) {
+      filtered = filtered.filter(service => {
+        const priceText = service.price.toLowerCase()
+        if (filters.priceRange === 'under-5000') return priceText.includes('3000') || priceText.includes('2000')
+        if (filters.priceRange === '5000-10000') return priceText.includes('5000') || priceText.includes('8000') || priceText.includes('10000')
+        if (filters.priceRange === '10000-20000') return priceText.includes('15000') || priceText.includes('20000')
+        if (filters.priceRange === '20000-30000') return priceText.includes('25000') || priceText.includes('30000')
+        if (filters.priceRange === 'over-30000') return priceText.includes('35000') || priceText.includes('40000')
+        return true
+      })
+    }
+
+    setFilteredServices(filtered)
+  }
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-20 items-center">
-      <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-        <div className="w-full max-w-4xl flex justify-between items-center p-3 text-sm">
-          <p>Eventli</p>
-          <div>
-            {user ? (
-              <div className="flex items-center gap-4">
-                Hey, {user.email}!
-                <LogoutButton />
-              </div>
-            ) : (
-              <Link
-                href="/login"
-                className="py-2 px-3 flex rounded-md no-underline bg-btn-background hover:bg-btn-background-hover"
-              >
-                Login
-              </Link>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      <div className="animate-in flex-1 flex flex-col gap-20 opacity-0 max-w-4xl px-3">
-        <main className="flex-1 flex flex-col gap-6">
-          <h2 className="font-bold text-4xl mb-4">Welcome to Eventli</h2>
-          <p className="text-lg">The easiest way to plan your next event.</p>
-        </main>
-      </div>
-
-      <footer className="w-full border-t border-t-foreground/10 p-8 flex justify-center text-center text-xs">
-        <p>
-          Powered by{' '}
-          <a
-            href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-            target="_blank"
-            className="font-bold hover:underline"
-            rel="noreferrer"
-          >
-            Supabase
-          </a>
-        </p>
-      </footer>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar onFilterChange={handleFilterChange} />
+      <CategoryNavigation />
+      <ServicesGrid services={filteredServices} />
     </div>
   )
 }
