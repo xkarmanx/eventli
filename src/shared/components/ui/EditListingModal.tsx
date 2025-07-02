@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { X, Edit } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import { useSession } from '@supabase/auth-helpers-react'
 import { getListings } from '@/features/services/listing_crud'
 import EditListingFormModal from "@/shared/components/ui/EditListingFormModal";
+import { createClient } from '@/shared/lib/supabase/client'
 
 interface EditListingModalProps {
   isOpen: boolean
@@ -16,22 +16,54 @@ export default function EditListingModal({ isOpen, onClose }: EditListingModalPr
   const [listings, setListings] = useState<any[]>([]);
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const session = useSession();
-
-  // Fetch listings when modal opens
   useEffect(() => {
-    if (isOpen && session?.user.id) {
+    const supabase = createClient();
+    
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          setUser(null);
+        } else {
+          setUser(session?.user || null);
+        }
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user || null);
+        setAuthLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && user?.id && !authLoading) {
       setFetchError(null);
-      getListings(session.user.id)
+      getListings(user.id)
         .then(setListings)
         .catch(err => {
           setFetchError(err.message || "Failed to fetch listings.");
           setListings([]);
         });
     }
-  }, [isOpen, session?.user?.id]);
-
+  }, [isOpen, user?.id, authLoading]);
 
   useEffect(() => {
     if (!isOpen) return
@@ -47,6 +79,29 @@ export default function EditListingModal({ isOpen, onClose }: EditListingModalPr
   }, [isOpen, onClose])
 
   if (!isOpen) return null
+
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center text-red-600">Please log in to access this feature.</div>
+          <div className="flex justify-center mt-4">
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -73,51 +128,56 @@ export default function EditListingModal({ isOpen, onClose }: EditListingModalPr
         {/* Modal Content */}
         <div className="p-8">
           <h2 className="text-2xl font-bold mb-6">Edit a Listing</h2>
-            <div className="space-y-4">
-              {listings.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">
-                  You have no listings yet.
-                </div>
-              ) : (
-                listings.map(listing => (
-                  <div key={listing.id} className="border border-gray-200 rounded-lg p-4 flex flex-col gap-2 bg-gray-50">
-                    <div className="font-semibold">{listing.title}</div>
-                    <div className="text-gray-700 text-sm">{listing.description}</div>
-                    <div className="flex gap-2 mt-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => setEditTarget(listing)}
-                      className="border border-gray-300 hover:bg-gray-100"
-                    >
-                      <Edit className="w-4 h-4 mr-1" /> Edit
-                    </Button>
-                    </div>
-                  </div>
-                ))
-              )}
+          {fetchError && (
+            <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-center font-medium">
+              {fetchError}
             </div>
-          <div className="flex justify-end mt-6">
-            <Button className="border border-gray-300 hover:bg-gray-100" variant="secondary" onClick={onClose}>
-              Close
-            </Button>
+          )}
+          <div className="space-y-4">
+            {listings.length === 0 ? (
+              <div className="text-gray-500 text-center py-8">
+                You have no listings yet.
+              </div>
+            ) : (
+              listings.map(listing => (
+                <div key={listing.id} className="border border-gray-200 rounded-lg p-4 flex flex-col gap-2 bg-gray-50">
+                  <div className="font-semibold">{listing.title}</div>
+                  <div className="text-gray-700 text-sm">{listing.description}</div>
+                  <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setEditTarget(listing)}
+                    className="border border-gray-300 hover:bg-gray-100"
+                  >
+                    <Edit className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
+        <div className="flex justify-end mt-6">
+          <Button className="border border-gray-300 hover:bg-gray-100" variant="secondary" onClick={onClose}>
+            Close
+          </Button>
         </div>
       </div>
-      {/* Modal with pre-filled values, similar to AddListingModal */}
-      {editTarget && (
-        <EditListingFormModal
-          isOpen={!!editTarget}
-          onClose={() => setEditTarget(null)}
-          listing={editTarget}
-          onUpdated={updatedListing => {
-            setListings(listings =>
-              listings.map(l => l.id === updatedListing.id ? updatedListing : l)
-            );
-            setEditTarget(null);
-          }}
-        />
-       )}
     </div>
+    {/* Modal with pre-filled values, similar to AddListingModal */}
+    {editTarget && (
+      <EditListingFormModal
+        isOpen={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        listing={editTarget}
+        onUpdated={updatedListing => {
+          setListings(listings =>
+            listings.map(l => l.id === updatedListing.id ? updatedListing : l)
+          );
+          setEditTarget(null);
+        }}
+      />
+     )}
+  </div>
   )
 }

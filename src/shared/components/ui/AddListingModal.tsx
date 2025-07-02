@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ToastContainer, toast } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css';
+// kvs: Removed react-toastify imports and replaced with sonner for consistent toast implementation
+import { toast } from 'sonner'
 import { X, Upload } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { createListing, uploadListingImage, updateListing } from "@/features/services/listing_crud";
-import { useSession } from "@supabase/auth-helpers-react"
+// kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
+// kvs: Added createClient import for proper Supabase client usage
+import { createClient } from '@/shared/lib/supabase/client'
 
 interface AddListingModalProps {
   isOpen: boolean
@@ -54,7 +56,46 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const session = useSession();
+  // kvs: Replaced useSession() with proper Supabase auth state management
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // kvs: Added proper Supabase auth state management
+  useEffect(() => {
+    const supabase = createClient();
+    
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          setUser(null);
+        } else {
+          setUser(session?.user || null);
+        }
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user || null);
+        setAuthLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return
@@ -90,9 +131,40 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
 
   if (!isOpen) return null
 
+  // kvs: Added authentication checks to prevent unauthorized access
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center text-red-600">Please log in to access this feature.</div>
+          <div className="flex justify-center mt-4">
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file && (file.type.startsWith("image/"))) {
+      // kvs: Added client-side file size validation for better user experience
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast.error("File size must be less than 10MB");
+        return;
+      }
+      
       setImage(file)
       setImagePreview(URL.createObjectURL(file))
     } else {
@@ -144,8 +216,10 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
 async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
 
-  if (!session?.user?.id) {
-    alert("User not logged in.");
+  // kvs: Updated to use user state instead of session?.user?.id
+  if (!user?.id) {
+    // kvs: Replaced alert with sonner toast for consistent error messaging
+    toast.error("User not logged in");
     return;
   }
 
@@ -157,7 +231,8 @@ async function handleSubmit(e: React.FormEvent) {
   try {
     // 1. Create the listing without image_url to get the id
     const listingData = {
-      seller_id: session.user.id,
+      // kvs: Updated to use user.id instead of session.user.id
+      seller_id: user.id,
       title,
       description,
       price: Number(priceRange),
@@ -177,10 +252,13 @@ async function handleSubmit(e: React.FormEvent) {
     }
 
     onClose();
+    // kvs: Replaced react-toastify with sonner toast for consistent success messaging
     toast.success("Listing created successfully!");
   } 
   catch (err: any) {
     setSubmitError(err.message || "Failed to create listing.");
+    // kvs: Added sonner toast for error messaging consistency
+    toast.error(err.message || "Failed to create listing");
   } 
   finally {
     setLoading(false);
@@ -408,10 +486,12 @@ async function handleSubmit(e: React.FormEvent) {
                 type="submit" 
                 variant="default"
                 className="border border-gray-300 hover:bg-gray-100"
+                disabled={loading}
               >
-                Add Listing
+                {loading ? "Creating..." : "Add Listing"}
               </Button>
             </div>
+            {submitError && <div className="text-sm text-red-600 mt-2">{submitError}</div>}
           </form>
         </div>
         {/* Cancel Confirmation Pop-up */}

@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { X, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import { useSession } from '@supabase/auth-helpers-react'
 import { getListings, deleteListing } from '@/features/services/listing_crud'
-import { toast } from 'react-toastify';
+// kvs: Replaced react-toastify with sonner for consistent toast implementation across the app
+import { toast } from 'sonner';
+import { createClient } from '@/shared/lib/supabase/client'
 
 interface DeleteListingModalProps {
   isOpen: boolean
@@ -17,20 +18,54 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const session = useSession();
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (isOpen && session?.user?.id || "a4fef5aa-c7cd-4c75-9a89-1273bd66cbcd") {
+    const supabase = createClient();
+    
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          setUser(null);
+        } else {
+          setUser(session?.user || null);
+        }
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user || null);
+        setAuthLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && user?.id && !authLoading) {
       setFetchError(null);
-      getListings(session?.user.id || "a4fef5aa-c7cd-4c75-9a89-1273bd66cbcd")
+      getListings(user.id)
         .then(setListings)
         .catch(err => {
           setFetchError(err.message || "Failed to fetch listings.");
           setListings([]);
         });
     }
-  }, [isOpen, session?.user?.id]);
+  }, [isOpen, user?.id, authLoading]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -62,6 +97,30 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
 
   if (!isOpen) return null;
 
+  // kvs: Added authentication check to prevent unauthorized access
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center text-red-600">Please log in to access this feature.</div>
+          <div className="flex justify-center mt-4">
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleDelete = (listing: any) => {
     setDeleteTarget(listing);
   };
@@ -71,11 +130,14 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
     setLoading(true);
     try {
       await deleteListing(deleteTarget.id);
+      // kvs: Replaced react-toastify with sonner toast for consistent success messaging
       toast.success("Listing deleted successfully!");
       setListings(prev => prev.filter(l => l.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err: any) {
       setFetchError(err.message || "Failed to delete listing.");
+      // kvs: Added sonner toast for error messaging consistency
+      toast.error(err.message || "Failed to delete listing");
     } finally {
       setLoading(false);
     }
