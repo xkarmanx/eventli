@@ -218,6 +218,13 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     }
   }
 
+  // JC: Handle clicking outside the modal to close it I removed it by accident
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleConfirmClose();
+    }
+  }
+
 async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
 
@@ -275,6 +282,7 @@ async function handleSubmit(e: React.FormEvent) {
       className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300"
       role="dialog"
       aria-modal="true"
+      onClick={handleBackdropClick}
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
         {/* Close Button */}

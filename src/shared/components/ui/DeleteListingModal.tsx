@@ -12,9 +12,11 @@ import { createClient } from '@/shared/lib/supabase/client' // JC: Get user data
 interface DeleteListingModalProps {
   isOpen: boolean
   onClose: () => void
+  listing?: any // JC: Optional listing to delete directly (when called from card)
+  onDelete?: (listingId: string) => void // JC: Callback to update parent state
 }
 
-export default function DeleteListingModal({ isOpen, onClose }: DeleteListingModalProps) {
+export default function DeleteListingModal({ isOpen, onClose, listing, onDelete }: DeleteListingModalProps) {
   // JC: State to store user listings and selected listing for deletion
   const [listings, setListings] = useState<any[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -22,6 +24,16 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // JC: If listing is provided directly, skip the selection interface
+  const directDeleteMode = !!listing;
+
+  // JC: Handle direct delete mode - when listing is provided, go straight to delete confirmation
+  useEffect(() => {
+    if (directDeleteMode && listing && isOpen) {
+      setDeleteTarget(listing);
+    }
+  }, [directDeleteMode, listing, isOpen]);
 
   // JC: Get user login info when modal opens
   useEffect(() => {
@@ -135,8 +147,16 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
       await deleteListing(deleteTarget.id);
       // kvs: Replaced react-toastify with sonner toast for consistent success messaging
       toast.success("Listing deleted successfully!");
-      setListings(prev => prev.filter(l => l.id !== deleteTarget.id));
-      setDeleteTarget(null);
+      
+      if (directDeleteMode) {
+        // JC: In direct mode, call parent callback and close modal
+        onDelete?.(deleteTarget.id);
+        onClose();
+      } else {
+        // JC: In selection mode, update local listings state
+        setListings(prev => prev.filter(l => l.id !== deleteTarget.id));
+        setDeleteTarget(null);
+      }
     } catch (err: any) {
       setFetchError(err.message || "Failed to delete listing.");
       // kvs: Added sonner toast for error messaging consistency
@@ -159,7 +179,8 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
       aria-modal="true"
       onClick={handleBackdropClick}
     >
-      {/* Main Modal Content */}
+      {/* Main Modal Content - only show when not in direct delete mode */}
+      {!directDeleteMode && (
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
         {/* Close Button */}
         <button
@@ -171,13 +192,13 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
         </button>
 
         <div className="p-8">
-          <h2 className="text-2xl font-bold mb-6">Delete a Listing</h2>
-          {fetchError && (
-            <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-center font-medium">
-              {fetchError}
-            </div>
-          )}
-          <div className="space-y-6">
+              <h2 className="text-2xl font-bold mb-6">Delete a Listing</h2>
+              {fetchError && (
+                <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-center font-medium">
+                  {fetchError}
+                </div>
+              )}
+              <div className="space-y-6">
             {listings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-6">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -263,6 +284,7 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
           </div>
         </div>
       </div>
+      )}
 
       {/* Confirmation Dialog */}
       {deleteTarget && (
@@ -286,7 +308,13 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
                 <Button
                   className="cursor-pointer flex-1 border border-gray-300 hover:bg-teal-700 hover:text-white"
                   variant="secondary"
-                  onClick={() => setDeleteTarget(null)}
+                  onClick={() => {
+                    setDeleteTarget(null);
+                    // JC: In direct delete mode, also close the main modal when canceling
+                    if (directDeleteMode) {
+                      onClose();
+                    }
+                  }}
                   disabled={loading}
                 >
                   Cancel

@@ -16,6 +16,7 @@ export default function ListingsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<any>(null); // JC: Track which listing is being edited/deleted
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -98,6 +99,30 @@ export default function ListingsPage() {
     setAddOpen(false);
     // Refresh listings after adding
     fetchListings();
+  };
+
+  // JC: Handle edit button click from card - open modal with selected listing
+  const handleEditRequest = (listing: any) => {
+    setSelectedListing(listing);
+    setEditOpen(true);
+  };
+
+  // JC: Handle delete button click from card - open modal with selected listing
+  const handleDeleteRequest = (listing: any) => {
+    setSelectedListing(listing);
+    setDeleteOpen(true);
+  };
+
+  // JC: Close edit modal and clear selected listing
+  const handleEditModalClose = () => {
+    setEditOpen(false);
+    setSelectedListing(null);
+  };
+
+  // JC: Close delete modal and clear selected listing
+  const handleDeleteModalClose = () => {
+    setDeleteOpen(false);
+    setSelectedListing(null);
   };
 
   if (authLoading) {
@@ -274,6 +299,8 @@ export default function ListingsPage() {
                         listing={listing}
                         onUpdate={handleListingUpdate}
                         onDelete={handleListingDelete}
+                        onEdit={handleEditRequest}
+                        onDeleteRequest={handleDeleteRequest}
                       />
                     </div>
                   ))}
@@ -284,10 +311,20 @@ export default function ListingsPage() {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals - JC: Now at page level to avoid card transform conflicts */}
       <AddListingModal isOpen={addOpen} onClose={handleAddModalClose} />
-      <EditListingModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
-      <DeleteListingModal isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} />
+      <EditListingModal 
+        isOpen={editOpen} 
+        onClose={handleEditModalClose} 
+        listing={selectedListing}
+        onUpdate={handleListingUpdate}
+      />
+      <DeleteListingModal 
+        isOpen={deleteOpen} 
+        onClose={handleDeleteModalClose} 
+        listing={selectedListing}
+        onDelete={handleListingDelete}
+      />
 
       {/* kvs: Removed ToastContainer as all toast notifications now use Sonner which is globally configured in layout.tsx */}
     </div>

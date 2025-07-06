@@ -23,22 +23,22 @@ interface ListingCardSellerProps {
   }
   onUpdate?: (updatedListing: any) => void
   onDelete?: (listingId: string) => void
+  onEdit?: (listing: any) => void // JC: Callback when edit button is clicked
+  onDeleteRequest?: (listing: any) => void // JC: Callback when delete button is clicked
 }
 
-export default function ListingCardSeller({ listing, onUpdate, onDelete }: ListingCardSellerProps) {
-  // JC: State to control which modal is open
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit, onDeleteRequest }: ListingCardSellerProps) {
+  // JC: Remove local modal state since modals are now handled by parent component
 
-  // JC: Functions to handle edit and delete button clicks
+  // JC: Functions to handle edit and delete button clicks - now call parent callbacks
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setEditModalOpen(true)
+    onEdit?.(listing)
   }
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setDeleteModalOpen(true)
+    onDeleteRequest?.(listing)
   }
 
   // JC: Format date for display
@@ -147,17 +147,6 @@ export default function ListingCardSeller({ listing, onUpdate, onDelete }: Listi
         {/* Decorative corner element */}
         <div className="absolute top-0 right-0 w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
-
-      {/* Modals */}
-      <EditListingModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-      />
-
-      <DeleteListingModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-      />
     </>
   )
 }
