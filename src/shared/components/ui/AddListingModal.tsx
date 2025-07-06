@@ -10,11 +10,13 @@ import { createListing, uploadListingImage, updateListing } from "@/features/ser
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client'
 
+// JC: Define what props this modal needs to work
 interface AddListingModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
+// JC: Available event types for dropdowns
 const eventTypes = [
   "Birthday",
   "Wedding",
@@ -23,6 +25,7 @@ const eventTypes = [
   "Other"
 ]
 
+// JC: Available serving styles for dropdowns
 const servingStyles = [
   "Buffet",
   "Plated",
@@ -30,11 +33,13 @@ const servingStyles = [
   "Family Style"
 ]
 
+// JC: Clean up user input to prevent XSS attacks
 function sanitizeText(text: string) {
   return text.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
 export default function AddListingModal({ isOpen, onClose }: AddListingModalProps) {
+  // JC: Form state variables to store user input
   const [title, setTitle] = useState('')
   const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
@@ -275,7 +280,7 @@ async function handleSubmit(e: React.FormEvent) {
         {/* Close Button */}
         <button
           onClick={handleConfirmClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10 bg-white shadow"
+          className="cursor-pointer absolute top-4 right-4 p-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-300 shadow"
           aria-label="Close modal"
         >
           <X className="w-6 h-6" />
@@ -332,7 +337,7 @@ async function handleSubmit(e: React.FormEvent) {
             <div className="flex gap-4">
               <div className="w-1/2">
                 <label className="block font-medium mb-1" htmlFor="listing-price">
-                  Price Range (₱)<span className="text-red-500">*</span>
+                  Price Range ($)<span className="text-red-500">*</span>
                 </label>
                 <input
                   id="listing-price"
@@ -478,14 +483,14 @@ async function handleSubmit(e: React.FormEvent) {
                 type="button" 
                 variant="secondary" 
                 onClick={handleConfirmClose}
-                className="border border-gray-300 hover:bg-gray-100"
+                className="cursor-pointer border border-gray-300 hover:bg-teal-700 hover:text-white"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 variant="default"
-                className="border border-gray-300 hover:bg-gray-100"
+                className="cursor-pointer bg-teal-50 text-teal-700 border border-gray-300 hover:bg-teal-700 hover:border-teal-700 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
                 disabled={loading}
               >
                 {loading ? "Creating..." : "Add Listing"}
@@ -503,14 +508,14 @@ async function handleSubmit(e: React.FormEvent) {
               </div>
               <div className="flex gap-2 mt-4">
                 <Button 
-                  className="border border-gray-300 hover:bg-gray-100" 
+                  className="cursor-pointer border border-gray-200 hover:bg-teal-700 hover:text-white" 
                   variant="secondary" 
                   onClick={() => setCancelConfirmation(false)}
                   >
                   No
                 </Button>
                 <Button 
-                  className="border border-gray-300 hover:bg-red-300 bg-red-500 text-white" 
+                  className="cursor-pointer bg-red-50 text-red-600 border-red-300 hover:bg-red-600 hover:border-red-600 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md" 
                   variant="destructive" 
                   onClick={() => { setCancelConfirmation(false); 
                   onClose(); }}

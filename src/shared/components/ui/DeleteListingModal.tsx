@@ -6,14 +6,16 @@ import { Button } from '@/shared/components/ui/button'
 import { getListings, deleteListing } from '@/features/services/listing_crud'
 // kvs: Replaced react-toastify with sonner for consistent toast implementation across the app
 import { toast } from 'sonner';
-import { createClient } from '@/shared/lib/supabase/client'
+import { createClient } from '@/shared/lib/supabase/client' // JC: Get user data from database
 
+// JC: Define what props this modal needs
 interface DeleteListingModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
 export default function DeleteListingModal({ isOpen, onClose }: DeleteListingModalProps) {
+  // JC: State to store user listings and selected listing for deletion
   const [listings, setListings] = useState<any[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
@@ -21,6 +23,7 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // JC: Get user login info when modal opens
   useEffect(() => {
     const supabase = createClient();
     
@@ -157,11 +160,11 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
       onClick={handleBackdropClick}
     >
       {/* Main Modal Content */}
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10 bg-white shadow"
+          className="cursor-pointer absolute top-4 right-4 p-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-300 shadow"
           aria-label="Close modal"
         >
           <X className="w-6 h-6" />
@@ -174,34 +177,84 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
               {fetchError}
             </div>
           )}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {listings.length === 0 ? (
-              <div className="text-gray-500 text-center py-8">
-                You have no listings to delete.
+              <div className="flex flex-col items-center justify-center py-16 px-6">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                  <Trash2 className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No listings yet</h3>
+                <p className="text-gray-500 text-center max-w-sm">
+                  You haven't created any listings yet. Create your first listing to get started!
+                </p>
               </div>
             ) : (
-              listings.map(listing => (
-                <div key={listing.id} className="border border-gray-200 rounded-lg p-4 flex flex-col gap-2 bg-gray-50">
-                  <div className="font-semibold">{listing.title}</div>
-                  <div className="text-gray-700 text-sm">{listing.description}</div>
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      className="border border-gray-300 hover:bg-gray-100"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(listing)}
-                      disabled={loading}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" /> Delete
-                    </Button>
+              <div className="grid gap-4">
+                {listings.map(listing => (
+                  <div 
+                    key={listing.id} 
+                    onClick={() => handleDelete(listing)}
+                    className="group relative bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-teal-700 hover:shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-1 cursor-pointer"
+                  >
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="relative overflow-hidden rounded-lg flex-shrink-0">
+                        <img 
+                          src={listing.image_url} 
+                          alt={listing.title} 
+                          className="w-full sm:w-32 sm:h-32 h-48 object-cover transition-transform duration-300 group-hover:scale-105" 
+                        />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="font-bold text-lg text-gray-800 truncate pr-2 group-hover:text-teal-700 transition-colors duration-200">
+                            {listing.title}
+                          </h3>
+                          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="w-2 h-2 bg-teal-700 rounded-full animate-pulse"></div>
+                          </div>
+                        </div>
+                        
+                        {listing.description && (
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                            {listing.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center justify-between">
+                          {listing.price && (
+                            <div className="text-lg font-semibold text-teal-700">
+                              ${listing.price}
+                            </div>
+                          )}
+                          
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(listing);
+                            }}
+                            disabled={loading}
+                            className="cursor-pointer bg-teal-50 text-teal-700 border-teal-700 hover:bg-teal-700 hover:border-teal-700 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> 
+                            Delete Listing
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Decorative corner element */}
+                    <div className="absolute top-0 right-0 w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
           <div className="flex justify-end mt-6">
             <Button
-              className="border border-gray-300 hover:bg-gray-100"
+              className="cursor-pointer border border-gray-300 hover:bg-teal-700 hover:text-white"
               variant="secondary"
               onClick={onClose}
             >
@@ -213,30 +266,40 @@ export default function DeleteListingModal({ isOpen, onClose }: DeleteListingMod
 
       {/* Confirmation Dialog */}
       {deleteTarget && (
-        <div className="fixed inset-0 bg-black/40 z-60 flex items-center justify-center">
-          <div className="bg-white rounded-xl shadow-xl p-8 max-w-xs w-full flex flex-col items-center">
-            <Trash2 className="w-8 h-8 text-red-500 mb-2" />
-            <div className="font-semibold mb-2 text-center">
-              Are you sure you want to delete <br />
-              <span className="text-red-600">{deleteTarget.title}</span>?
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Button
-                className="border border-gray-300 hover:bg-gray-100"
-                variant="secondary"
-                onClick={() => setDeleteTarget(null)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="border border-gray-300 hover:bg-gray-100 bg-red-500 text-white"
-                variant="destructive"
-                onClick={confirmDelete}
-                disabled={loading}
-              >
-                {loading ? "Deleting..." : "Delete"}
-              </Button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-60 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-100">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                <Trash2 className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Delete Listing</h3>
+              <p className="text-gray-600 mb-2">
+                Are you sure you want to delete
+              </p>
+              <p className="font-semibold text-red-600 mb-6">
+                "{deleteTarget.title}"?
+              </p>
+              <p className="text-sm text-gray-500 mb-8">
+                This action cannot be undone. This will permanently delete your listing.
+              </p>
+              <div className="flex gap-3 w-full">
+                <Button
+                  className="cursor-pointer flex-1 border border-gray-300 hover:bg-teal-700 hover:text-white"
+                  variant="secondary"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="cursor-pointer flex-1 text-black border border-gray-300 hover:bg-red-700 hover:text-white hover:border-red-600"
+                  variant="destructive"
+                  onClick={confirmDelete}
+                  disabled={loading}
+                >
+                  {loading ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
