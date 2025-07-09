@@ -5,6 +5,7 @@ import { User, Mail, Phone, MapPin, Calendar, Star, Award, Settings, Edit, Globe
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
+import { fetchFullUser } from "@/features/services/profile_crud"; // CT: Fetch full user profile including email_change
 
 export default function SellerProfilePage() {
   // JC: State to control edit modal open/close
@@ -15,6 +16,9 @@ export default function SellerProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
+
+  //CT: State to store full user data including email_change
+  const [fullUser, setFullUser] = useState<any>(null);
 
   // JC: Get user login info when page loads
   useEffect(() => {
@@ -89,6 +93,11 @@ export default function SellerProfilePage() {
   const handleProfileUpdate = () => {
     // Refresh profile data after update
     fetchProfile();
+
+    //Refresh full user data including email_change
+    refreshFullUser();
+    console.log("Full User Data:", fullUser);
+    console.log("Email_change:", fullUser?.email_change);
   };
 
   // JC: Show loading screen while getting user data
@@ -113,6 +122,19 @@ export default function SellerProfilePage() {
       </div>
     );
   }
+
+  // CT: Fetch full user profile including email_change
+  const refreshFullUser = async () => {
+    try {
+      const fullUserData = await fetchFullUser();
+      setFullUser(fullUserData);
+    } 
+    catch (error) {
+      console.error("Error fetching full user:", error);
+      setFullUser(null);
+    }
+  };
+
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
@@ -218,9 +240,9 @@ export default function SellerProfilePage() {
                     <div>
                       {/* CT: Displays unverified email status if updated email is unverified */}
                       <div className="text-gray-900 flex items-center gap-2">
-                        {user.email_change ? user.email_change : user.email || "No email"}
-                        {!user.email_confirmed_at && (
-                          <span className="ml-2 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">
+                        {fullUser.new_email ? fullUser.new_email : fullUser.email || "No email"}
+                        {fullUser.new_email && (
+                          <span className="ml-8 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">
                             Unverified
                           </span>
                         )}
