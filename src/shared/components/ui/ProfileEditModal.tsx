@@ -3,12 +3,14 @@
 import { useRef, useState, useEffect } from "react";
 import { Camera, User, Mail, Phone, MapPin, Award, Settings, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { updateProfile } from "@/features/services/profile_crud";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   userType: 'seller' | 'customer';
+  userId: string;
   userData?: {
     name: string;
     email: string;
@@ -21,7 +23,7 @@ interface ProfileEditModalProps {
   onSave?: () => void;
 }
 
-export default function ProfileEditModal({ isOpen, onClose, userType, userData, onSave }: ProfileEditModalProps) {
+export default function ProfileEditModal({ isOpen, onClose, userType, userId, userData, onSave }: ProfileEditModalProps) {
   // JC: State to store form data with initial values from props
   const [profilePic, setProfilePic] = useState<string | null>(userData?.profilePic || null);
   const [previewPic, setPreviewPic] = useState<string | null>(userData?.profilePic || null);
@@ -68,9 +70,23 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userData, 
   };
 
   // JC: Save form data when user submits
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement actual save logic to update profile in database
+
+    const newEmail = email !== userData?.email ? email : null;
+  
+    // CT: Logic to update profile in database
+    try {
+      await updateProfile(userId, {
+        full_name: name,
+        email,
+        phone,
+        location,
+        bio,
+        website,
+        avatar_url: profilePic,
+      });
+
     console.log("Profile updated with:", {
       name,
       email,
@@ -80,6 +96,12 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userData, 
       website,
       profilePic
     });
+    } 
+    catch (error) {
+      //Can add additional error handling for user feedback**
+      console.error("Failed to update profile:", error);
+    }
+    
     onSave?.();
     onClose();
   };

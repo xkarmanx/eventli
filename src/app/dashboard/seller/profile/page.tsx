@@ -216,8 +216,15 @@ export default function SellerProfilePage() {
                       <Mail className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-gray-700">Email Address</div>
-                      <div className="text-gray-900">{user.email || "No email"}</div>
+                      {/* CT: Displays unverified email status if updated email is unverified */}
+                      <div className="text-gray-900 flex items-center gap-2">
+                        {user.email || "No email"}
+                        {!user.email_confirmed_at && (
+                          <span className="ml-2 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">
+                            Unverified
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -361,6 +368,7 @@ export default function SellerProfilePage() {
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)}
         userType="seller"
+        userId={profile.id}
         userData={{
           name: profile.full_name || "",
           email: user.email || "",
