@@ -72,8 +72,6 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   // JC: Save form data when user submits
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-
-    const newEmail = email !== userData?.email ? email : null;
   
     // CT: Logic to update profile in database
     try {
@@ -86,6 +84,8 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
         website,
         avatar_url: profilePic,
       });
+
+      setEmail(email); // Update email in state if changed so the UI displayes the latest value instead of the value in the table
 
     console.log("Profile updated with:", {
       name,
