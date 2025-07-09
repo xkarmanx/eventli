@@ -85,8 +85,6 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
         avatar_url: profilePic,
       });
 
-      setEmail(email); // Update email in state if changed so the UI displayes the latest value instead of the value in the table
-
     console.log("Profile updated with:", {
       name,
       email,

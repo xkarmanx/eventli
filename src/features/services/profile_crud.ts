@@ -23,3 +23,11 @@ export async function updateProfile(userId: string, updates: any) {
   if (error) throw error;
   return data;
 }
+
+// CT: Fetches the full user profile including user.email_change which is the main usage
+export async function fetchFullUser() {
+  const supabase = createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return data.user;
+}
