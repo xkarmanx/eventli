@@ -218,7 +218,7 @@ export default function SellerProfilePage() {
                     <div>
                       {/* CT: Displays unverified email status if updated email is unverified */}
                       <div className="text-gray-900 flex items-center gap-2">
-                        {user.email || "No email"}
+                        {user.email_change ? user.email_change : user.email || "No email"}
                         {!user.email_confirmed_at && (
                           <span className="ml-2 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">
                             Unverified
