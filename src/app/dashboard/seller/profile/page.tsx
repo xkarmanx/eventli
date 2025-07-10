@@ -17,7 +17,7 @@ export default function SellerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
 
-  //CT: State to store full user data including email_change
+  //CT: State to store full user data including new_email
   const [fullUser, setFullUser] = useState<any>(null);
 
   // JC: Get user login info when page loads
@@ -240,8 +240,8 @@ export default function SellerProfilePage() {
                     <div>
                       {/* CT: Displays unverified email status if updated email is unverified */}
                       <div className="text-gray-900 flex items-center gap-2">
-                        {fullUser.new_email ? fullUser.new_email : fullUser.email || "No email"}
-                        {fullUser.new_email && (
+                        {fullUser?.new_email || user?.email || "No email"}
+                        {fullUser?.new_email && (
                           <span className="ml-8 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">
                             Unverified
                           </span>
