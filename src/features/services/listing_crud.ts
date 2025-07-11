@@ -228,13 +228,20 @@ export async function uploadListingImage(file: File, listingId: string) {
 }
 
 // kvs: Added new Server Action for getting public listings (no authentication required)
-// FETCH PUBLIC LISTINGS - for homepage/browse page
+// FETCH PUBLIC LISTINGS - for homepage/browse page - accessible to everyone
 export async function getPublicListings(limit?: number) {
   const supabase = await createClient();
   
+  // Query published listings with seller profile information
   let query = supabase
     .from("listings")
-    .select("*")
+    .select(`
+      *,
+      profiles!listings_seller_id_fkey (
+        full_name
+      )
+    `)
+    .eq("is_published", true)
     .order("created_at", { ascending: false });
   
   if (limit) {
@@ -242,6 +249,26 @@ export async function getPublicListings(limit?: number) {
   }
   
   const { data, error } = await query;
-  if (error) throw error;
-  return data as Listing[];
+  
+  if (error) {
+    console.error('Error fetching public listings:', error);
+    return [];
+  }
+  
+  return data as (Listing & { profiles: { full_name: string | null } })[];
+}
+
+// kvs: Added transformer function to convert database listings to Service interface format
+import { Service } from "@/shared/types/service";
+import { transformListingToService } from "@/shared/lib/listingUtils";
+
+// kvs: Enhanced getPublicListings to return Service interface format
+export async function getPublicListingsAsServices(limit?: number): Promise<Service[]> {
+  try {
+    const listings = await getPublicListings(limit);
+    return listings.map(transformListingToService);
+  } catch (error) {
+    console.error('Error in getPublicListingsAsServices:', error);
+    return [];
+  }
 }

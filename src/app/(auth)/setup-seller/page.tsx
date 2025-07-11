@@ -37,7 +37,7 @@ export default async function SetupSellerPage() {
           </Link>
           <CardTitle className="text-xl font-bold text-gray-900 pt-3">Complete Your Profile</CardTitle>
           <CardDescription className="pt-1 text-sm text-gray-600">
-            Let's set up your public profile. This information will be visible to potential customers.
+            Let&apos;s set up your public profile. This information will be visible to potential customers.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 pt-0">
