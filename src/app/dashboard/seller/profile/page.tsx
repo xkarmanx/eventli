@@ -105,6 +105,9 @@ export default function SellerProfilePage() {
     refreshFullUser();
     console.log("Full User Data:", fullUser);
     console.log("New Email:", fullUser?.new_email);
+
+    console.log("Profile Data:", profile);
+    console.log("Profile complete?:", profile.is_setup_complete);
   };
 
   // JC: Show loading screen while getting user data

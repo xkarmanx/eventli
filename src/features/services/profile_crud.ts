@@ -1,9 +1,10 @@
 import { createClient } from "@/shared/lib/supabase/client";
+import type { ProfileUpdate } from "@/shared/components/ui/ProfileEditModal";
+
+const supabase = createClient();
 
 //CT: Allows users to update their profile information
 export async function updateProfile(userId: string, updates: any) {
- const supabase = createClient();
-
   // If email is being updated, handle email change
   if (updates.email) {
     const newEmail = updates.email;
@@ -41,8 +42,34 @@ export async function updateProfile(userId: string, updates: any) {
 
 // CT: Fetches the full user profile including 'new_email' field, which is the main usage
 export async function fetchFullUser() {
-  const supabase = createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) throw error;
   return data.user;
+}
+
+// CT: profile.is_setup_complete will return true if conditions are met
+export async function updateProfileComplete(userId: string, updatedData: ProfileUpdate) {
+  const isProfileComplete =
+    !!updatedData.full_name &&
+    !!updatedData.bio &&
+    !!updatedData.phone &&
+    !!updatedData.location &&
+    !!updatedData.website &&
+    (!!updatedData.email || !!updatedData.pending_email);
+
+  // Update the profiles table
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      ...updatedData,
+      is_setup_complete: isProfileComplete,
+    })
+    .eq("id", userId);
+
+  if (error) {
+    console.error("Error updating profile:", error);
+    return null;
+  }
+
+  return data;
 }

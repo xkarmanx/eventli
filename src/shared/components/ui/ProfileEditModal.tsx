@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Camera, User, Mail, Phone, MapPin, Award, Settings, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { updateProfile } from "@/features/services/profile_crud";
+import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
@@ -21,6 +21,17 @@ interface ProfileEditModalProps {
     profilePic: string;
   };
   onSave?: () => void;
+}
+
+export interface ProfileUpdate {
+  full_name: string;
+  email: string;
+  phone: string;
+  location: string;
+  bio: string;
+  website: string;
+  avatar_url: string | null;
+  pending_email?: string | null;
 }
 
 export default function ProfileEditModal({ isOpen, onClose, userType, userId, userData, onSave }: ProfileEditModalProps) {
@@ -72,28 +83,24 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   // JC: Save form data when user submits
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-  
-    // CT: Logic to update profile in database
-    try {
-      await updateProfile(userId, {
-        full_name: name,
-        email,
-        phone,
-        location,
-        bio,
-        website,
-        avatar_url: profilePic,
-      });
 
-    console.log("Profile updated with:", {
-      name,
+    const updatedData: ProfileUpdate = {
+      full_name: name,
       email,
       phone,
       location,
       bio,
       website,
-      profilePic
-    });
+      avatar_url: profilePic,
+      pending_email: email !== userData?.email ? email : email,
+    };
+  
+    // CT: Logic to update profile in database
+    try {
+      await updateProfile(userId, updatedData);
+      console.log("Profile updated with:", updatedData);
+
+      await updateProfileComplete(userId, updatedData);
     } 
     catch (error) {
       //Can add additional error handling for user feedback**
