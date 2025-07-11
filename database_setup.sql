@@ -416,3 +416,14 @@ ADD COLUMN IF NOT EXISTS num_staff INTEGER;
 
 ALTER TABLE public.listings
 ADD COLUMN IF NOT EXISTS num_guests INTEGER;
+
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Add pending_email & pending_email_requested_at column to profiles
+-- Added by: [Cody Tran], 2024-07-10
+-- Purpose: To store pending email for users that are updating their email
+-- =============================================================================
+
+ALTER TABLE public.profiles
+ADD COLUMN pending_email TEXT,
+ADD COLUMN pending_email_requested_at TIMESTAMP;

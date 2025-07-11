@@ -20,6 +20,13 @@ export default function SellerProfilePage() {
   //CT: State to store full user data including new_email
   const [fullUser, setFullUser] = useState<any>(null);
 
+  //CT: Hold the time period for pending email validity
+  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
+  const now = new Date();
+  const pendingDate = new Date(profile?.pending_email_requested_at || 0);
+  const isPendingStillValid = profile?.pending_email && (now.getTime() - pendingDate.getTime()) < THIRTY_DAYS;
+  const displayEmail = isPendingStillValid ? profile.pending_email : user?.email;
+
   // JC: Get user login info when page loads
   useEffect(() => {
     const supabase = createClient();
@@ -240,9 +247,12 @@ export default function SellerProfilePage() {
                     <div>
                       {/* CT: Displays unverified email status if updated email is unverified */}
                       <div className="text-gray-900 flex items-center gap-2">
-                        {fullUser?.new_email || user?.email || "No email"}
-                        {fullUser?.new_email && (
-                          <span className="ml-8 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">
+                        {displayEmail || "No email"}
+                        {isPendingStillValid && (
+                          <span
+                            className="ml-8 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium"
+                            title="Please verify this email address. A confirmation email was sent."
+                          >
                             Unverified
                           </span>
                         )}
