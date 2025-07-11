@@ -1,4 +1,3 @@
-// app/auth/callback/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,11 +9,26 @@ export default function EmailVerificationCallback() {
   const [status, setStatus] = useState("Verifying...");
   const router = useRouter();
 
+  console.log("URL:", window.location.href);
+  const url = new URL(window.location.href);
+  const hash = url.hash;
+  const error = url.searchParams.get("error");
+  const message = url.searchParams.get("message");
+
+  if (error) {
+    console.error("❌ Supabase error:", error);
+    console.error("❌ Description:", url.searchParams.get("error_description"));
+    setStatus("❌ " + url.searchParams.get("error_description"));
+    return;
+  }
+
   useEffect(() => {
     const supabase = createClient();
 
     async function verifyEmail() {
       const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+      console.log("URL received from Supabase:", window.location.href);
+
       if (error) {
         console.error("Email verification failed:", error.message);
         setStatus("Verification failed. Please try again.");
@@ -47,6 +61,7 @@ export default function EmailVerificationCallback() {
     verifyEmail();
   }, [router]);
 
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-white text-center p-4">
       <div className="text-lg text-gray-700">{status}</div>

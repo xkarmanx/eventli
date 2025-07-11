@@ -104,7 +104,7 @@ export default function SellerProfilePage() {
     //Refresh full user data including email_change
     refreshFullUser();
     console.log("Full User Data:", fullUser);
-    console.log("Email_change:", fullUser?.email_change);
+    console.log("New Email:", fullUser?.new_email);
   };
 
   // JC: Show loading screen while getting user data
@@ -246,15 +246,22 @@ export default function SellerProfilePage() {
                     </div>
                     <div>
                       {/* CT: Displays unverified email status if updated email is unverified */}
-                      <div className="text-gray-900 flex items-center gap-2">
+                      <div className="text-gray-900 flex items-center gap-2 relative"> {/* <-- make this relative */}
                         {displayEmail || "No email"}
                         {isPendingStillValid && (
-                          <span
-                            className="ml-8 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium"
-                            title="Please verify this email address. A confirmation email was sent."
-                          >
-                            Unverified
-                          </span>
+                          <div className="group inline-block relative ml-4"> {/* slightly smaller margin left */}
+                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default">
+                              Unverified
+                            </span>
+                              <div className="absolute left-0 top-full mt-1 w-max max-w-xs whitespace-normal 
+                                bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg 
+                                opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 
+                                border border-gray-700">
+                                Please verify this email address. A confirmation email was sent. 
+                                <br></br><br></br>
+                                If the new email is not verified within 30 days, it will revert back to the original email.
+                              </div>
+                          </div>
                         )}
                       </div>
                     </div>
