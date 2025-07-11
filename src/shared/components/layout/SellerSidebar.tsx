@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut, Menu, X, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { signOut } from '@/features/auth/actions'
 
+// JC: Added TrendingUp icon for boosting feature 
 const navItems = [
   { name: "Dashboard", href: "/dashboard/seller", icon: LayoutDashboard },
   { name: "Listings", href: "/dashboard/seller/listings", icon: List },
+  { name: "Boosting", href: "/dashboard/seller/boosting", icon: TrendingUp },
   { name: "Profile", href: "/dashboard/seller/profile", icon: User },
   { name: "Support", href: "/dashboard/seller/support", icon: LifeBuoy },
 ];
