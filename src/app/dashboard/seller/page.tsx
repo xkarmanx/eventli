@@ -15,7 +15,7 @@ export default function SellerDashboardPage() {
             <div className="p-1.5 sm:p-2 bg-blue-50 rounded-full">
               <LayoutDashboard className="w-6 h-6 sm:w-8 sm:h-8 text-teal-700" />
             </div>
-            Dashboard
+            Overview
           </h1>
           <p className="text-sm sm:text-base lg:text-lg text-gray-600 font-medium">Monitor your business performance and activity</p>
         </div>
@@ -141,7 +141,7 @@ export default function SellerDashboardPage() {
       <Card className="bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 group">
         <CardHeader className="border-b border-gray-100 pb-4">
           <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900">Recent Activity & Notifications</CardTitle>
-          <CardDescription className="text-sm sm:text-base text-gray-600">Stay updated with what's happening</CardDescription>
+          <CardDescription className="text-sm sm:text-base text-gray-600">Stay updated with what&apos;s happening</CardDescription>
         </CardHeader>
         <CardContent className="pt-4 sm:pt-6">
           <ul className="space-y-3 sm:space-y-4">

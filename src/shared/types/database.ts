@@ -27,6 +27,8 @@ export interface Database {
           stripe_customer_id: string | null
           created_at: string | null
           is_setup_complete: boolean | null
+          pending_email: string | null
+          pending_email_requested_at: string | null
         }
         Insert: {
           id: string
@@ -101,6 +103,10 @@ export interface Database {
           views_count: number | null
           created_at: string | null
           updated_at: string | null
+          event_type: string | null
+          serving_style: string | null
+          num_staff: number | null
+          num_guests: number | null
         }
         Insert: {
           id?: string
@@ -116,6 +122,10 @@ export interface Database {
           views_count?: number | null
           created_at?: string | null
           updated_at?: string | null
+          event_type?: string | null
+          serving_style?: string | null
+          num_staff?: number | null
+          num_guests?: number | null
         }
         Update: {
           id?: string
@@ -131,6 +141,10 @@ export interface Database {
           views_count?: number | null
           created_at?: string | null
           updated_at?: string | null
+          event_type?: string | null
+          serving_style?: string | null
+          num_staff?: number | null
+          num_guests?: number | null
         }
         Relationships: [
           {

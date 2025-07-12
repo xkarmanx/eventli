@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, MapPin, Users, Clock, Building2, CheckCircle } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/shared/components/ui/button'
-import { Service } from '@/shared/lib/mockData'
+import { Service } from '@/shared/types/service'
 import BookingModal from './BookingModal'
 
 interface ListingModalProps {

@@ -1,66 +1,67 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useRef } from 'react'
-// kvs: Removed react-toastify imports and replaced with sonner for consistent toast implementation
-import { toast } from 'sonner'
-import { X, Upload } from 'lucide-react'
-import { Button } from '@/shared/components/ui/button'
-import { createListing, uploadListingImage, updateListing } from "@/features/services/listing_crud";
+import { useState, useEffect, useRef } from "react";
+import { X, Upload } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { updateListing, uploadListingImage } from "@/features/services/listing_crud";
 // kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
+// kvs: Replaced react-toastify with sonner for consistent toast implementation across the app
+import { toast } from 'sonner';
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client'
 
-// JC: Define what props this modal needs to work
-interface AddListingModalProps {
-  isOpen: boolean
-  onClose: () => void
+// JC: Define what props this edit modal needs
+interface EditListingFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  listing: any;
+  onUpdated: (updatedListing: any) => void;
 }
 
-// JC: Available event types for dropdowns
+// JC: Available event types for editing
 const eventTypes = [
   "Birthday",
   "Wedding",
   "Corporate",
   "Concert",
-  "Other"
-]
+  "Other",
+];
 
-// JC: Available serving styles for dropdowns
+// JC: Available serving styles for editing
 const servingStyles = [
   "Buffet",
   "Plated",
   "Cocktail",
-  "Family Style"
-]
+  "Family Style",
+];
 
-// JC: Clean up user input to prevent XSS attacks
+// JC: Sanitize user input for security
 function sanitizeText(text: string) {
-  return text.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  return text.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export default function AddListingModal({ isOpen, onClose }: AddListingModalProps) {
-  // JC: Form state variables to store user input
-  const [title, setTitle] = useState('')
-  const [city, setCity] = useState('')
-  const [address, setAddress] = useState('')
-  const [priceRange, setPriceRange] = useState('')
-  const [eventType, setEventType] = useState('')
-  const [customEventType, setCustomEventType] = useState('')
-  const [servingStyle, setServingStyle] = useState('')
-  const [numStaff, setNumStaff] = useState('')
-  const [numGuests, setNumGuests] = useState('')
-  const [image, setImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [description, setDescription] = useState('')
+export default function EditListingFormModal({ isOpen, onClose, listing, onUpdated }: EditListingFormModalProps) {
+  // JC: Pre-populate form fields with existing listing data
+  const [title, setTitle] = useState(listing.title || "");
+  const [city, setCity] = useState(listing.location?.split(", ")[0] || "");
+  const [address, setAddress] = useState(listing.location?.split(", ")[1] || "");
+  const [priceRange, setPriceRange] = useState(listing.price?.toString() || "");
+  const [eventType, setEventType] = useState(listing.event_type || "");
+  const [customEventType, setCustomEventType] = useState(eventTypes.includes(listing.event_type) ? "" : listing.event_type || "");
+  const [servingStyle, setServingStyle] = useState(listing.serving_style || "");
+  const [numStaff, setNumStaff] = useState(listing.num_staff?.toString() || "");
+  const [numGuests, setNumGuests] = useState(listing.num_guests?.toString() || "");
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(listing.image_url || null);
+  const [description, setDescription] = useState(listing.description || "");
 
   const [loading, setLoading] = useState(false);
-
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   const [cancelConfirmation, setCancelConfirmation] = useState(false)
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-
+  
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   // kvs: Replaced useSession() with proper Supabase auth state management
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -103,38 +104,23 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
   }, []);
 
   useEffect(() => {
-    if (!isOpen) return
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleEscKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', handleEscKey)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, onClose])
+    if (!isOpen) return;
+    setTitle(listing.title || "");
+    setCity(listing.location?.split(", ")[0] || "");
+    setAddress(listing.location?.split(", ")[1] || "");
+    setPriceRange(listing.price?.toString() || "");
+    setEventType(listing.event_type || "");
+    setCustomEventType(eventTypes.includes(listing.event_type) ? "" : listing.event_type || "");
+    setServingStyle(listing.serving_style || "");
+    setNumStaff(listing.num_staff?.toString() || "");
+    setNumGuests(listing.num_guests?.toString() || "");
+    setImage(null);
+    setImagePreview(listing.image_url || null);
+    setDescription(listing.description || "");
+    setErrors({});
+  }, [isOpen, listing]);
 
-  useEffect(() => {
-    // Reset form when modal closes
-    if (!isOpen) {
-      setTitle('')
-      setCity('')
-      setAddress('')
-      setPriceRange('')
-      setEventType('')
-      setCustomEventType('')
-      setServingStyle('')
-      setNumStaff('')
-      setNumGuests('')
-      setImage(null)
-      setImagePreview(null)
-      setDescription('')
-      setErrors({})
-    }
-  }, [isOpen])
-
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   // kvs: Added authentication checks to prevent unauthorized access
   if (authLoading) {
@@ -161,56 +147,47 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file && (file.type.startsWith("image/"))) {
-      // kvs: Added client-side file size validation for better user experience
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        toast.error("File size must be less than 10MB");
-        return;
-      }
-      
-      setImage(file)
-      setImagePreview(URL.createObjectURL(file))
-    } else {
-      setImage(null)
-      setImagePreview(null)
-    }
-  }
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    } 
+  };
 
   const validate = () => {
-    const newErrors: {[key: string]: string} = {}
-    if (!title.trim()) newErrors.title = "Title is required"
-    if (!city.trim()) newErrors.city = "City is required"
-    if (!address.trim()) newErrors.address = "Address is required"
-    if (!priceRange || isNaN(Number(priceRange)) || Number(priceRange) < 1) newErrors.priceRange = "Valid price range is required"
-    if (!eventType) newErrors.eventType = "Event type is required"
-    if (eventType === "Other" && !customEventType.trim()) newErrors.customEventType = "Please specify the event type"
-    if (!servingStyle) newErrors.servingStyle = "Serving style is required"
-    if (!numStaff || isNaN(Number(numStaff)) || Number(numStaff) < 1) newErrors.numStaff = "Valid number of staff is required"
-    if (!numGuests || isNaN(Number(numGuests)) || Number(numGuests) < 1) newErrors.numGuests = "Valid number of guests is required"
-    if (!image) newErrors.image = "Image is required"
-    if (!description.trim()) newErrors.description = "Description is required"
-    if (description.length > 500) newErrors.description = "Description must be 500 characters or less"
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    const newErrors: { [key: string]: string } = {};
+    if (!title.trim()) newErrors.title = "Title is required";
+    if (!city.trim()) newErrors.city = "City is required";
+    if (!address.trim()) newErrors.address = "Address is required";
+    if (!priceRange || isNaN(Number(priceRange)) || Number(priceRange) < 1) newErrors.priceRange = "Valid price range is required";
+    if (!eventType) newErrors.eventType = "Event type is required";
+    if (eventType === "Other" && !customEventType.trim()) newErrors.customEventType = "Please specify the event type";
+    if (!servingStyle) newErrors.servingStyle = "Serving style is required";
+    if (!numStaff || isNaN(Number(numStaff)) || Number(numStaff) < 1) newErrors.numStaff = "Valid number of staff is required";
+    if (!numGuests || isNaN(Number(numGuests)) || Number(numGuests) < 1) newErrors.numGuests = "Valid number of guests is required";
+    if (!description.trim()) newErrors.description = "Description is required";
+    if (description.length > 500) newErrors.description = "Description must be 500 characters or less";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleConfirmClose = () => {
-    if (
-      title ||
-      city ||
-      address ||
-      priceRange ||
-      eventType ||
-      customEventType ||
-      servingStyle ||
-      numStaff ||
-      numGuests ||
-      image ||
-      description
-    ) 
-    {
+    const hasChanged =
+        title !== (listing.title || "") ||
+        city !== (listing.location?.split(", ")[0] || "") ||
+        address !== (listing.location?.split(", ")[1] || "") ||
+        priceRange !== (listing.price?.toString() || "") ||
+        eventType !== (listing.event_type || "") ||
+        (eventType === "Other"
+        ? customEventType !== (eventTypes.includes(listing.event_type) ? "" : listing.event_type || "")
+        : false) ||
+        servingStyle !== (listing.serving_style || "") ||
+        numStaff !== (listing.num_staff?.toString() || "") ||
+        numGuests !== (listing.num_guests?.toString() || "") ||
+        description !== (listing.description || "") ||
+        image !== null;
+
+    if (hasChanged) {
       setCancelConfirmation(true);
     }
     else {
@@ -218,84 +195,68 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     }
   }
 
-  // JC: Handle clicking outside the modal to close it I removed it by accident
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleConfirmClose();
-    }
-  }
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
 
-async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-
-  // kvs: Updated to use user state instead of session?.user?.id
-  if (!user?.id) {
-    // kvs: Replaced alert with sonner toast for consistent error messaging
-    toast.error("User not logged in");
-    return;
-  }
-
-  setSubmitError(null);
-
-  if (!validate()) return;
-  setLoading(true);
-
-  try {
-    // 1. Create the listing without image_url to get the id
-    const listingData = {
-      // kvs: Updated to use user.id instead of session.user.id
-      seller_id: user.id,
-      title,
-      description,
-      price: Number(priceRange),
-      location: `${city}, ${address}`,
-      event_type: eventType === "Other" ? customEventType : eventType,
-      serving_style: servingStyle,
-      num_staff: Number(numStaff),
-      num_guests: Number(numGuests),
-    };
-    console.log("listingData", listingData);
-    const createdListing = await createListing(listingData);
-
-    // 2. Upload image and update listing with image_url
-    if (image && createdListing.id) {
-      const imageUrl = await uploadListingImage(image, createdListing.id);
-      await updateListing(createdListing.id, { image_url: imageUrl });
+    // kvs: Added user authentication check for form submission
+    if (!user?.id) {
+      // kvs: Replaced alert with sonner toast for consistent error messaging
+      toast.error("User not logged in");
+      return;
     }
 
-    onClose();
-    // kvs: Replaced react-toastify with sonner toast for consistent success messaging
-    toast.success("Listing created successfully!");
-  } 
-  catch (err: any) {
-    setSubmitError(err.message || "Failed to create listing.");
-    // kvs: Added sonner toast for error messaging consistency
-    toast.error(err.message || "Failed to create listing");
-  } 
-  finally {
-    setLoading(false);
+    setSubmitError(null);
+
+    if (!validate()) return;
+    setLoading(true);
+
+    try {
+      const updates: any = {
+        title,
+        description,
+        price: Number(priceRange),
+        location: `${city}, ${address}`,
+        event_type: eventType === "Other" ? customEventType : eventType,
+        serving_style: servingStyle,
+        num_staff: Number(numStaff),
+        num_guests: Number(numGuests),
+      };
+      if (image) {
+        const imageUrl = await uploadListingImage(image, listing.id);
+        updates.image_url = imageUrl;
+      }
+      const updated = await updateListing(listing.id, updates);
+      // kvs: Replaced react-toastify with sonner toast for consistent success messaging
+      toast.success("Listing updated successfully!");
+      onUpdated(updated);
+      onClose();
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to update listing.");
+      // kvs: Added sonner toast for error messaging consistency
+      toast.error(err.message || "Failed to update listing");
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   return (
     <div
       className="fixed inset-0 bg-gray-800/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300"
       role="dialog"
       aria-modal="true"
-      onClick={handleBackdropClick}
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
         {/* Close Button */}
         <button
           onClick={handleConfirmClose}
-          className="cursor-pointer absolute top-4 right-4 p-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-300 shadow"
+          className="cursor-pointer absolute top-4 right-4 p-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-200 shadow"
           aria-label="Close modal"
         >
           <X className="w-6 h-6" />
         </button>
         {/* Modal Content */}
         <div className="p-8">
-          <h2 className="text-2xl font-bold mb-6">Add a Listing</h2>
+          <h2 className="text-2xl font-bold mb-6">Edit Listing</h2>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-title">
@@ -345,7 +306,7 @@ async function handleSubmit(e: React.FormEvent) {
             <div className="flex gap-4">
               <div className="w-1/2">
                 <label className="block font-medium mb-1" htmlFor="listing-price">
-                  Price Range ($)<span className="text-red-500">*</span>
+                  Price Range (₱)<span className="text-red-500">*</span>
                 </label>
                 <input
                   id="listing-price"
@@ -444,7 +405,7 @@ async function handleSubmit(e: React.FormEvent) {
             </div>
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-image">
-                Image<span className="text-red-500">*</span>
+                Image
               </label>
               <div className="flex gap-4 items-center">
                 <input
@@ -487,21 +448,21 @@ async function handleSubmit(e: React.FormEvent) {
               {errors.description && <div className="text-sm text-red-600 mt-1">{errors.description}</div>}
             </div>
             <div className="flex gap-2 justify-end">
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={handleConfirmClose}
                 className="cursor-pointer border border-gray-300 hover:bg-teal-700 hover:text-white"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 variant="default"
-                className="cursor-pointer bg-teal-50 text-teal-700 border border-gray-300 hover:bg-teal-700 hover:border-teal-700 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
+                className="cursor-pointer bg-teal-50 text-teal-700 border-teal-700 hover:bg-teal-700 hover:border-teal-700 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
                 disabled={loading}
               >
-                {loading ? "Creating..." : "Add Listing"}
+                {loading ? "Saving..." : "Save Changes"}
               </Button>
             </div>
             {submitError && <div className="text-sm text-red-600 mt-2">{submitError}</div>}
@@ -516,7 +477,7 @@ async function handleSubmit(e: React.FormEvent) {
               </div>
               <div className="flex gap-2 mt-4">
                 <Button 
-                  className="cursor-pointer border border-gray-200 hover:bg-teal-700 hover:text-white" 
+                  className="cursor-pointer border border-gray-300 hover:bg-teal-700 hover:text-white" 
                   variant="secondary" 
                   onClick={() => setCancelConfirmation(false)}
                   >
@@ -536,5 +497,5 @@ async function handleSubmit(e: React.FormEvent) {
         )}
       </div>
     </div>
-  )
+  );
 }

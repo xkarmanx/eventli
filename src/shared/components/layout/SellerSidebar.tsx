@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { signOut } from '@/features/auth/actions'
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard/seller", icon: LayoutDashboard },
@@ -147,23 +148,22 @@ export default function SellerSidebar() {
 
       {/* Footer Section - Logout Button */}
       <div className="mt-auto pt-4 border-t border-gray-200">
-        <a
-          href="/api/auth/signout"
-          className={`group flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg transition-all duration-200 ease-in-out text-gray-700 hover:bg-red-50 hover:text-red-600 cursor-pointer text-sm sm:text-base
-            ${collapsed ? "justify-center px-2" : ""}
-          `}
-          title={collapsed ? "Logout" : undefined}
-        >
-          <LogOut 
-            size={20} 
-            className="shrink-0 text-gray-600 group-hover:text-red-600 transition-colors duration-200" 
-          />
-          {!collapsed && (
-            <span className="font-medium transition-all duration-200">
-              Logout
-            </span>
-          )}
-        </a>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="w-full group flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg transition-all duration-200 ease-in-out text-gray-700 hover:bg-red-50 hover:text-red-600 cursor-pointer text-sm sm:text-base"
+          >
+            <LogOut 
+              size={20} 
+              className="shrink-0 text-gray-600 group-hover:text-red-600 transition-colors duration-200" 
+            />
+            {!collapsed && (
+              <span className="font-medium transition-all duration-200">
+                Logout
+              </span>
+            )}
+          </button>
+        </form>
       </div>
     </aside>
     </>

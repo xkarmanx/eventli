@@ -397,3 +397,33 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Add event_type, serving_style, num_staff, num_guests to listings
+-- Added by: [Cody Tran], 2024-06-27
+-- Purpose: To support event type, serving style, staff, and guest count in listings
+-- =============================================================================
+
+ALTER TABLE public.listings
+ADD COLUMN IF NOT EXISTS event_type TEXT;
+
+ALTER TABLE public.listings
+ADD COLUMN IF NOT EXISTS serving_style TEXT;
+
+ALTER TABLE public.listings
+ADD COLUMN IF NOT EXISTS num_staff INTEGER;
+
+ALTER TABLE public.listings
+ADD COLUMN IF NOT EXISTS num_guests INTEGER;
+
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Add pending_email & pending_email_requested_at column to profiles
+-- Added by: [Cody Tran], 2024-07-10
+-- Purpose: To store pending email for users that are updating their email
+-- =============================================================================
+
+ALTER TABLE public.profiles
+ADD COLUMN pending_email TEXT,
+ADD COLUMN pending_email_requested_at TIMESTAMP;
