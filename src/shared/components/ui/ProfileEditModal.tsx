@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Camera, User, Mail, Phone, MapPin, Award, Settings, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
+import { updateEmail, updateProfileComplete } from "@/features/services/profile_crud";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
@@ -95,7 +95,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   
     // CT: Logic to update profile in database
     try {
-      await updateProfile(userId, updatedData);
+      await updateEmail(userId, updatedData);
       await updateProfileComplete(userId, updatedData);
     } 
     catch (error) {

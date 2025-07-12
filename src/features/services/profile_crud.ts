@@ -4,27 +4,29 @@ import type { ProfileUpdate } from "@/shared/components/ui/ProfileEditModal";
 const supabase = createClient();
 
 //CT: Allows users to update their profile information
-export async function updateProfile(userId: string, updates: any) {
+export async function updateEmail(userId: string, updates: any) {
   // If email is being updated, handle email change
   if (updates.email) {
     const newEmail = updates.email;
 
-    // 1. Update email using Supabase Auth
     const { error: emailError } = await supabase.auth.updateUser({ email: newEmail });
     if (emailError) throw emailError;
 
-    // 2. Save pending email info to profiles table
+    const { data: authUserData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+
+    const isNewEmailDifferent = authUserData?.user?.email !== newEmail;
+
     const { error: pendingEmailError } = await supabase
       .from("profiles")
       .update({
-        pending_email: newEmail,
-        pending_email_requested_at: new Date().toISOString(),
+        pending_email: isNewEmailDifferent ? newEmail : null,
+        pending_email_requested_at: isNewEmailDifferent ? new Date().toISOString() : null,
       })
       .eq("id", userId);
 
     if (pendingEmailError) throw pendingEmailError;
 
-    // 3. Remove email from the updates object so it doesn't overwrite in `profiles`
     delete updates.email;
   }
 
