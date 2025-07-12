@@ -15,7 +15,7 @@ export default function SellerDashboardPage() {
             <div className="p-1.5 sm:p-2 bg-blue-50 rounded-full">
               <LayoutDashboard className="w-6 h-6 sm:w-8 sm:h-8 text-teal-700" />
             </div>
-            Dashboard
+            Overview
           </h1>
           <p className="text-sm sm:text-base lg:text-lg text-gray-600 font-medium">Monitor your business performance and activity</p>
         </div>

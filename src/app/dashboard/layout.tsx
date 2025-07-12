@@ -1,4 +1,5 @@
 import SellerSidebar from "@/shared/components/layout/SellerSidebar";
+import DashboardHeader from "@/shared/components/layout/DashboardHeader"; // JC: Reusable header component for dashboard
 import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
 import CustomerSidebar from "@/shared/components/layout/CustomerSidebar";
@@ -19,7 +20,7 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  // Fetch user profile to determine role -Joshua :)
+  // Fetch user profile to determine role - JC: Check user role to show correct sidebar
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
@@ -33,7 +34,7 @@ export default async function DashboardLayout({
   // but for now, we'll let individual pages handle their content.
 
 
-  //I added this so it renders the appropriate sidebar according to which user role the person is logged in -Joshua 
+  //JC: Show different sidebar based on user role - render customer or seller sidebar
   const isCustomer = profile.role === "customer";
 
   return (
@@ -47,9 +48,19 @@ export default async function DashboardLayout({
       </div>
       
       {/* Main content area */}
-      <main className="flex-1 w-full min-w-0 p-3 sm:p-4 md:p-6 lg:p-8">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Dashboard Header */}
+        <DashboardHeader 
+          userType={isCustomer ? "customer" : "seller"}
+          title="Dashboard"
+          subtitle={`Welcome back! Manage your ${isCustomer ? "bookings" : "listings"} and profile.`}
+        />
+        
+        {/* Page Content */}
+        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
