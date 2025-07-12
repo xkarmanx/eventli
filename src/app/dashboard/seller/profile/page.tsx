@@ -228,10 +228,10 @@ export default function SellerProfilePage() {
                     </div>
                     <div>
                       {/* CT: Displays unverified email status if updated email is unverified */}
-                      <div className="text-gray-900 flex items-center gap-2 relative"> {/* <-- make this relative */}
+                      <div className="text-gray-900 flex items-center gap-2 relative">
                         {displayEmail || "No email"}
                         {isPendingStillValid && (
-                          <div className="group inline-block relative ml-4"> {/* slightly smaller margin left */}
+                          <div className="group inline-block relative ml-4">
                             <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default">
                               Unverified
                             </span>
@@ -392,7 +392,7 @@ export default function SellerProfilePage() {
         userId={profile.id}
         userData={{
           name: profile.full_name || "",
-          email: user.email || "",
+          email: displayEmail || "",
           phone: profile.phone || "",
           location: profile.location || "",
           bio: profile.bio || "",

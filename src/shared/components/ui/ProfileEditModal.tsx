@@ -102,7 +102,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       //Can add additional error handling for user feedback**
       console.error("Failed to update profile:", error);
     }
-    
+
     onSave?.();
     onClose();
   };

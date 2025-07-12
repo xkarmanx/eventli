@@ -30,7 +30,6 @@ export async function updateEmail(userId: string, updates: any) {
     delete updates.email;
   }
 
-  // 4. Update the remaining profile fields
   const { data, error } = await supabase
     .from("profiles")
     .update(updates)
