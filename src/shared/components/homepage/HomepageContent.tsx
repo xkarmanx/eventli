@@ -1,0 +1,74 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Navbar from "@/shared/components/ui/Navbar"
+import CategoryNavigation from "@/shared/components/ui/CategoryNavigation"
+import ServicesGrid from "@/shared/components/ui/ServicesGrid"
+import { Service } from "@/shared/types/service"
+import { FilterValues } from "@/shared/components/ui/FilterModal"
+
+interface HomepageContentProps {
+  initialServices: Service[]
+}
+
+export default function HomepageContent({ initialServices }: HomepageContentProps) {
+  const [filteredServices, setFilteredServices] = useState<Service[]>(initialServices)
+
+  // Update filteredServices when initialServices changes
+  useEffect(() => {
+    setFilteredServices(initialServices)
+  }, [initialServices])
+
+  const handleFilterChange = (filters: FilterValues) => {
+    let filtered = [...initialServices]
+
+    // Filter by guest number
+    if (filters.guestNumber) {
+      filtered = filtered.filter(service => {
+        const guestText = service.guests.toLowerCase()
+        if (filters.guestNumber === 'under-20') return guestText.includes('20') || guestText.includes('10') || guestText.includes('15')
+        if (filters.guestNumber === '20-40') return guestText.includes('40') || guestText.includes('30') || guestText.includes('25')
+        if (filters.guestNumber === '40-60') return guestText.includes('60') || guestText.includes('50')
+        if (filters.guestNumber === '60-100') return guestText.includes('100') || guestText.includes('80') || guestText.includes('70')
+        if (filters.guestNumber === 'over-100') return guestText.includes('100') || guestText.includes('150') || guestText.includes('200')
+        return true
+      })
+    }
+
+    // Filter by price range - Updated to handle both old and new price formats
+    if (filters.priceRange) {
+      filtered = filtered.filter(service => {
+        const priceText = service.price.toLowerCase()
+        
+        // Handle "price on request" case - include in all ranges
+        if (priceText.includes('price on request') || priceText.includes('request')) {
+          return true
+        }
+        
+        // Extract numeric values from price string
+        const priceNumbers = priceText.match(/\d+/g)?.map(Number) || []
+        if (priceNumbers.length === 0) return true // If no numbers found, include in all ranges
+        
+        const maxPrice = Math.max(...priceNumbers)
+        const minPrice = Math.min(...priceNumbers)
+        
+        if (filters.priceRange === 'under-5000') return maxPrice < 5000
+        if (filters.priceRange === '5000-10000') return minPrice >= 5000 && maxPrice <= 10000
+        if (filters.priceRange === '10000-20000') return minPrice >= 10000 && maxPrice <= 20000
+        if (filters.priceRange === '20000-30000') return minPrice >= 20000 && maxPrice <= 30000
+        if (filters.priceRange === 'over-30000') return minPrice > 30000
+        return true
+      })
+    }
+
+    setFilteredServices(filtered)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar onFilterChange={handleFilterChange} />
+      <CategoryNavigation />
+      <ServicesGrid services={filteredServices} />
+    </div>
+  )
+}

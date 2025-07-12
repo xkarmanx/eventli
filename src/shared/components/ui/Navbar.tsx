@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Search, Filter } from "lucide-react"
-import { Button } from "@/shared/components/ui/button" // ✅ CHANGED: Import from ui/button instead of core/Button
+import { Button } from "@/shared/components/ui/button" 
 import Image from "next/image"
 import Link from "next/link"
 import AuthModal from "./AuthModal"
