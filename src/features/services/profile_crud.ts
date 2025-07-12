@@ -40,24 +40,43 @@ export async function updateProfile(userId: string, updates: any) {
   return data;
 }
 
-// CT: Fetches the full user profile including 'new_email' field, which is the main usage
-export async function fetchFullUser() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
-  return data.user;
-}
 
 // CT: profile.is_setup_complete will return true if conditions are met
 export async function updateProfileComplete(userId: string, updatedData: ProfileUpdate) {
+  const { data: authUser, error: userError } = await supabase.auth.getUser();
+  if (userError || !authUser?.user?.email) {
+    console.error("Failed to fetch current authenticated user.");
+    return null;
+  }
+  const verifiedEmail = authUser.user.email;
+
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("pending_email, pending_email_requested_at")
+    .eq("id", userId)
+    .single();
+
+  if (profileError) {
+    console.error("Failed to fetch profile data:", profileError);
+    return null;
+  }
+
+  const isPending = profileData?.pending_email && profileData.pending_email !== verifiedEmail;
+  const isWithin30Days =
+    isPending &&
+    new Date().getTime() - new Date(profileData.pending_email_requested_at).getTime() < 30 * 24 * 60 * 60 * 1000;
+
+  const emailIsVerified = !isPending || !isWithin30Days;
+
   const isProfileComplete =
     !!updatedData.full_name &&
-    !!updatedData.bio &&
     !!updatedData.phone &&
     !!updatedData.location &&
+    !!updatedData.bio &&
     !!updatedData.website &&
-    (!!updatedData.email || !!updatedData.pending_email);
+    !!updatedData.avatar_url &&
+    emailIsVerified;
 
-  // Update the profiles table
   const { data, error } = await supabase
     .from("profiles")
     .update({

@@ -31,7 +31,6 @@ export interface ProfileUpdate {
   bio: string;
   website: string;
   avatar_url: string | null;
-  pending_email?: string | null;
 }
 
 export default function ProfileEditModal({ isOpen, onClose, userType, userId, userData, onSave }: ProfileEditModalProps) {
@@ -92,14 +91,11 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       bio,
       website,
       avatar_url: profilePic,
-      pending_email: email !== userData?.email ? email : email,
     };
   
     // CT: Logic to update profile in database
     try {
       await updateProfile(userId, updatedData);
-      console.log("Profile updated with:", updatedData);
-
       await updateProfileComplete(userId, updatedData);
     } 
     catch (error) {

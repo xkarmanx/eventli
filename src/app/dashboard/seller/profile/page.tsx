@@ -5,7 +5,6 @@ import { User, Mail, Phone, MapPin, Calendar, Star, Award, Settings, Edit, Globe
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
-import { fetchFullUser } from "@/features/services/profile_crud"; // CT: Fetch full user profile including email_change
 
 export default function SellerProfilePage() {
   // JC: State to control edit modal open/close
@@ -16,9 +15,6 @@ export default function SellerProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
-
-  //CT: State to store full user data including new_email
-  const [fullUser, setFullUser] = useState<any>(null);
 
   //CT: Hold the time period for pending email validity
   const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
@@ -101,11 +97,6 @@ export default function SellerProfilePage() {
     // Refresh profile data after update
     fetchProfile();
 
-    //Refresh full user data including email_change
-    refreshFullUser();
-    console.log("Full User Data:", fullUser);
-    console.log("New Email:", fullUser?.new_email);
-
     console.log("Profile Data:", profile);
     console.log("Profile complete?:", profile.is_setup_complete);
   };
@@ -132,18 +123,6 @@ export default function SellerProfilePage() {
       </div>
     );
   }
-
-  // CT: Fetch full user profile including email_change
-  const refreshFullUser = async () => {
-    try {
-      const fullUserData = await fetchFullUser();
-      setFullUser(fullUserData);
-    } 
-    catch (error) {
-      console.error("Error fetching full user:", error);
-      setFullUser(null);
-    }
-  };
 
 
   return (
