@@ -101,6 +101,10 @@ export interface Database {
           views_count: number | null
           created_at: string | null
           updated_at: string | null
+          event_type: string | null
+          serving_style: string | null
+          num_staff: number | null
+          num_guests: number | null
         }
         Insert: {
           id?: string
@@ -116,6 +120,10 @@ export interface Database {
           views_count?: number | null
           created_at?: string | null
           updated_at?: string | null
+          event_type?: string | null
+          serving_style?: string | null
+          num_staff?: number | null
+          num_guests?: number | null
         }
         Update: {
           id?: string
@@ -131,6 +139,10 @@ export interface Database {
           views_count?: number | null
           created_at?: string | null
           updated_at?: string | null
+          event_type?: string | null
+          serving_style?: string | null
+          num_staff?: number | null
+          num_guests?: number | null
         }
         Relationships: [
           {

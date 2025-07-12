@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import AddListingModal from "@/shared/components/ui/AddListingModal";
 import EditListingModal from "@/shared/components/ui/EditListingModal";
 import DeleteListingModal from "@/shared/components/ui/DeleteListingModal";
+// kvs: Removed react-toastify imports - no longer needed as all modals use Sonner toast
 
 export default function ListingsPage() {
   const [addOpen, setAddOpen] = useState(false);
@@ -106,6 +107,8 @@ export default function ListingsPage() {
       <AddListingModal isOpen={addOpen} onClose={() => setAddOpen(false)} />
       <EditListingModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
       <DeleteListingModal isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} />
+
+      {/* kvs: Removed ToastContainer as all toast notifications now use Sonner which is globally configured in layout.tsx */}
     </div>
   );
 }
