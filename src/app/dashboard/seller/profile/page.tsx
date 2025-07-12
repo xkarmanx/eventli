@@ -16,6 +16,13 @@ export default function SellerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
 
+  //CT: Hold the time period for pending email validity
+  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
+  const now = new Date();
+  const pendingDate = new Date(profile?.pending_email_requested_at || 0);
+  const isPendingStillValid = profile?.pending_email && (now.getTime() - pendingDate.getTime()) < THIRTY_DAYS;
+  const displayEmail = isPendingStillValid ? profile.pending_email : user?.email;
+
   // JC: Get user login info when page loads
   useEffect(() => {
     const supabase = createClient();
@@ -89,6 +96,9 @@ export default function SellerProfilePage() {
   const handleProfileUpdate = () => {
     // Refresh profile data after update
     fetchProfile();
+
+    console.log("Profile Data:", profile);
+    console.log("Profile complete?:", profile.is_setup_complete);
   };
 
   // JC: Show loading screen while getting user data
@@ -113,6 +123,7 @@ export default function SellerProfilePage() {
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
@@ -216,8 +227,25 @@ export default function SellerProfilePage() {
                       <Mail className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-gray-700">Email Address</div>
-                      <div className="text-gray-900">{user.email || "No email"}</div>
+                      {/* CT: Displays unverified email status if updated email is unverified */}
+                      <div className="text-gray-900 flex items-center gap-2 relative">
+                        {displayEmail || "No email"}
+                        {isPendingStillValid && (
+                          <div className="group inline-block relative ml-4">
+                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default">
+                              Unverified
+                            </span>
+                              <div className="absolute left-0 top-full mt-1 w-max max-w-xs whitespace-normal 
+                                bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg 
+                                opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 
+                                border border-gray-700">
+                                Please verify this email address. A confirmation email was sent. 
+                                <br></br><br></br>
+                                If the new email is not verified within 30 days, it will revert back to the original email.
+                              </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -361,9 +389,10 @@ export default function SellerProfilePage() {
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)}
         userType="seller"
+        userId={profile.id}
         userData={{
           name: profile.full_name || "",
-          email: user.email || "",
+          email: displayEmail || "",
           phone: profile.phone || "",
           location: profile.location || "",
           bio: profile.bio || "",
