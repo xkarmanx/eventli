@@ -53,12 +53,16 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
 
   // CT: stores the image file for upload
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // CT: Track if the user has edited their email so useEffect doesnt override it
+  const [hasEditedEmail, setHasEditedEmail] = useState(false);
   
   // JC: Update form when new user data comes in
   useEffect(() => {
     if (userData) {
       setName(userData.name || "");
-      setEmail(userData.email || "");
+      if (!hasEditedEmail) 
+        setEmail(userData.email || "");
       setPhone(userData.phone || "");
       setLocation(userData.location || "");
       setBio(userData.bio || "");
@@ -66,7 +70,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       setProfilePic(userData.profilePic || null);
       setPreviewPic(userData.profilePic || null);
     }
-  }, [userData]);
+  }, [userData, hasEditedEmail]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -265,7 +269,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                         id="email"
                         type="email"
                         value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={e => {
+                          setHasEditedEmail(true);
+                          setEmail(e.target.value)}}
                         className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
                         placeholder="Enter your email"
                       />
