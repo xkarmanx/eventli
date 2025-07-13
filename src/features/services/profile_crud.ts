@@ -1,10 +1,9 @@
 import { createClient } from "@/shared/lib/supabase/client";
-import type { ProfileUpdate } from "@/shared/components/ui/ProfileEditModal";
 
 const supabase = createClient();
 
 //CT: Allows users to update their profile information
-export async function updateEmail(userId: string, updates: any) {
+export async function updateProfile(userId: string, updates: any) {
   // If email is being updated, handle email change
   if (updates.email) {
     const newEmail = updates.email;
@@ -39,7 +38,7 @@ export async function updateEmail(userId: string, updates: any) {
     .update(updates)
     .eq("id", userId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
   return data;
