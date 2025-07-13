@@ -9,4 +9,6 @@ export interface Service {
   staff: string;
   status: string;
   image: string;
+  description: string; // JC: Added so it renders the right description in ListingModal
+  serving_style: string; // JC: Added to handle serving style in ListingModal
 }

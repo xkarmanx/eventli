@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, MapPin, Users, Clock, Building2, CheckCircle } from 'lucide-react'
+import { X, MapPin, Users, Clock, Building2, CheckCircle, Utensils, HandPlatter } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/shared/components/ui/button'
 import { Service } from '@/shared/types/service'
@@ -108,9 +108,10 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
                   </div>
                   
                   <div className="flex items-center space-x-3">
-                    <Users className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <HandPlatter className="w-6 h-6 text-gray-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-gray-600">5-10 staff</p>
+                      {/* JC: Fixed this part Changed hardcoded "5-10 staff" to use actual service data */}
+                      <p className="text-sm text-gray-600">{service.staff || 'Staff info not available'}</p>
                     </div>
                   </div>
 
@@ -129,9 +130,10 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <Clock className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <Utensils className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-gray-600">Serving Style: Buffet</p>
+                      {/* JC: Fixed this part Changed hardcoded "Serving Style: Buffet" to use actual service data */}
+                      <p className="text-sm text-gray-600">Serving Style: {service.serving_style}</p>
                     </div>
                   </div>
 
@@ -164,10 +166,9 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
               {/* Description Section */}
               <div className="mb-8">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p>1- Available for Events on weekdays</p>
-                  <p>2- Multi DJ</p>
-                  <p>3- Vehicle Service</p>
+                <div className="text-sm text-gray-600">
+                  {/* Fixed: Changed hardcoded description list to use actual service data */}
+                  <p>{service.description || 'No description available'}</p>
                 </div>
               </div>
 
