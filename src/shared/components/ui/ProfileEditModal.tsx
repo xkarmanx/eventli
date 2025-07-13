@@ -77,8 +77,14 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   // JC: Handle profile picture upload
   // CT: Updated url since the object only stays alive in memory but not after reload or close
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB limit
     const file = e.target.files?.[0];
+    
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert("File size exceeds 2MB. Please choose a smaller image.");
+        return;
+      }
       const url = URL.createObjectURL(file);
       setPreviewPic(url);
       //setProfilePic(url);
@@ -100,12 +106,15 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
 
     if (imageFile) {
       const fileExt = imageFile.name.split(".").pop();
-      const fileName = `${userId}.${fileExt}`;
+      const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
+
 
       const { error: uploadError } = await supabase.storage
         .from("profile-avatar-images")
-        .upload(filePath, fileName);
+        .upload(filePath, imageFile, {
+          upsert: true,
+        });
 
       if (uploadError) {
         console.error("Image upload failed:", uploadError);
@@ -124,7 +133,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       location,
       bio,
       website,
-      avatar_url: profilePic,
+      avatar_url: uploadedUrl,
     };
   
     // CT: Logic to update profile in database

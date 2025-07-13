@@ -242,9 +242,9 @@ export default function SellerProfilePage() {
                                 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 
                                 border border-gray-700">
                                 Please verify this email address by clicking the "Change Email" hyperlink on both emails. 
-                                <br></br><br></br>
+                                <br/><br/>
                                 A confirmation email was sent to both inboxes. The link will expire in 30 minutes.
-                                <br></br><br></br>
+                                <br/><br/>
                                 If the new email is not verified within 30 days, it will revert back to the original email.
                               </div>
                           </div>
