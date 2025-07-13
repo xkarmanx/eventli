@@ -239,7 +239,9 @@ export default function SellerProfilePage() {
                                 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg 
                                 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 
                                 border border-gray-700">
-                                Please verify this email address. A confirmation email was sent. 
+                                Please verify this email address by clicking the "Change Email" hyperlink on both emails. 
+                                <br></br><br></br>
+                                A confirmation email was sent to both inboxes. The link will expire in 30 minutes.
                                 <br></br><br></br>
                                 If the new email is not verified within 30 days, it will revert back to the original email.
                               </div>

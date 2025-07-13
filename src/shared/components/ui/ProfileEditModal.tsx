@@ -129,7 +129,6 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       await updateProfileComplete(userId, updatedData);
     } 
     catch (error) {
-      //Can add additional error handling for user feedback**
       console.error("Failed to update profile:", error);
     }
 
