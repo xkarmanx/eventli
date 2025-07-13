@@ -9,7 +9,11 @@ export async function updateEmail(userId: string, updates: any) {
   if (updates.email) {
     const newEmail = updates.email;
 
-    const { error: emailError } = await supabase.auth.updateUser({ email: newEmail });
+    const { error: emailError } = await supabase.auth.updateUser(
+      { email: newEmail },
+      { emailRedirectTo: `${window.location.origin}/auth/callback` }
+    );
+
     if (emailError) throw emailError;
 
     const { data: authUserData, error: authError } = await supabase.auth.getUser();

@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { Camera, User, Mail, Phone, MapPin, Award, Settings, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { updateEmail, updateProfileComplete } from "@/features/services/profile_crud";
+import { createClient } from "@/shared/lib/supabase/client";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
@@ -33,6 +34,8 @@ export interface ProfileUpdate {
   avatar_url: string | null;
 }
 
+const supabase = createClient();
+
 export default function ProfileEditModal({ isOpen, onClose, userType, userId, userData, onSave }: ProfileEditModalProps) {
   // JC: State to store form data with initial values from props
   const [profilePic, setProfilePic] = useState<string | null>(userData?.profilePic || null);
@@ -47,6 +50,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   
   // JC: Website field for business info
   const [website, setWebsite] = useState(userData?.website || "");
+
+  // CT: stores the image file for upload
+  const [imageFile, setImageFile] = useState<File | null>(null);
   
   // JC: Update form when new user data comes in
   useEffect(() => {
@@ -65,12 +71,14 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // JC: Handle profile picture upload
+  // CT: Updated url since the object only stays alive in memory but not after reload or close
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setPreviewPic(url);
-      setProfilePic(url);
+      //setProfilePic(url);
+      setImageFile(file);
     }
   };
 
@@ -82,6 +90,28 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   // JC: Save form data when user submits
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
+
+    // CT: Upload profile picture to storage if a new image is selected
+    let uploadedUrl = profilePic;
+
+    if (imageFile) {
+      const fileExt = imageFile.name.split(".").pop();
+      const fileName = `${userId}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("profile-avatar-images")
+        .upload(filePath, fileName);
+
+      if (uploadError) {
+        console.error("Image upload failed:", uploadError);
+      } else {
+        const { data: publicUrlData } = supabase.storage
+          .from("profile-avatar-images")
+          .getPublicUrl(filePath);
+        uploadedUrl = publicUrlData?.publicUrl || null;
+      }
+    }
 
     const updatedData: ProfileUpdate = {
       full_name: name,
@@ -177,6 +207,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                     <img
                       src={
                         previewPic ||
+                        userData?.profilePic ||
                         "https://ui-avatars.com/api/?name=" +
                           encodeURIComponent(name) +
                           "&background=0D8ABC&color=fff&size=120"
