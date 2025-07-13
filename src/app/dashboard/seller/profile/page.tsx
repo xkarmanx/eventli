@@ -5,6 +5,7 @@ import { User, Mail, Phone, MapPin, Calendar, Star, Award, Settings, Edit, Globe
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
+import { updateProfileComplete } from "@/features/services/profile_crud";
 
 export default function SellerProfilePage() {
   // JC: State to control edit modal open/close
@@ -83,6 +84,7 @@ export default function SellerProfilePage() {
         setProfile(null);
       } else {
         setProfile(data);
+        await updateProfileComplete(user.id);
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);

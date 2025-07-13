@@ -126,7 +126,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
     // CT: Logic to update profile in database
     try {
       await updateEmail(userId, updatedData);
-      await updateProfileComplete(userId, updatedData);
+      await updateProfileComplete(userId);
     } 
     catch (error) {
       console.error("Failed to update profile:", error);

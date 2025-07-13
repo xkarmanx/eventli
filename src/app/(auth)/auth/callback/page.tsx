@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/shared/lib/supabase/client";
+import { updateProfileComplete } from "@/features/services/profile_crud";
 
 export default function EmailVerificationCallback() {
     const [status, setStatus] = useState("Verifying your email...");
     const router = useRouter();
-
-    const [newEmail, setNewEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -34,8 +33,6 @@ export default function EmailVerificationCallback() {
           return;
         }
 
-        setNewEmail(user?.email || null);
-
         const { error: updateError } = await supabase
           .from("profiles")
           .update({
@@ -43,6 +40,8 @@ export default function EmailVerificationCallback() {
             pending_email_requested_at: null,
           })
           .eq("id", user.id);
+
+          await updateProfileComplete(user.id);
 
         if (updateError) {
           console.error("Failed to update profile:", updateError.message);
