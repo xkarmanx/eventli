@@ -154,8 +154,8 @@ export default function ListingsPage() {
             </p>
             <div className="mt-6 flex items-center justify-center gap-2">
               <div className="w-12 h-1 bg-teal-600 rounded-full"></div>
-              <div className="w-3 h-1 bg-teal-300 rounded-full"></div>
-              <div className="w-3 h-1 bg-teal-300 rounded-full"></div>
+              <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+              <div className="w-12 h-1 bg-teal-600 rounded-full"></div>
             </div>
           </div>
         </div>

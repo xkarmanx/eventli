@@ -22,5 +22,8 @@ export function transformListingToService(listing: Listing & { profiles: { full_
     staff: listing.num_staff ? `${listing.num_staff} staff` : "Staff count not specified",
     status: listing.is_published ? "Accepting" : "Not Available",
     image: listing.image_url || "/assets/samantha-gades-7J4T1XzpJgU-unsplash.jpg",
+    // JC: Fixed missing fields - Added serving_style and description mapping
+    serving_style: listing.serving_style || "Not specified",
+    description: listing.description || "No description available",
   };
 }
