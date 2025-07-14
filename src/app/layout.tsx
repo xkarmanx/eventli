@@ -28,7 +28,7 @@ export default function RootLayout({
         <main className="min-h-screen">
           {children}
         </main>
-        <Toaster />
+        <Toaster position='top-right'/>
       </body>
     </html>
   )
