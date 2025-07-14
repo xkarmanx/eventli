@@ -265,10 +265,123 @@ import { transformListingToService } from "@/shared/lib/listingUtils";
 // kvs: Enhanced getPublicListings to return Service interface format
 export async function getPublicListingsAsServices(limit?: number): Promise<Service[]> {
   try {
+    console.log('📋 getPublicListingsAsServices called with limit:', limit)
     const listings = await getPublicListings(limit);
-    return listings.map(transformListingToService);
+    const result = listings.map(transformListingToService);
+    console.log('📋 getPublicListingsAsServices returning', result.length, 'services')
+    return result;
   } catch (error) {
-    console.error('Error in getPublicListingsAsServices:', error);
+    console.error('📋 Error in getPublicListingsAsServices:', error);
+    return [];
+  }
+}
+
+// NEW: Server Action for searching and filtering listings
+export async function searchAndFilterListings(
+  searchQuery?: string,
+  filters?: {
+    priceRange?: string;
+    guestNumber?: string;
+  }
+): Promise<Service[]> {
+  try {
+    console.log('🔍 searchAndFilterListings called with:', { searchQuery, filters })
+    
+    const supabase = await createClient();
+    
+    // Check if we have any search criteria at all
+    const hasSearchQuery = searchQuery && searchQuery.trim();
+    const hasFilters = filters && (
+      (filters.priceRange && filters.priceRange.trim()) || 
+      (filters.guestNumber && filters.guestNumber.trim())
+    );
+    
+    console.log('🔍 Search criteria:', { hasSearchQuery, hasFilters })
+    
+    // If no search criteria, return all public listings
+    if (!hasSearchQuery && !hasFilters) {
+      console.log('🔍 No search criteria, returning all public listings')
+      return await getPublicListingsAsServices();
+    }
+    
+    // Start with base query for published listings
+    let query = supabase
+      .from("listings")
+      .select(`
+        *,
+        profiles!listings_seller_id_fkey (
+          full_name
+        )
+      `)
+      .eq("is_published", true);
+
+    // Apply search query if provided (search in title, description, location, event_type)
+    if (hasSearchQuery) {
+      const searchTerm = searchQuery.trim();
+      query = query.or(
+        `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,event_type.ilike.%${searchTerm}%`
+      );
+    }
+
+    // Apply price range filter
+    if (filters?.priceRange && filters.priceRange.trim()) {
+      switch (filters.priceRange) {
+        case 'under-5000':
+          query = query.lt('price', 5000);
+          break;
+        case '5000-10000':
+          query = query.gte('price', 5000).lte('price', 10000);
+          break;
+        case '10000-20000':
+          query = query.gte('price', 10000).lte('price', 20000);
+          break;
+        case '20000-30000':
+          query = query.gte('price', 20000).lte('price', 30000);
+          break;
+        case 'over-30000':
+          query = query.gt('price', 30000);
+          break;
+      }
+    }
+
+    // Apply guest number filter
+    if (filters?.guestNumber && filters.guestNumber.trim()) {
+      switch (filters.guestNumber) {
+        case 'under-20':
+          query = query.lt('num_guests', 20);
+          break;
+        case '20-40':
+          query = query.gte('num_guests', 20).lte('num_guests', 40);
+          break;
+        case '40-60':
+          query = query.gte('num_guests', 40).lte('num_guests', 60);
+          break;
+        case '60-100':
+          query = query.gte('num_guests', 60).lte('num_guests', 100);
+          break;
+        case 'over-100':
+          query = query.gt('num_guests', 100);
+          break;
+      }
+    }
+
+    // Order by relevance (recently created first)
+    query = query.order("created_at", { ascending: false });
+
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error searching listings:', error);
+      return [];
+    }
+
+    // Transform to Service format
+    const listings = data as (Listing & { profiles: { full_name: string | null } })[];
+    const result = listings.map(transformListingToService);
+    console.log('🔍 searchAndFilterListings returning', result.length, 'results')
+    return result;
+  } catch (error) {
+    console.error('Error in searchAndFilterListings:', error);
     return [];
   }
 }
