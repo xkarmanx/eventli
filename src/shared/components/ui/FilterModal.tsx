@@ -13,51 +13,49 @@ interface FilterModalProps {
 }
 
 export interface FilterValues {
-  priceRange: string
-  guestNumber: string
+  priceRange?: string
+  guestNumber?: string
 }
 
 export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterModalProps) {
-  const [filters, setFilters] = useState<FilterValues>({
-    priceRange: '',
-    guestNumber: ''
-  })
+  const [selectedFilters, setSelectedFilters] = useState<FilterValues>({})
+  const [lastAppliedFilters, setLastAppliedFilters] = useState<FilterValues>({}) // JC: Track what was actually applied
 
+  // JC: When modal opens, reset to last applied filters
   useEffect(() => {
-    if (!isOpen) return
-
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
+    if (isOpen) {
+      setSelectedFilters(lastAppliedFilters)
     }
-    document.addEventListener('keydown', handleEscKey)
-    document.body.style.overflow = 'hidden'
+  }, [isOpen, lastAppliedFilters])
 
-    return () => {
-      document.removeEventListener('keydown', handleEscKey)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, onClose])
+  // JC: Handle "Show Results" - apply the selected filters
+  const handleShowResults = () => {
+    setLastAppliedFilters(selectedFilters) // JC: Remember what we applied
+    onApplyFilters(selectedFilters)
+    onClose()
+  }
+
+  // JC: Handle "Clear All" - clear and apply empty filters
+  const handleClearAll = () => {
+    const emptyFilters: FilterValues = {} // JC: Type the empty object
+    setSelectedFilters(emptyFilters)
+    setLastAppliedFilters(emptyFilters)
+    onApplyFilters(emptyFilters)
+    onClose()
+  }
+
+  // JC: Handle modal close (X button or outside click) - revert to last applied filters
+  const handleModalClose = () => {
+    setSelectedFilters(lastAppliedFilters) // JC: Revert to what was actually applied
+    onClose()
+  }
 
   if (!isOpen) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose()
+      handleModalClose() // JC: Use custom close handler instead of onClose()
     }
-  }
-
-  const handleApplyFilters = () => {
-    onApplyFilters(filters)
-    onClose()
-  }
-
-  const handleClearFilters = () => {
-    setFilters({
-      priceRange: '',
-      guestNumber: ''
-    })
   }
 
   const priceRanges = [
@@ -90,7 +88,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
       }`}>
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={handleModalClose} // JC: Use our custom close handler
           className="absolute top-3 sm:top-4 right-3 sm:right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10"
           aria-label="Close modal"
         >
@@ -118,12 +116,12 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
                 {priceRanges.map((range) => (
                   <button
                     key={range.value}
-                    onClick={() => setFilters(prev => ({ 
+                    onClick={() => setSelectedFilters(prev => ({ 
                       ...prev, 
                       priceRange: prev.priceRange === range.value ? '' : range.value 
                     }))}
                     className={`p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                      filters.priceRange === range.value
+                      selectedFilters.priceRange === range.value
                         ? 'border-teal-600 bg-teal-50 text-teal-700'
                         : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                     }`}
@@ -143,12 +141,12 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
                 {guestNumbers.map((guest) => (
                   <button
                     key={guest.value}
-                    onClick={() => setFilters(prev => ({ 
+                    onClick={() => setSelectedFilters(prev => ({ 
                       ...prev, 
                       guestNumber: prev.guestNumber === guest.value ? '' : guest.value 
                     }))}
                     className={`p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                      filters.guestNumber === guest.value
+                      selectedFilters.guestNumber === guest.value
                         ? 'border-teal-600 bg-teal-50 text-teal-700'
                         : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                     }`}
@@ -164,13 +162,13 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-6 sm:pt-8 border-t border-gray-200 mt-6 sm:mt-8 space-y-3 sm:space-y-0">
             <Button
               variant="outline"
-              onClick={handleClearFilters}
+              onClick={handleClearAll}
               className="w-full sm:w-auto px-4 sm:px-6 py-2 text-gray-600 border-gray-300 hover:bg-gray-50 text-sm"
             >
               Clear All
             </Button>
             <Button
-              onClick={handleApplyFilters}
+              onClick={handleShowResults}
               className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 text-sm"
             >
               Show Results
