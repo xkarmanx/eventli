@@ -2,11 +2,15 @@
 'use server';
 
 import axios from 'axios';
+import filter  from 'leo-profanity';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/shared/lib/supabase/server';
+
+// load the English dictionary for `leo-profanity`
+filter.loadDictionary('en')
 
 /* -------------------------------------------------------------------------- */
 /* SignUp Schema (strong password policy + role required)                            */
@@ -84,6 +88,9 @@ export async function signup(formData: FormData) {
 
   const { fullName, email, password, role, recaptchaToken } = validated.data;
 
+  if (filter.check(fullName))
+    throw new Error('Your full name contains innappropiate language. Please choose a different name.')
+
   // Verify reCAPTCHA secret key is in environmental variables
   if (!RECAPTCHA_SECRET_KEY)
     throw new Error('Server configuration error: reCAPTCHA secret key is missing.');
@@ -92,7 +99,7 @@ export async function signup(formData: FormData) {
     const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
     const verificationResponse = await axios.post(verificationUrl, null, {
       params: {
-        secret: RECAPTCHA_SECRET_KEY as string,
+        secret: RECAPTCHA_SECRET_KEY,
         response: recaptchaToken
       }
     });
@@ -159,7 +166,7 @@ export async function login(formData: FormData) {
     const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
     const verificationResponse = await axios.post(verificationUrl, null, {
       params: {
-        secret: RECAPTCHA_SECRET_KEY as string,
+        secret: RECAPTCHA_SECRET_KEY,
         response: recaptchaToken
       }
     });
@@ -225,6 +232,9 @@ export async function updateSellerProfile(formData: FormData) {
     location: formData.get('location') as string,
     is_setup_complete: true
   };
+
+  if (filter.check(profileData.bio))
+    throw new Error('Your bio contains innappropiate language. Please use appropiate language in your bio.')
 
   const { error } = await supabase
     .from('profiles')
