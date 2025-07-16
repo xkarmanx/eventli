@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
 import { updateProfileComplete, updateProfile } from "@/features/services/profile_crud";
+import { toast } from "sonner";
 
 const supabase = createClient();
 
@@ -127,7 +128,7 @@ export default function SellerProfilePage() {
       await updateProfile(profile.id, { email: profile.pending_email });
 
       setResendCooldown(60);
-      alert("Verification email resent! Please check your inbox.");
+      toast.success("Verification email resent! Please check your inbox.");
     } 
     catch (err) {
       console.error("Resend error:", err);
@@ -265,7 +266,7 @@ export default function SellerProfilePage() {
                         {displayEmail || "No email"}
                         {isPendingStillValid && (
                           <div className="group inline-block relative ml-4">
-                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default">
+                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default ml-10">
                               Unverified
                             </span>
                               <div className="absolute left-0 top-full mt-1 w-max max-w-xs whitespace-normal 

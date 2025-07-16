@@ -5,6 +5,7 @@ import { Camera, User, Mail, Phone, MapPin, Award, Settings, X } from "lucide-re
 import { Button } from "@/shared/components/ui/button";
 import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
 import { createClient } from "@/shared/lib/supabase/client";
+import { toast } from "sonner";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
@@ -140,6 +141,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
     try {
       await updateProfile(userId, updatedData);
       await updateProfileComplete(userId);
+      toast.success("Profile updated successfully!");
     } 
     catch (error) {
       console.error("Failed to update profile:", error);
