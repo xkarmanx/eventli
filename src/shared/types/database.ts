@@ -27,6 +27,8 @@ export interface Database {
           stripe_customer_id: string | null
           created_at: string | null
           is_setup_complete: boolean | null
+          pending_email: string | null
+          pending_email_requested_at: string | null
         }
         Insert: {
           id: string

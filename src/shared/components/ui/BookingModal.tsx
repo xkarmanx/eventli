@@ -5,7 +5,7 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
-import { Service } from '@/shared/lib/mockData'
+import { Service } from '@/shared/types/service'
 
 interface BookingModalProps {
   isOpen: boolean

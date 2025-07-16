@@ -416,3 +416,51 @@ ADD COLUMN IF NOT EXISTS num_staff INTEGER;
 
 ALTER TABLE public.listings
 ADD COLUMN IF NOT EXISTS num_guests INTEGER;
+
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Add pending_email & pending_email_requested_at column to profiles
+-- Added by: [Cody Tran], 2024-07-10
+-- Purpose: To store pending email for users that are updating their email
+-- =============================================================================
+
+ALTER TABLE public.profiles
+ADD COLUMN pending_email TEXT,
+ADD COLUMN pending_email_requested_at TIMESTAMP;
+
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Create RLS policies for profile-avatar-images bucket in storage.objects
+-- Added by: [Cody Tran], 2024-07-12
+-- Purpose: 
+--   To enforce row-level security for the new 'profile-avatar-images' bucket.
+--   - Allows authenticated users to upload, update, and delete images in their own folder.
+--   - Allows public read access to all profile avatar images.
+--   This mirrors the policy structure used in the 'listing-images' bucket.
+-- =============================================================================
+
+-- Allow authenticated users to upload to their own folder
+CREATE POLICY "Users can upload profile avatars to own folder" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'profile-avatar-images' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Allow public read access to profile avatars
+CREATE POLICY "Anyone can view profile avatars" ON storage.objects
+  FOR SELECT USING (bucket_id = 'profile-avatar-images');
+
+-- Allow users to update their own profile avatars
+CREATE POLICY "Users can update own profile avatars" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'profile-avatar-images' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Allow users to delete their own profile avatars
+CREATE POLICY "Users can delete own profile avatars" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'profile-avatar-images' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+

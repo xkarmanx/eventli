@@ -3,12 +3,16 @@
 import { useRef, useState, useEffect } from "react";
 import { Camera, User, Mail, Phone, MapPin, Award, Settings, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
+import { createClient } from "@/shared/lib/supabase/client";
+import { toast } from "sonner";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   userType: 'seller' | 'customer';
+  userId: string;
   userData?: {
     name: string;
     email: string;
@@ -21,7 +25,19 @@ interface ProfileEditModalProps {
   onSave?: () => void;
 }
 
-export default function ProfileEditModal({ isOpen, onClose, userType, userData, onSave }: ProfileEditModalProps) {
+export interface ProfileUpdate {
+  full_name: string;
+  email: string;
+  phone: string;
+  location: string;
+  bio: string;
+  website: string;
+  avatar_url: string | null;
+}
+
+const supabase = createClient();
+
+export default function ProfileEditModal({ isOpen, onClose, userType, userId, userData, onSave }: ProfileEditModalProps) {
   // JC: State to store form data with initial values from props
   const [profilePic, setProfilePic] = useState<string | null>(userData?.profilePic || null);
   const [previewPic, setPreviewPic] = useState<string | null>(userData?.profilePic || null);
@@ -35,12 +51,19 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userData, 
   
   // JC: Website field for business info
   const [website, setWebsite] = useState(userData?.website || "");
+
+  // CT: stores the image file for upload
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // CT: Track if the user has edited their email so useEffect doesnt override it
+  const [hasEditedEmail, setHasEditedEmail] = useState(false);
   
   // JC: Update form when new user data comes in
   useEffect(() => {
     if (userData) {
       setName(userData.name || "");
-      setEmail(userData.email || "");
+      if (!hasEditedEmail) 
+        setEmail(userData.email || "");
       setPhone(userData.phone || "");
       setLocation(userData.location || "");
       setBio(userData.bio || "");
@@ -48,17 +71,25 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userData, 
       setProfilePic(userData.profilePic || null);
       setPreviewPic(userData.profilePic || null);
     }
-  }, [userData]);
+  }, [userData, hasEditedEmail]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // JC: Handle profile picture upload
+  // CT: Updated url since the object only stays alive in memory but not after reload or close
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB limit
     const file = e.target.files?.[0];
+    
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert("File size exceeds 2MB. Please choose a smaller image.");
+        return;
+      }
       const url = URL.createObjectURL(file);
       setPreviewPic(url);
-      setProfilePic(url);
+      //setProfilePic(url);
+      setImageFile(file);
     }
   };
 
@@ -68,18 +99,54 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userData, 
   };
 
   // JC: Save form data when user submits
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement actual save logic to update profile in database
-    console.log("Profile updated with:", {
-      name,
+
+    // CT: Upload profile picture to storage if a new image is selected
+    let uploadedUrl = profilePic;
+
+    if (imageFile) {
+      const fileExt = imageFile.name.split(".").pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+
+      const { error: uploadError } = await supabase.storage
+        .from("profile-avatar-images")
+        .upload(filePath, imageFile, {
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Image upload failed:", uploadError);
+      } else {
+        const { data: publicUrlData } = supabase.storage
+          .from("profile-avatar-images")
+          .getPublicUrl(filePath);
+        uploadedUrl = publicUrlData?.publicUrl || null;
+      }
+    }
+
+    const updatedData: ProfileUpdate = {
+      full_name: name,
       email,
       phone,
       location,
       bio,
       website,
-      profilePic
-    });
+      avatar_url: uploadedUrl,
+    };
+  
+    // CT: Logic to update profile in database
+    try {
+      await updateProfile(userId, updatedData);
+      await updateProfileComplete(userId);
+      toast.success("Profile updated successfully!");
+    } 
+    catch (error) {
+      console.error("Failed to update profile:", error);
+    }
+
     onSave?.();
     onClose();
   };
@@ -154,6 +221,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userData, 
                     <img
                       src={
                         previewPic ||
+                        userData?.profilePic ||
                         "https://ui-avatars.com/api/?name=" +
                           encodeURIComponent(name) +
                           "&background=0D8ABC&color=fff&size=120"
@@ -212,7 +280,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userData, 
                         id="email"
                         type="email"
                         value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={e => {
+                          setHasEditedEmail(true);
+                          setEmail(e.target.value)}}
                         className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
                         placeholder="Enter your email"
                       />
