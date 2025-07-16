@@ -94,7 +94,7 @@ export default function SupportSection() {
             <h3 className="text-lg font-semibold text-gray-800">Technical Issues</h3>
           </div>
           <p className="text-sm text-gray-600 mb-6">
-            Contact us, and we'll promptly resolve your problem.
+            Contact us, and we&apos;ll promptly resolve your problem.
           </p>
           <div className="text-sm space-y-3">
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-red-50 transition-colors duration-200">

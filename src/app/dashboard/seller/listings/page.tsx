@@ -8,7 +8,7 @@ import EditListingModal from "@/shared/components/ui/EditListingModal";
 import DeleteListingModal from "@/shared/components/ui/DeleteListingModal";
 import ListingCardSeller from "@/shared/components/ui/ListingCardSeller";
 import { getListings } from "@/features/services/listing_crud";
-import { createClient } from '@/shared/lib/supabase/client'; // JC: Get user authentication data from Supabase
+import { createClient } from '@/shared/lib/supabase/client';
 // kvs: Removed react-toastify imports - no longer needed as all modals use Sonner toast
 
 export default function ListingsPage() {
@@ -22,7 +22,6 @@ export default function ListingsPage() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // JC: Get user authentication data when component loads
   useEffect(() => {
     const supabase = createClient();
     
@@ -57,14 +56,12 @@ export default function ListingsPage() {
     };
   }, []);
 
-  // JC: Fetch user listings from database when user is authenticated
   useEffect(() => {
     if (user?.id && !authLoading) {
       fetchListings();
     }
   }, [user?.id, authLoading]);
 
-  // JC: Function to get listings from database
   const fetchListings = async () => {
     if (!user?.id) return;
     
@@ -80,7 +77,6 @@ export default function ListingsPage() {
     }
   };
 
-  // JC: Update a listing in the state when it's edited
   const handleListingUpdate = (updatedListing: any) => {
     setListings(prev => 
       prev.map(listing => 
@@ -89,7 +85,6 @@ export default function ListingsPage() {
     );
   };
 
-  // JC: Remove a listing from state when it's deleted
   const handleListingDelete = (listingId: string) => {
     setListings(prev => prev.filter(listing => listing.id !== listingId));
   };
@@ -159,8 +154,8 @@ export default function ListingsPage() {
             </p>
             <div className="mt-6 flex items-center justify-center gap-2">
               <div className="w-12 h-1 bg-teal-600 rounded-full"></div>
-              <div className="w-3 h-1 bg-teal-300 rounded-full"></div>
-              <div className="w-3 h-1 bg-teal-300 rounded-full"></div>
+              <div className="w-2 h-2 bg-teal-300 rounded-full"></div>
+              <div className="w-12 h-1 bg-teal-600 rounded-full"></div>
             </div>
           </div>
         </div>

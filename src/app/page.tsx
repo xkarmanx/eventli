@@ -1,51 +1,55 @@
-'use client'
+import HomepageContent from "@/shared/components/homepage/HomepageContent"
+import { getPublicListingsAsServices, searchAndFilterListings } from "@/features/services/listing_crud"
+import { Service } from "@/shared/types/service"
 
-import { useState } from 'react'
-import Navbar from "@/shared/components/ui/Navbar"
-import CategoryNavigation from "@/shared/components/ui/CategoryNavigation"
-import ServicesGrid from "@/shared/components/ui/ServicesGrid"
-import { mockServices } from "@/shared/lib/mockData"
-import { FilterValues } from "@/shared/components/ui/FilterModal"
+interface HomePageProps {
+  searchParams: {
+    q?: string
+    price?: string
+    guests?: string
+  }
+}
 
-export default function HomePage() {
-  const [filteredServices, setFilteredServices] = useState(mockServices)
-
-  const handleFilterChange = (filters: FilterValues) => {
-    let filtered = [...mockServices]
-
-    // Filter by guest number
-    if (filters.guestNumber) {
-      filtered = filtered.filter(service => {
-        if (filters.guestNumber === 'under-20') return service.guests.includes('20') || service.guests.includes('10')
-        if (filters.guestNumber === '20-40') return service.guests.includes('40')
-        if (filters.guestNumber === '40-60') return service.guests.includes('60')
-        if (filters.guestNumber === '60-100') return service.guests.includes('100')
-        if (filters.guestNumber === 'over-100') return service.guests.includes('100') || service.guests.includes('150')
-        return true
-      })
+export default async function HomePage({ searchParams }: HomePageProps) {
+  let services: Service[] = [];
+  
+  // In Next.js 15, searchParams is a Promise and needs to be awaited
+  const resolvedSearchParams = await searchParams;
+  
+  console.log('🏠 HomePage: searchParams received:', resolvedSearchParams)
+  
+  try {
+    // Check if there are search parameters
+    const hasSearchParams = resolvedSearchParams.q || resolvedSearchParams.price || resolvedSearchParams.guests
+    
+    console.log('🏠 HomePage: hasSearchParams:', hasSearchParams)
+    
+    if (hasSearchParams) {
+      console.log('🏠 HomePage: Using search functionality')
+      // Use search functionality when parameters are present
+      services = await searchAndFilterListings(
+        resolvedSearchParams.q,
+        {
+          priceRange: resolvedSearchParams.price,
+          guestNumber: resolvedSearchParams.guests,
+        }
+      );
+    } else {
+      console.log('🏠 HomePage: Fetching all public listings')
+      // Fetch all public listings when no search parameters
+      services = await getPublicListingsAsServices();
     }
-
-    // Filter by price range
-    if (filters.priceRange) {
-      filtered = filtered.filter(service => {
-        const priceText = service.price.toLowerCase()
-        if (filters.priceRange === 'under-5000') return priceText.includes('3000') || priceText.includes('2000')
-        if (filters.priceRange === '5000-10000') return priceText.includes('5000') || priceText.includes('8000') || priceText.includes('10000')
-        if (filters.priceRange === '10000-20000') return priceText.includes('15000') || priceText.includes('20000')
-        if (filters.priceRange === '20000-30000') return priceText.includes('25000') || priceText.includes('30000')
-        if (filters.priceRange === 'over-30000') return priceText.includes('35000') || priceText.includes('40000')
-        return true
-      })
-    }
-
-    setFilteredServices(filtered)
+    
+    console.log('🏠 HomePage: Found', services.length, 'services')
+  } catch (error) {
+    console.error('🏠 HomePage: Error fetching services:', error);
+    // If there's an error, we'll show an empty state
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onFilterChange={handleFilterChange} />
-      <CategoryNavigation />
-      <ServicesGrid services={filteredServices} />
-    </div>
+    <HomepageContent 
+      initialServices={services} 
+      searchParams={resolvedSearchParams}
+    />
   )
 }

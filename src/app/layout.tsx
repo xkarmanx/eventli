@@ -1,6 +1,8 @@
 import './globals.css'
 import { Geist, Geist_Mono } from "next/font/google"
 import { Toaster } from "sonner"
+import MobileBottomNav from "@/shared/components/layout/MobileBottomNav"
+import { Footer } from '@/shared/components/layout/Footer'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,11 +26,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="antialiased">
+      <body className="antialiased pb-16 sm:pb-0">
         <main className="min-h-screen">
           {children}
         </main>
-        <Toaster position='top-right'/>
+
+        <Footer/>
+        <MobileBottomNav />
+        <Toaster position='top-right' />
+
       </body>
     </html>
   )
