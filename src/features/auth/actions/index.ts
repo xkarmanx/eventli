@@ -152,7 +152,8 @@ export async function login(formData: FormData) {
   const validated = loginSchema.safeParse(fromEntries);
 
   if (!validated.success) {
-    const combined = Object.values(validated.error.flatten().fieldErrors).flat().join(' ');
+    const fieldErrors = validated.error.flatten().fieldErrors;
+    const combined = Object.values(fieldErrors).flat().join(' ');
     throw new Error(combined || 'Invalid login data. Please check your inputs and try again.');
   }
 
