@@ -40,7 +40,7 @@ const signupSchema = z.object({
   }),
   recaptchaToken: z.string().min(1, {
     message: 'reCAPTCHA verification is required.'
-  }) // Add recaptchaToken to schema
+  })
 });
 
 /* -------------------------------------------------------------------------- */
@@ -124,7 +124,7 @@ export async function signup(formData: FormData) {
     options: {
       // Metadata picked up by `handle_new_user` trigger (or insert manually later)
       data: {
-        full_name: fullName,
+        full_name: filter.clean(fullName),
         role,
         is_setup_complete: role === 'customer' // ✅ customers complete by default
       },
