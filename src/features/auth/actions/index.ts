@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { createClient } from '@/shared/lib/supabase/server';
 
 // load the English dictionary for `leo-profanity`
-filter.loadDictionary('en')
+filter.loadDictionary('en');
 
 /* -------------------------------------------------------------------------- */
 /* SignUp Schema (strong password policy + role required)                            */
@@ -81,7 +81,7 @@ export async function signup(formData: FormData) {
   const validated = signupSchema.safeParse(fromEntries);
 
   if (!validated.success) {
-    const fieldErrors = validated.error.flatten().fieldErrors
+    const fieldErrors = validated.error.flatten().fieldErrors;
     const combined = Object.values(fieldErrors).flat().join(' ');
     throw new Error(combined || 'Invalid form data. Please check your inputs and try again.');
   }
@@ -89,7 +89,7 @@ export async function signup(formData: FormData) {
   const { fullName, email, password, role, recaptchaToken } = validated.data;
 
   if (filter.check(fullName))
-    throw new Error('Your full name contains innappropiate language. Please choose a different name.')
+    throw new Error('Your full name contains innappropiate language. Please choose a different name.');
 
   // Verify reCAPTCHA secret key is in environmental variables
   if (!RECAPTCHA_SECRET_KEY)
@@ -112,7 +112,7 @@ export async function signup(formData: FormData) {
     }
   } catch (error) {
     console.error('Error during reCAPTCHA verification request:', error);
-    throw new Error('Failed to verify reCAPTCHA. Please try again.')
+    throw new Error('Failed to verify reCAPTCHA. Please try again.');
   }
 
   // ✅ Continue with signup after successful reCAPTCHA verification
@@ -179,7 +179,7 @@ export async function login(formData: FormData) {
     }
   } catch (error) {
     console.error('Error during reCAPTCHA verification request:', error);
-    throw new Error('Failed to verify reCAPTCHA. Please try again.')
+    throw new Error('Failed to verify reCAPTCHA. Please try again.');
   }
 
   // ✅ Continue with login after successful reCAPTCHA verification
@@ -234,7 +234,7 @@ export async function updateSellerProfile(formData: FormData) {
   };
 
   if (filter.check(profileData.bio))
-    throw new Error('Your bio contains innappropiate language. Please use appropiate language in your bio.')
+    throw new Error('Your bio contains innappropiate language. Please use appropiate language in your bio.');
 
   const { error } = await supabase
     .from('profiles')
