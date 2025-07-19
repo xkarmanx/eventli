@@ -232,6 +232,8 @@ export default function SellerProfilePage() {
                 {/* JC: Show user profile picture and basic info using real data */}
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-8">
                   <div className="relative">
+                    {/* Change from img to Image if actually needed */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={
                         profile.avatar_url ||

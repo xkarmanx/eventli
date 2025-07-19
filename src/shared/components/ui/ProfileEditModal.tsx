@@ -216,6 +216,8 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
                 {/* JC: Profile picture upload section */}
                 <div className="flex flex-col items-center gap-4 mb-8">
                   <div className="relative group">
+                    {/* Change from img to Image if actually needed */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={
                         previewPic ||
