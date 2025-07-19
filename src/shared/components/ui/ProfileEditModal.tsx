@@ -9,7 +9,7 @@ import { createClient } from "@/shared/lib/supabase/client";
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
   isOpen: boolean;
-  onCloseAction: () => void;
+  onCloseAction: () => void; // KSch: Renamed from "onClose" to "onCloseAction" to avoid eslint + Next.js error
   userType: 'seller' | 'customer';
   userId: string;
   userData?: {
