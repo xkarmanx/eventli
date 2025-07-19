@@ -1,5 +1,6 @@
 'use client';
 
+import filter from 'leo-profanity';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,6 +15,9 @@ import { Label } from '@/shared/components/ui/label';
 import { cn } from '@/shared/lib/utils';
 import { signInWithGoogle, signup } from '../actions';
 import { PasswordStrength } from './PasswordStrength';
+
+// load the English dictionary for `leo-profanity`
+filter.loadDictionary('en');
 
 // Google Icon Component for consistent styling
 const GoogleIcon = () => (
@@ -53,7 +57,7 @@ export function SignupForm() {
   const [isCaptchaVerified, setIsCaptchaVerified] = React.useState<boolean>(false);
   const recaptchaRef = React.useRef<ReCaptchaComponentRef>(null); // Ref for reCAPTCHA component
 
-  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   function handleCaptchaChange(token: string | null) {
     console.log('reCAPTCHA token:', token);
@@ -87,7 +91,13 @@ export function SignupForm() {
       const formData = new FormData(e.currentTarget);
       formData.append('recaptchaToken', recaptchaToken as string | Blob);
 
-      await signup(formData);
+      const fullName = formData.get('fullName') as string;
+
+      // KSch: Check if the user's full name has inappropriate language, if false then proceed.
+      if (filter.check(fullName))
+        toast.error('Your full name contains innappropiate language. Please choose a different name.');
+      else
+        await signup(formData);
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
         // ✅ Handle success case - show success message and redirect to login
