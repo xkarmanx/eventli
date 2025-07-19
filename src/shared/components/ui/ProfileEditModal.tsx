@@ -9,7 +9,7 @@ import { createClient } from "@/shared/lib/supabase/client";
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   userType: 'seller' | 'customer';
   userId: string;
   userData?: {
@@ -36,7 +36,7 @@ export interface ProfileUpdate {
 
 const supabase = createClient();
 
-export default function ProfileEditModal({ isOpen, onClose, userType, userId, userData, onSave }: ProfileEditModalProps) {
+export default function ProfileEditModal({ isOpen, onCloseAction, userType, userId, userData, onSave }: ProfileEditModalProps) {
   // JC: State to store form data with initial values from props
   const [profilePic, setProfilePic] = useState<string | null>(userData?.profilePic || null);
   const [previewPic, setPreviewPic] = useState<string | null>(userData?.profilePic || null);
@@ -146,13 +146,13 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
     }
 
     onSave?.();
-    onClose();
+    onCloseAction();
   };
 
   // JC: Close modal when user presses escape key and prevent body scroll
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseAction();
     };
 
     if (isOpen) {
@@ -164,7 +164,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onCloseAction]);
 
   if (!isOpen) return null;
 
@@ -173,7 +173,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
-        onClick={onClose}
+        onClick={onCloseAction}
       />
 
       {/* Modal Container */}
@@ -188,7 +188,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                 <p className="text-gray-600 mt-1">Update your {userType} profile information</p>
               </div>
               <button
-                onClick={onClose}
+                onClick={onCloseAction}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                 aria-label="Close modal"
               >
@@ -373,7 +373,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onClose}
+                  onClick={onCloseAction}
                   className="px-8 py-3 text-gray-700 border-gray-300 hover:bg-gray-50 transition-all duration-200"
                 >
                   Cancel
