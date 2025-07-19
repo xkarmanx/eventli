@@ -1,7 +1,7 @@
 "use client";
 
 import { Award, Building, Calendar, Edit, Globe, Mail, MapPin, Phone, Settings, Star, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
@@ -24,7 +24,7 @@ export default function SellerProfilePage() {
 
   // JC: Get user login info when page loads
   useEffect(() => {
-    const getInitialSession = async () => {
+    (async () => { // KSch: For simplicity, this should be an anonymous arrow function.
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
@@ -39,9 +39,7 @@ export default function SellerProfilePage() {
       } finally {
         setAuthLoading(false);
       }
-    };
-
-    getInitialSession();
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -55,24 +53,8 @@ export default function SellerProfilePage() {
     };
   }, []);
 
-  // JC: Get user profile data from database when user is logged in
-  useEffect(() => {
-    if (user?.id && !authLoading) {
-      fetchProfile();
-    }
-  }, [user?.id, authLoading]);
-
-  // CT: Countdown timer for resend verification email
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
-
-
   // JC: Function to get user profile from database
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user?.id) return;
 
     setLoading(true);
@@ -96,18 +78,32 @@ export default function SellerProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  // JC: Get user profile data from database when user is logged in
+  useEffect(() => {
+    if (user?.id && !authLoading)
+      fetchProfile();
+  }, [user?.id, authLoading, fetchProfile]);
+
+  // CT: Countdown timer for resend verification email
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // JC: Function to refresh profile data after user saves changes
-  const handleProfileUpdate = () => {
+  function handleProfileUpdate() {
     // Refresh profile data after update
     fetchProfile();
 
     console.log("Profile Data:", profile);
     console.log("Profile complete?:", profile.is_setup_complete);
-  };
+  }
 
-    //CT: Hold the time period for pending email validity
+  //CT: Hold the time period for pending email validity
   const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7; //7 days
   const now = new Date();
   const pendingDate = new Date(profile?.pending_email_requested_at || 0);
@@ -115,7 +111,7 @@ export default function SellerProfilePage() {
   const displayEmail = isPendingStillValid ? profile.pending_email : user?.email;
 
   // CT: Resend email verification function
-  const handleResendVerificationEmail = async () => {
+  async function handleResendVerificationEmail() {
     try {
       if (!user) return;
 
@@ -132,7 +128,7 @@ export default function SellerProfilePage() {
     catch (err) {
       console.error("Resend error:", err);
     }
-  };
+  }
 
   // JC: Show loading screen while getting user data
   if (authLoading || loading) {
