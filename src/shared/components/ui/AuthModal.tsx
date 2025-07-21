@@ -9,9 +9,10 @@ interface AuthModalProps {
   isOpen: boolean
   onClose: () => void
   type: 'login' | 'signup'
+  onSwitchMode?: (newType: 'login' | 'signup') => void
 }
 
-export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, type, onSwitchMode }: AuthModalProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -86,64 +87,102 @@ export default function AuthModal({ isOpen, onClose, type }: AuthModalProps) {
             <p id="auth-modal-description" className="text-gray-600">{subtitle}</p>
           </div>
 
-          <div className="space-y-4">
-            {/* Customer/Buyer Option */}
-            <Link href="/signup?role=customer" onClick={onClose} className="block">
-              <div className="group border-2 border-gray-200 rounded-xl p-6 hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.02]">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-teal-100 group-hover:bg-teal-200 p-3 rounded-full transition-colors">
-                    <User className="w-6 h-6 text-teal-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-teal-700 transition-colors">
-                      Sign up as Customer
-                    </h3>
-                    <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
-                      Find and book amazing services for your events
-                    </p>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            {/* Seller Option */}
-            <Link href="/signup?role=seller" onClick={onClose} className="block">
-              <div className="group border-2 border-gray-200 rounded-xl p-6 hover:border-purple-500 hover:bg-purple-50 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.02]">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-purple-100 group-hover:bg-purple-200 p-3 rounded-full transition-colors">
-                    <ShoppingBag className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-purple-700 transition-colors">
-                      Sign up as Service Provider
-                    </h3>
-                    <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
-                      Offer your services and grow your business
-                    </p>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+          {type === 'login' ? (
+            // Login Options
+            <div className="space-y-4">
+              <Link href="/login" onClick={onClose} className="block">
+                <div className="group border-2 border-gray-200 rounded-xl p-6 hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.02]">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-teal-100 group-hover:bg-teal-200 p-3 rounded-full transition-colors">
+                      <User className="w-6 h-6 text-teal-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-teal-700 transition-colors">
+                        Log in to your account
+                      </h3>
+                      <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
+                        Continue to your dashboard and manage your account
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link
-                href="/login"
-                onClick={onClose}
-                className="text-teal-600 hover:text-teal-700 font-medium"
-              >
-                Log in
               </Link>
-            </p>
+            </div>
+          ) : (
+            // Signup Options
+            <div className="space-y-4">
+              {/* Customer/Buyer Option */}
+              <Link href="/signup?role=customer" onClick={onClose} className="block">
+                <div className="group border-2 border-gray-200 rounded-xl p-6 hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.02]">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-teal-100 group-hover:bg-teal-200 p-3 rounded-full transition-colors">
+                      <User className="w-6 h-6 text-teal-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-teal-700 transition-colors">
+                        Sign up as Customer
+                      </h3>
+                      <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
+                        Find and book amazing services for your events
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Seller Option */}
+              <Link href="/signup?role=seller" onClick={onClose} className="block">
+                <div className="group border-2 border-gray-200 rounded-xl p-6 hover:border-purple-500 hover:bg-purple-50 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.02]">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-purple-100 group-hover:bg-purple-200 p-3 rounded-full transition-colors">
+                      <ShoppingBag className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-purple-700 transition-colors">
+                        Sign up as Service Provider
+                      </h3>
+                      <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
+                        Offer your services and grow your business
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          )}
+
+          {/* Footer with mode switch */}
+          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+            {type === 'login' ? (
+              <p className="text-sm text-gray-600">
+                Don&apos;t have an account?{' '}
+                <button
+                  onClick={() => onSwitchMode?.('signup')}
+                  className="text-teal-600 hover:text-teal-700 font-medium"
+                >
+                  Sign up
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Already have an account?{' '}
+                <button
+                  onClick={() => onSwitchMode?.('login')}
+                  className="text-teal-600 hover:text-teal-700 font-medium"
+                >
+                  Log in
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>

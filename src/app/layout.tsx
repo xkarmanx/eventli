@@ -30,9 +30,11 @@ export default function RootLayout({
         <main className="min-h-screen">
           {children}
         </main>
+
         <Footer/>
         <MobileBottomNav />
-        <Toaster />
+        <Toaster position='top-right' />
+
       </body>
     </html>
   )

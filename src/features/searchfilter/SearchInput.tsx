@@ -12,6 +12,7 @@ interface SearchInputProps {
   className?: string
   variant?: 'desktop' | 'mobile'
   initialValue?: string
+  inputClassName?: string // Add custom input styling prop
 }
 
 export default function SearchInput({
@@ -22,7 +23,8 @@ export default function SearchInput({
   onFilteredResults,
   className = '',
   variant = 'desktop',
-  initialValue = ''
+  initialValue = '',
+  inputClassName
 }: SearchInputProps) {
   const [query, setQuery] = useState(initialValue)
   // JC: Use ref to prevent unnecessary re-renders and callback changes
@@ -107,14 +109,14 @@ export default function SearchInput({
   if (variant === 'mobile') {
     return (
       <div className={`relative ${className}`}>
-        <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
         <input
           type="text"
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
           placeholder={placeholder}
-          className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className={inputClassName || "w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"}
         />
       </div>
     )

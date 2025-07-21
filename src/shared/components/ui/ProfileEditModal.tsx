@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
 import { Button } from "@/shared/components/ui/button";
 import { createClient } from "@/shared/lib/supabase/client";
+import { toast } from "sonner";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
@@ -140,8 +141,8 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
     try {
       await updateProfile(userId, updatedData);
       await updateProfileComplete(userId);
-    }
-    catch (error) {
+      toast.success("Profile updated successfully!");
+    } catch (error) {
       console.error("Failed to update profile:", error);
     }
 
