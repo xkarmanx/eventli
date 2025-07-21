@@ -144,12 +144,12 @@ export default function ListingsPage() {
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
       {/* Enhanced Header Section */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
               Manage Your Listings
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Create, edit, and manage your event listings. Showcase your services to potential clients and grow your business.
             </p>
             <div className="mt-6 flex items-center justify-center gap-2">
@@ -162,34 +162,34 @@ export default function ListingsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 py-8 px-6 sm:px-8">
+      <div className="flex-1 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Enhanced Action Cards Section */}
-          <div className="mb-12">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Quick Actions</h2>
-              <p className="text-gray-600">Choose an action to get started with your listings</p>
+          <div className="mb-8 sm:mb-12">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Quick Actions</h2>
+              <p className="text-sm sm:text-base text-gray-600">Choose an action to get started with your listings</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {/* Add a Listing */}
               <div
                 tabIndex={0}
                 role="button"
                 onClick={() => setAddOpen(true)}
-                className="group relative overflow-hidden flex flex-col items-center justify-center px-8 py-10 bg-white border border-gray-200 rounded-2xl shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:border-green-200 hover:-translate-y-2 hover:scale-105"
+                className="group relative overflow-hidden flex flex-col items-center justify-center px-6 sm:px-8 py-8 sm:py-10 bg-white border border-gray-200 rounded-2xl shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:border-green-200 hover:-translate-y-2 hover:scale-105"
               >
                 <div className="absolute top-0 left-0 w-full h-1 bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-                <div className="p-4 bg-green-50 rounded-2xl group-hover:bg-green-100 transition-all duration-300 mb-6 group-hover:scale-110">
-                  <PlusCircle className="text-green-600 group-hover:text-green-700 transition-colors duration-300" size={32} />
+                <div className="p-3 sm:p-4 bg-green-50 rounded-2xl group-hover:bg-green-100 transition-all duration-300 mb-4 sm:mb-6 group-hover:scale-110">
+                  <PlusCircle className="text-green-600 group-hover:text-green-700 transition-colors duration-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="font-bold text-xl text-gray-900 group-hover:text-green-800 transition-colors duration-300 text-center mb-2">
+                <h3 className="font-bold text-lg sm:text-xl text-gray-900 group-hover:text-green-800 transition-colors duration-300 text-center mb-2">
                   Add a Listing
                 </h3>
-                <p className="text-sm text-gray-500 group-hover:text-green-600 transition-colors duration-300 text-center leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-500 group-hover:text-green-600 transition-colors duration-300 text-center leading-relaxed">
                   Create a new event listing to showcase your services
                 </p>
-                <div className="absolute bottom-0 right-0 w-20 h-20 bg-green-50 rounded-full transform translate-x-10 translate-y-10 group-hover:scale-150 transition-transform duration-500 opacity-20"></div>
+                <div className="absolute bottom-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-green-50 rounded-full transform translate-x-8 translate-y-8 sm:translate-x-10 sm:translate-y-10 group-hover:scale-150 transition-transform duration-500 opacity-20"></div>
               </div>
 
               {/* Edit a Listing */}
@@ -197,19 +197,19 @@ export default function ListingsPage() {
                 tabIndex={0}
                 role="button"
                 onClick={() => setEditOpen(true)}
-                className="group relative overflow-hidden flex flex-col items-center justify-center px-8 py-10 bg-white border border-gray-200 rounded-2xl shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:border-blue-200 hover:-translate-y-2 hover:scale-105"
+                className="group relative overflow-hidden flex flex-col items-center justify-center px-6 sm:px-8 py-8 sm:py-10 bg-white border border-gray-200 rounded-2xl shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:border-blue-200 hover:-translate-y-2 hover:scale-105"
               >
                 <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-                <div className="p-4 bg-blue-50 rounded-2xl group-hover:bg-blue-100 transition-all duration-300 mb-6 group-hover:scale-110">
-                  <Edit className="text-blue-600 group-hover:text-blue-700 transition-colors duration-300" size={32} />
+                <div className="p-3 sm:p-4 bg-blue-50 rounded-2xl group-hover:bg-blue-100 transition-all duration-300 mb-4 sm:mb-6 group-hover:scale-110">
+                  <Edit className="text-blue-600 group-hover:text-blue-700 transition-colors duration-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="font-bold text-xl text-gray-900 group-hover:text-blue-800 transition-colors duration-300 text-center mb-2">
+                <h3 className="font-bold text-lg sm:text-xl text-gray-900 group-hover:text-blue-800 transition-colors duration-300 text-center mb-2">
                   Edit a Listing
                 </h3>
-                <p className="text-sm text-gray-500 group-hover:text-blue-600 transition-colors duration-300 text-center leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-500 group-hover:text-blue-600 transition-colors duration-300 text-center leading-relaxed">
                   Update and modify your existing event listings
                 </p>
-                <div className="absolute bottom-0 right-0 w-20 h-20 bg-blue-50 rounded-full transform translate-x-10 translate-y-10 group-hover:scale-150 transition-transform duration-500 opacity-20"></div>
+                <div className="absolute bottom-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-blue-50 rounded-full transform translate-x-8 translate-y-8 sm:translate-x-10 sm:translate-y-10 group-hover:scale-150 transition-transform duration-500 opacity-20"></div>
               </div>
 
               {/* Delete a Listing */}
@@ -217,19 +217,19 @@ export default function ListingsPage() {
                 tabIndex={0}
                 role="button"
                 onClick={() => setDeleteOpen(true)}
-                className="group relative overflow-hidden flex flex-col items-center justify-center px-8 py-10 bg-white border border-gray-200 rounded-2xl shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:border-red-200 hover:-translate-y-2 hover:scale-105"
+                className="group relative overflow-hidden flex flex-col items-center justify-center px-6 sm:px-8 py-8 sm:py-10 bg-white border border-gray-200 rounded-2xl shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:border-red-200 hover:-translate-y-2 hover:scale-105 sm:col-span-2 lg:col-span-1"
               >
                 <div className="absolute top-0 left-0 w-full h-1 bg-red-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-                <div className="p-4 bg-red-50 rounded-2xl group-hover:bg-red-100 transition-all duration-300 mb-6 group-hover:scale-110">
-                  <Trash2 className="text-red-600 group-hover:text-red-700 transition-colors duration-300" size={32} />
+                <div className="p-3 sm:p-4 bg-red-50 rounded-2xl group-hover:bg-red-100 transition-all duration-300 mb-4 sm:mb-6 group-hover:scale-110">
+                  <Trash2 className="text-red-600 group-hover:text-red-700 transition-colors duration-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="font-bold text-xl text-gray-900 group-hover:text-red-800 transition-colors duration-300 text-center mb-2">
+                <h3 className="font-bold text-lg sm:text-xl text-gray-900 group-hover:text-red-800 transition-colors duration-300 text-center mb-2">
                   Delete a Listing
                 </h3>
-                <p className="text-sm text-gray-500 group-hover:text-red-600 transition-colors duration-300 text-center leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-500 group-hover:text-red-600 transition-colors duration-300 text-center leading-relaxed">
                   Permanently remove listings you no longer need
                 </p>
-                <div className="absolute bottom-0 right-0 w-20 h-20 bg-red-50 rounded-full transform translate-x-10 translate-y-10 group-hover:scale-150 transition-transform duration-500 opacity-20"></div>
+                <div className="absolute bottom-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-red-50 rounded-full transform translate-x-8 translate-y-8 sm:translate-x-10 sm:translate-y-10 group-hover:scale-150 transition-transform duration-500 opacity-20"></div>
               </div>
             </div>
           </div>
@@ -237,17 +237,17 @@ export default function ListingsPage() {
           {/* Enhanced Listings Section */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Section Header */}
-            <div className="bg-gray-50 px-8 py-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-1">Your Event Listings</h2>
-                  <p className="text-gray-600">Manage and monitor your active listings</p>
+            <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="text-center sm:text-left">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Your Event Listings</h2>
+                  <p className="text-sm sm:text-base text-gray-600">Manage and monitor your active listings</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-teal-600">
+                <div className="text-center sm:text-right">
+                  <div className="text-2xl sm:text-3xl font-bold text-teal-600">
                     {loading ? '...' : listings.length}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-xs sm:text-sm text-gray-500">
                     {loading ? 'Loading...' : `Active listing${listings.length !== 1 ? 's' : ''}`}
                   </div>
                 </div>
@@ -255,12 +255,12 @@ export default function ListingsPage() {
             </div>
 
             {/* Content Area */}
-            <div className="p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
               {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="bg-gray-50 rounded-xl p-6 animate-pulse">
-                      <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
+                    <div key={i} className="bg-gray-50 rounded-xl p-4 sm:p-6 animate-pulse">
+                      <div className="h-40 sm:h-48 bg-gray-200 rounded-lg mb-4"></div>
                       <div className="space-y-3">
                         <div className="h-4 bg-gray-200 rounded"></div>
                         <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -270,24 +270,24 @@ export default function ListingsPage() {
                   ))}
                 </div>
               ) : listings.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 px-6">
-                  <div className="w-24 h-24 bg-teal-50 rounded-full flex items-center justify-center mb-6">
-                    <PlusCircle className="w-12 h-12 text-teal-400" />
+                <div className="flex flex-col items-center justify-center py-16 sm:py-20 px-4 sm:px-6">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-teal-50 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+                    <PlusCircle className="w-10 h-10 sm:w-12 sm:h-12 text-teal-400" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-700 mb-3">No listings yet</h3>
-                  <p className="text-gray-500 text-center max-w-md mb-8 leading-relaxed">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-700 mb-2 sm:mb-3 text-center">No listings yet</h3>
+                  <p className="text-sm sm:text-base text-gray-500 text-center max-w-md mb-6 sm:mb-8 leading-relaxed">
                     You haven't created any listings yet. Start showcasing your events and services to potential clients by creating your first listing.
                   </p>
                   <Button 
                     onClick={() => setAddOpen(true)}
-                    className="cursor-pointer bg-teal-600 text-white border-teal-600 hover:bg-teal-700 hover:border-teal-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl px-8 py-3 text-lg font-semibold rounded-xl"
+                    className="cursor-pointer bg-teal-600 text-white border-teal-600 hover:bg-teal-700 hover:border-teal-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold rounded-xl"
                   >
-                    <PlusCircle className="w-5 h-5 mr-3" />
+                    <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
                     Create Your First Listing
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                   {listings.map((listing) => (
                     <div key={listing.id} className="transform transition-all duration-300 hover:scale-105">
                       <ListingCardSeller
