@@ -146,7 +146,7 @@ export default function ListingsPage() {
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-3">
               Manage Your Listings
             </h1>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
@@ -167,7 +167,7 @@ export default function ListingsPage() {
           {/* Enhanced Action Cards Section */}
           <div className="mb-8 sm:mb-12">
             <div className="text-center mb-6 sm:mb-8">
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Quick Actions</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-black mb-2">Quick Actions</h2>
               <p className="text-sm sm:text-base text-gray-600">Choose an action to get started with your listings</p>
             </div>
             
@@ -183,7 +183,7 @@ export default function ListingsPage() {
                 <div className="p-3 sm:p-4 bg-green-50 rounded-2xl group-hover:bg-green-100 transition-all duration-300 mb-4 sm:mb-6 group-hover:scale-110">
                   <PlusCircle className="text-green-600 group-hover:text-green-700 transition-colors duration-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="font-bold text-lg sm:text-xl text-gray-900 group-hover:text-green-800 transition-colors duration-300 text-center mb-2">
+                <h3 className="font-bold text-lg sm:text-xl text-black group-hover:text-green-800 transition-colors duration-300 text-center mb-2">
                   Add a Listing
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-500 group-hover:text-green-600 transition-colors duration-300 text-center leading-relaxed">
@@ -203,7 +203,7 @@ export default function ListingsPage() {
                 <div className="p-3 sm:p-4 bg-blue-50 rounded-2xl group-hover:bg-blue-100 transition-all duration-300 mb-4 sm:mb-6 group-hover:scale-110">
                   <Edit className="text-blue-600 group-hover:text-blue-700 transition-colors duration-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="font-bold text-lg sm:text-xl text-gray-900 group-hover:text-blue-800 transition-colors duration-300 text-center mb-2">
+                <h3 className="font-bold text-lg sm:text-xl text-black group-hover:text-blue-800 transition-colors duration-300 text-center mb-2">
                   Edit a Listing
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-500 group-hover:text-blue-600 transition-colors duration-300 text-center leading-relaxed">
@@ -223,7 +223,7 @@ export default function ListingsPage() {
                 <div className="p-3 sm:p-4 bg-red-50 rounded-2xl group-hover:bg-red-100 transition-all duration-300 mb-4 sm:mb-6 group-hover:scale-110">
                   <Trash2 className="text-red-600 group-hover:text-red-700 transition-colors duration-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="font-bold text-lg sm:text-xl text-gray-900 group-hover:text-red-800 transition-colors duration-300 text-center mb-2">
+                <h3 className="font-bold text-lg sm:text-xl text-black group-hover:text-red-800 transition-colors duration-300 text-center mb-2">
                   Delete a Listing
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-500 group-hover:text-red-600 transition-colors duration-300 text-center leading-relaxed">
@@ -240,7 +240,7 @@ export default function ListingsPage() {
             <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="text-center sm:text-left">
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Your Event Listings</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-black mb-1">Your Event Listings</h2>
                   <p className="text-sm sm:text-base text-gray-600">Manage and monitor your active listings</p>
                 </div>
                 <div className="text-center sm:text-right">
@@ -274,7 +274,7 @@ export default function ListingsPage() {
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-teal-50 rounded-full flex items-center justify-center mb-4 sm:mb-6">
                     <PlusCircle className="w-10 h-10 sm:w-12 sm:h-12 text-teal-400" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-700 mb-2 sm:mb-3 text-center">No listings yet</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-black mb-2 sm:mb-3 text-center">No listings yet</h3>
                   <p className="text-sm sm:text-base text-gray-500 text-center max-w-md mb-6 sm:mb-8 leading-relaxed">
                     You haven't created any listings yet. Start showcasing your events and services to potential clients by creating your first listing.
                   </p>

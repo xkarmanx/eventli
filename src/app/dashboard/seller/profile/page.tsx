@@ -184,7 +184,7 @@ export default function SellerProfilePage() {
         <div className="max-w-4xl mx-auto">
           
           {/* JC: Simple stats cards using real data */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/*<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-4 sm:p-6 text-center hover:shadow-lg transition-shadow duration-300">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <Star className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
@@ -200,7 +200,7 @@ export default function SellerProfilePage() {
               <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">0</div>
               <div className="text-xs sm:text-sm text-gray-600">Events Completed</div>
             </div>
-          </div>
+          </div>*/}
 
           <div className="space-y-6 sm:space-y-8">
             
@@ -336,7 +336,7 @@ export default function SellerProfilePage() {
             </div>
 
             {/* JC: Business info section - only shows website from database */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            {/*<div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto sm:mx-0">
@@ -347,12 +347,12 @@ export default function SellerProfilePage() {
                     <p className="text-xs sm:text-sm text-gray-600">Your business details and website</p>
                   </div>
                 </div>
-              </div>
+              </div>*/}
               
-              <div className="p-4 sm:p-6 lg:p-8">
-                <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              {/*<div className="p-4 sm:p-6 lg:p-8">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">*/}
                   {/* JC: Show website if user has one */}
-                  {profile.website && (
+                  {/*{profile.website && (
                     <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
@@ -374,7 +374,7 @@ export default function SellerProfilePage() {
                   )}
                   
                   {/* JC: Show message if no website provided */}
-                  {!profile.website && (
+                  {/*{!profile.website && (
                     <div className="text-center py-6 sm:py-8 text-gray-500">
                       <Globe className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-300" />
                       <p className="text-sm sm:text-base">No website information provided</p>
@@ -383,7 +383,7 @@ export default function SellerProfilePage() {
                   )}
                 </div>
               </div>
-            </div>
+            </div>*/}
 
             {/* JC: Account settings section showing real user data from database */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
