@@ -282,6 +282,7 @@ export async function searchAndFilterListings(
   filters?: {
     priceRange?: string;
     guestNumber?: string;
+    eventType?: string;
   }
 ): Promise<Service[]> {
   try {
@@ -293,7 +294,8 @@ export async function searchAndFilterListings(
     const hasSearchQuery = searchQuery && searchQuery.trim();
     const hasFilters = filters && (
       (filters.priceRange && filters.priceRange.trim()) || 
-      (filters.guestNumber && filters.guestNumber.trim())
+      (filters.guestNumber && filters.guestNumber.trim()) ||
+      (filters.eventType && filters.eventType.trim())
     );
     
     console.log('🔍 Search criteria:', { hasSearchQuery, hasFilters })
@@ -363,6 +365,11 @@ export async function searchAndFilterListings(
           query = query.gt('num_guests', 100);
           break;
       }
+    }
+
+    // Apply event type filter
+    if (filters?.eventType && filters.eventType.trim()) {
+      query = query.eq('event_type', filters.eventType);
     }
 
     // Order by relevance (recently created first)

@@ -18,7 +18,7 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
 
   return (
     <div 
-      className="bg-white rounded-lg border border-gray-200 p-2 sm:p-4 hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-white border border-gray-200 p-2 sm:p-4 hover:shadow-md transition-shadow cursor-pointer"
       onClick={handleCardClick}
     >
       <div className="flex space-x-2 sm:space-x-4">
@@ -37,7 +37,7 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div className="flex-1 pr-1 sm:pr-4">
-              <h3 className="text-xs sm:text-base font-semibold text-gray-900 leading-tight mb-0.5 sm:mb-2 line-clamp-2">
+              <h3 className="text-xs sm:text-base font-semibold text-gray-900 leading-tight mb-0.5 sm:mb-2">
                 {service.title}
               </h3>
               <p className="text-xs sm:text-base font-semibold text-gray-900 mb-1 sm:mb-3">

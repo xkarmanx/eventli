@@ -7,6 +7,7 @@ interface HomePageProps {
     q?: string
     price?: string
     guests?: string
+    eventType?: string
   }
 }
 
@@ -20,7 +21,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   
   try {
     // Check if there are search parameters
-    const hasSearchParams = resolvedSearchParams.q || resolvedSearchParams.price || resolvedSearchParams.guests
+    const hasSearchParams = resolvedSearchParams.q || resolvedSearchParams.price || resolvedSearchParams.guests || resolvedSearchParams.eventType
     
     console.log('🏠 HomePage: hasSearchParams:', hasSearchParams)
     
@@ -32,6 +33,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         {
           priceRange: resolvedSearchParams.price,
           guestNumber: resolvedSearchParams.guests,
+          eventType: resolvedSearchParams.eventType,
         }
       );
     } else {

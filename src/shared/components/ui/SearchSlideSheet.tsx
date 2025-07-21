@@ -15,6 +15,7 @@ interface SearchSlideSheetProps {
 export interface FilterValues {
   priceRange?: string
   guestNumber?: string
+  eventType?: string
 }
 
 export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSlideSheetProps) {
@@ -32,10 +33,12 @@ export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSl
     if (isOpen && isMounted) {
       const currentPrice = searchParams.get('price') || ''
       const currentGuests = searchParams.get('guests') || ''
+      const currentEventType = searchParams.get('eventType') || ''
       
       setSelectedFilters({
         priceRange: currentPrice,
-        guestNumber: currentGuests
+        guestNumber: currentGuests,
+        eventType: currentEventType
       })
     }
   }, [isOpen, isMounted, searchParams])
@@ -79,6 +82,14 @@ export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSl
     { value: '40-60', label: '40 - 60' },
     { value: '60-100', label: '60 - 100' },
     { value: 'over-100', label: '100+' }
+  ]
+
+  const eventTypes = [
+    { value: 'Wedding', label: 'Wedding' },
+    { value: 'Birthday', label: 'Birthday' },
+    { value: 'Corporate', label: 'Corporate' },
+    { value: 'Funeral', label: 'Funeral' },
+    { value: 'Other', label: 'Others' }
   ]
 
   if (!isOpen || !isMounted) return null
@@ -158,8 +169,33 @@ export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSl
             </div>
           </div>
 
+          {/* Event Type Filter */}
+          <div>
+            <Label className="text-base font-semibold text-gray-900 mb-3 block">
+              Event Type
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {eventTypes.map((type) => (
+                <button
+                  key={type.value}
+                  onClick={() => setSelectedFilters(prev => ({ 
+                    ...prev, 
+                    eventType: prev.eventType === type.value ? '' : type.value 
+                  }))}
+                  className={`p-3 border rounded-lg text-sm font-medium transition-all ${
+                    selectedFilters.eventType === type.value
+                      ? 'border-teal-600 bg-teal-50 text-teal-700'
+                      : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Clear All Button */}
-          {(selectedFilters.priceRange || selectedFilters.guestNumber) && (
+          {(selectedFilters.priceRange || selectedFilters.guestNumber || selectedFilters.eventType) && (
             <div className="flex justify-center">
               <button
                 onClick={handleClearAll}
@@ -176,7 +212,7 @@ export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSl
               onClick={handleSearch}
               className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 text-base font-medium"
             >
-              {!selectedFilters.priceRange && !selectedFilters.guestNumber
+              {!selectedFilters.priceRange && !selectedFilters.guestNumber && !selectedFilters.eventType
                 ? 'Show All Events'
                 : 'Apply Filters'
               }

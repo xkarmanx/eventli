@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -16,6 +17,9 @@ interface BookingModalProps {
 export default function BookingModal({ isOpen, onClose, service }: BookingModalProps) {
   const [selectedDate, setSelectedDate] = useState<number | null>(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [isMobile, setIsMobile] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -26,8 +30,33 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
     endTime: '18:00 PM'
   })
 
+  // Initialize mobile detection on mount
   useEffect(() => {
-    if (!isOpen) return
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    
+    checkMobile()
+    setIsMounted(true)
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Handle mobile navigation - only after component is mounted
+  useEffect(() => {
+    if (!isMounted) return // Wait for mount to complete
+    
+    if (isOpen && service && isMobile) {
+      // On mobile, navigate to the booking page instead of showing modal
+      router.push(`/listing/${service.id}/booking`)
+      onClose() // Close the modal state
+      return
+    }
+  }, [isOpen, service, isMobile, router, onClose, isMounted])
+
+  useEffect(() => {
+    if (!isMounted || !isOpen || isMobile) return // Don't set up modal behavior on mobile
 
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -41,9 +70,10 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
       document.removeEventListener('keydown', handleEscKey)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, isMobile, isMounted])
 
-  if (!isOpen || !service) return null
+  // Don't render modal on mobile (navigation handled above) or before mount
+  if (!isMounted || !isOpen || !service || isMobile) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
