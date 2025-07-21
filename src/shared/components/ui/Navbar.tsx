@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
 import FilterModal, { FilterValues } from "./FilterModal"
+import AuthModal from "./AuthModal"
 import SearchInput from "@/features/searchfilter/SearchInput"
 import { Service } from "@/shared/types/service"
 
@@ -23,6 +24,7 @@ export default function Navbar({
   onEventSearchResults 
 }: NavbarProps) {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   const handleApplyFilters = (filters: FilterValues) => {
     onFilterChange?.(filters)
@@ -139,11 +141,12 @@ export default function Navbar({
             >
               Login
             </Link>
-            <Button asChild className="hidden sm:flex bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium">
-              <Link href="/signup">
-                Sign up
-              </Link>
-            </Button>
+            <button 
+              onClick={() => setIsAuthModalOpen(true)}
+              className="hidden sm:flex bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium"
+            >
+              Sign up
+            </button>
           </div>
         </div>
       </div>
@@ -153,6 +156,14 @@ export default function Navbar({
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleApplyFilters}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        type="signup"
+        onSwitchMode={() => {}}
       />
     </header>
   )

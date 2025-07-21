@@ -13,6 +13,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { cn } from '@/shared/lib/utils';
 import ReCaptchaComponent, { ReCaptchaComponentRef } from '@/shared/components/ReCaptchaInstance';
+import AuthModal from '@/shared/components/ui/AuthModal';
 
 // Google Icon Component for consistent styling
 const GoogleIcon = () => (
@@ -40,6 +41,7 @@ export function LoginForm() {
   const [loading, setLoading] = React.useState(false);
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
   const searchParams = useSearchParams();
 
   // State for the reCAPTCHA component
@@ -107,6 +109,7 @@ export function LoginForm() {
   }
 
   return (
+    <>
     <Card className='w-full max-w-md bg-white shadow-md rounded-lg border'>
       <CardHeader className='text-center p-4'>
         <Link href='/' className='inline-block mx-auto'>
@@ -233,14 +236,23 @@ export function LoginForm() {
 
         <p className='text-center text-sm text-gray-600 mt-6'>
           {"Don't have an account?"}{' '}
-          <Link
-            href='/signup'
-            className='font-semibold text-teal-600 hover:text-teal-700 transition'
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className='font-semibold text-teal-600 hover:text-teal-700 transition cursor-pointer'
           >
             Sign Up
-          </Link>
+          </button>
         </p>
       </CardContent>
     </Card>
+
+      {/* Auth Modal for signup role selection */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        type="signup"
+        onSwitchMode={() => {}}
+      />
+    </>
   );
 }
