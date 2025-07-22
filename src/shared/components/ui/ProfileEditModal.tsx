@@ -57,21 +57,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
 
   // CT: Track if the user has edited their email so useEffect doesnt override it
   const [hasEditedEmail, setHasEditedEmail] = useState(false);
-  
-  // JC: Update form when new user data comes in
-  useEffect(() => {
-    if (userData) {
-      setName(userData.name || "");
-      if (!hasEditedEmail) 
-        setEmail(userData.email || "");
-      setPhone(userData.phone || "");
-      setLocation(userData.location || "");
-      setBio(userData.bio || "");
-      setWebsite(userData.website || "");
-      setProfilePic(userData.profilePic || null);
-      setPreviewPic(userData.profilePic || null);
-    }
-  }, [userData, hasEditedEmail]);
+
+  // CT: Error state for phone validation
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -97,6 +85,24 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   const handlePicClick = () => {
     fileInputRef.current?.click();
   };
+
+  
+  // CT: Format phone number to XXX-XXX-XXXX
+  function formatPhoneNumber(value: string) {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+
+    // Format as XXX-XXX-XXXX
+    const part1 = digits.slice(0, 3);
+    const part2 = digits.slice(3, 6);
+    const part3 = digits.slice(6, 10);
+
+    let formatted = part1;
+    if (part2) formatted += `-${part2}`;
+    if (part3) formatted += `-${part3}`;
+
+    return formatted;
+  }
 
   // JC: Save form data when user submits
   const handleSubmit = async(e: React.FormEvent) => {
@@ -127,6 +133,15 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       }
     }
 
+    // Validate phone number
+    const phoneRegex = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
+    if (phone && !phoneRegex.test(phone)) {
+      setPhoneError("Please enter a valid phone number (e.g. 123-456-7890)");
+      return;
+    }
+
+    setPhoneError(null); 
+
     const updatedData: ProfileUpdate = {
       full_name: name,
       email,
@@ -150,6 +165,21 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
     onSave?.();
     onClose();
   };
+
+  // JC: Update form when new user data comes in
+  useEffect(() => {
+    if (userData) {
+      setName(userData.name || "");
+      if (!hasEditedEmail) 
+        setEmail(userData.email || "");
+      setPhone(userData.phone || "");
+      setLocation(userData.location || "");
+      setBio(userData.bio || "");
+      setWebsite(userData.website || "");
+      setProfilePic(userData.profilePic || null);
+      setPreviewPic(userData.profilePic || null);
+    }
+  }, [userData, hasEditedEmail]);
 
   // JC: Close modal when user presses escape key and prevent body scroll
   useEffect(() => {
@@ -293,17 +323,26 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                     <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
                       Phone Number
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                      <input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Enter your phone number"
-                      />
-                    </div>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <input
+                          id="phone"
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => {
+                            const formatted = formatPhoneNumber(e.target.value);
+                            setPhone(formatted);
+                            if (phoneError) setPhoneError(null);
+                          }}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-200
+                            ${phoneError ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-teal-500"}
+                          `}
+                          placeholder="Enter your phone number"
+                        />
+                        {phoneError && (
+                          <p className="text-sm text-red-600 mt-1">{phoneError}</p>
+                        )}
+                      </div>
                   </div>
                   
                   <div>
