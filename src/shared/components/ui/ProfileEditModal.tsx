@@ -55,8 +55,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   // CT: stores the image file for upload
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // CT: Track if the user has edited their email so useEffect doesnt override it
+  // CT: Track if the user has edited their email so useEffect doesnt override it. Also state to store previous email
   const [hasEditedEmail, setHasEditedEmail] = useState(false);
+  const [previousEmail, setPreviousEmail] = useState(userData?.email || "");
 
   // CT: Error state for phone validation
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -105,10 +106,10 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   }
 
   // JC: Save form data when user submits
-  const handleSubmit = async(e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // CT: Upload profile picture to storage if a new image is selected
+    // Upload profile picture to storage if a new image is selected
     let uploadedUrl = profilePic;
 
     if (imageFile) {
@@ -116,12 +117,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
-
       const { error: uploadError } = await supabase.storage
         .from("profile-avatar-images")
-        .upload(filePath, imageFile, {
-          upsert: true,
-        });
+        .upload(filePath, imageFile, { upsert: true });
 
       if (uploadError) {
         console.error("Image upload failed:", uploadError);
@@ -140,7 +138,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       return;
     }
 
-    setPhoneError(null); 
+    setPhoneError(null);
 
     const updatedData: ProfileUpdate = {
       full_name: name,
@@ -151,19 +149,31 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       website,
       avatar_url: uploadedUrl,
     };
-  
-    // CT: Logic to update profile in database
-    try {
-      await updateProfile(userId, updatedData);
-      await updateProfileComplete(userId);
-      toast.success("Profile updated successfully!");
-    } 
-    catch (error) {
-      console.error("Failed to update profile:", error);
-    }
 
-    onSave?.();
-    onClose();
+    try {
+      if (email !== previousEmail) {
+        // If email changed, call updateProfile normally (includes auth.email update)
+        await updateProfile(userId, updatedData);
+        setPreviousEmail(email); // track the new confirmed/pending email
+        toast.success("Profile and email update request sent!");
+      } else {
+        // Remove email to skip auth update
+        const { email, ...rest } = updatedData;
+        await updateProfile(userId, rest);
+        toast.success("Profile updated successfully!");
+      }
+
+      await updateProfileComplete(userId);
+      onSave?.();
+      onClose();
+    } catch (error: any) {
+      if (error.name === "AuthApiError") {
+        toast.error("Please wait before requesting another email update.");
+      } else {
+        toast.error("Failed to update profile.");
+      }
+      console.error("Profile update error:", error);
+    }
   };
 
   // JC: Update form when new user data comes in
@@ -172,6 +182,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       setName(userData.name || "");
       if (!hasEditedEmail) 
         setEmail(userData.email || "");
+        setPreviousEmail(userData.email || "");
       setPhone(userData.phone || "");
       setLocation(userData.location || "");
       setBio(userData.bio || "");
