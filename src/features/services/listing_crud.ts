@@ -280,8 +280,8 @@ export async function getPublicListingsAsServices(limit?: number): Promise<Servi
 export async function searchAndFilterListings(
   searchQuery?: string,
   filters?: {
-    priceRange?: string;
-    guestNumber?: string;
+    priceRange?: string[];
+    guestNumber?: string[];
     eventType?: string;
   }
 ): Promise<Service[]> {
@@ -293,8 +293,8 @@ export async function searchAndFilterListings(
     // Check if we have any search criteria at all
     const hasSearchQuery = searchQuery && searchQuery.trim();
     const hasFilters = filters && (
-      (filters.priceRange && filters.priceRange.trim()) || 
-      (filters.guestNumber && filters.guestNumber.trim()) ||
+      (filters.priceRange && filters.priceRange.length > 0) || 
+      (filters.guestNumber && filters.guestNumber.length > 0) ||
       (filters.eventType && filters.eventType.trim())
     );
     
@@ -326,44 +326,60 @@ export async function searchAndFilterListings(
     }
 
     // Apply price range filter
-    if (filters?.priceRange && filters.priceRange.trim()) {
-      switch (filters.priceRange) {
-        case 'under-5000':
-          query = query.lt('price', 5000);
-          break;
-        case '5000-10000':
-          query = query.gte('price', 5000).lte('price', 10000);
-          break;
-        case '10000-20000':
-          query = query.gte('price', 10000).lte('price', 20000);
-          break;
-        case '20000-30000':
-          query = query.gte('price', 20000).lte('price', 30000);
-          break;
-        case 'over-30000':
-          query = query.gt('price', 30000);
-          break;
+    if (filters?.priceRange && filters.priceRange.length > 0) {
+      const priceConditions: string[] = []
+      
+      filters.priceRange.forEach(range => {
+        switch (range) {
+          case 'under-5000':
+            priceConditions.push('price.lt.5000')
+            break;
+          case '5000-10000':
+            priceConditions.push('and(price.gte.5000,price.lte.10000)')
+            break;
+          case '10000-20000':
+            priceConditions.push('and(price.gte.10000,price.lte.20000)')
+            break;
+          case '20000-30000':
+            priceConditions.push('and(price.gte.20000,price.lte.30000)')
+            break;
+          case 'over-30000':
+            priceConditions.push('price.gt.30000')
+            break;
+        }
+      })
+      
+      if (priceConditions.length > 0) {
+        query = query.or(priceConditions.join(','))
       }
     }
 
     // Apply guest number filter
-    if (filters?.guestNumber && filters.guestNumber.trim()) {
-      switch (filters.guestNumber) {
-        case 'under-20':
-          query = query.lt('num_guests', 20);
-          break;
-        case '20-40':
-          query = query.gte('num_guests', 20).lte('num_guests', 40);
-          break;
-        case '40-60':
-          query = query.gte('num_guests', 40).lte('num_guests', 60);
-          break;
-        case '60-100':
-          query = query.gte('num_guests', 60).lte('num_guests', 100);
-          break;
-        case 'over-100':
-          query = query.gt('num_guests', 100);
-          break;
+    if (filters?.guestNumber && filters.guestNumber.length > 0) {
+      const guestConditions: string[] = []
+      
+      filters.guestNumber.forEach(range => {
+        switch (range) {
+          case 'under-20':
+            guestConditions.push('num_guests.lt.20')
+            break;
+          case '20-40':
+            guestConditions.push('and(num_guests.gte.20,num_guests.lte.40)')
+            break;
+          case '40-60':
+            guestConditions.push('and(num_guests.gte.40,num_guests.lte.60)')
+            break;
+          case '60-100':
+            guestConditions.push('and(num_guests.gte.60,num_guests.lte.100)')
+            break;
+          case 'over-100':
+            guestConditions.push('num_guests.gt.100')
+            break;
+        }
+      })
+      
+      if (guestConditions.length > 0) {
+        query = query.or(guestConditions.join(','))
       }
     }
 

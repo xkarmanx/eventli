@@ -5,30 +5,25 @@ import { Search, Filter } from "lucide-react"
 import { Button } from "@/shared/components/ui/button" 
 import Image from "next/image"
 import Link from "next/link"
-import FilterModal, { FilterValues } from "./FilterModal"
+import FilterModal from "./FilterModal"
 import AuthModal from "./AuthModal"
 import SearchInput from "@/features/searchfilter/SearchInput"
 import { Service } from "@/shared/types/service"
 
 interface NavbarProps {
-  onFilterChange?: (filters: FilterValues) => void
   listings?: Service[]
-  onLocationSearchResults?: (filteredListings: Service[]) => void
-  onEventSearchResults?: (filteredListings: Service[]) => void
+  onLocationSearchResults?: (results: Service[]) => void
+  onEventSearchResults?: (results: Service[]) => void
 }
 
 export default function Navbar({ 
-  onFilterChange, 
   listings = [], 
   onLocationSearchResults, 
   onEventSearchResults 
 }: NavbarProps) {
+
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-
-  const handleApplyFilters = (filters: FilterValues) => {
-    onFilterChange?.(filters)
-  }
 
   // JC: Handler for when location search input filters the listings
   const handleLocationFilter = (filteredListings: Service[]) => {
@@ -155,7 +150,6 @@ export default function Navbar({
       <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleApplyFilters}
       />
 
       {/* Auth Modal */}

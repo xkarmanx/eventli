@@ -13,8 +13,8 @@ interface SearchSlideSheetProps {
 }
 
 export interface FilterValues {
-  priceRange?: string
-  guestNumber?: string
+  priceRange?: string[]
+  guestNumber?: string[]
   eventType?: string
 }
 
@@ -36,8 +36,8 @@ export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSl
       const currentEventType = searchParams.get('eventType') || ''
       
       setSelectedFilters({
-        priceRange: currentPrice,
-        guestNumber: currentGuests,
+        priceRange: currentPrice ? currentPrice.split(',').filter(Boolean) : [],
+        guestNumber: currentGuests ? currentGuests.split(',').filter(Boolean) : [],
         eventType: currentEventType
       })
     }
@@ -128,13 +128,20 @@ export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSl
               {priceRanges.map((range) => (
                 <button
                   key={range.value}
-                  onClick={() => setSelectedFilters(prev => ({ 
-                    ...prev, 
-                    priceRange: prev.priceRange === range.value ? '' : range.value 
-                  }))}
+                  onClick={() => setSelectedFilters(prev => {
+                    const currentPriceRanges = prev.priceRange || []
+                    const isSelected = currentPriceRanges.includes(range.value)
+                    
+                    return {
+                      ...prev,
+                      priceRange: isSelected
+                        ? currentPriceRanges.filter(val => val !== range.value)
+                        : [...currentPriceRanges, range.value]
+                    }
+                  })}
                   className={`p-3 border rounded-lg text-sm font-medium transition-all ${
-                    selectedFilters.priceRange === range.value
-                      ? 'border-teal-600 bg-teal-50 text-teal-700'
+                    selectedFilters.priceRange?.includes(range.value)
+                      ? 'border-teal-600 bg-teal-600 text-white shadow-md transform scale-105'
                       : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -153,13 +160,20 @@ export default function SearchSlideSheet({ isOpen, onClose, onSearch }: SearchSl
               {guestNumbers.map((guest) => (
                 <button
                   key={guest.value}
-                  onClick={() => setSelectedFilters(prev => ({ 
-                    ...prev, 
-                    guestNumber: prev.guestNumber === guest.value ? '' : guest.value 
-                  }))}
+                  onClick={() => setSelectedFilters(prev => {
+                    const currentGuestNumbers = prev.guestNumber || []
+                    const isSelected = currentGuestNumbers.includes(guest.value)
+                    
+                    return {
+                      ...prev,
+                      guestNumber: isSelected
+                        ? currentGuestNumbers.filter(val => val !== guest.value)
+                        : [...currentGuestNumbers, guest.value]
+                    }
+                  })}
                   className={`p-3 border rounded-lg text-sm font-medium transition-all ${
-                    selectedFilters.guestNumber === guest.value
-                      ? 'border-teal-600 bg-teal-50 text-teal-700'
+                    selectedFilters.guestNumber?.includes(guest.value)
+                      ? 'border-teal-600 bg-teal-600 text-white shadow-md transform scale-105'
                       : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >

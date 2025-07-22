@@ -31,8 +31,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       services = await searchAndFilterListings(
         resolvedSearchParams.q,
         {
-          priceRange: resolvedSearchParams.price,
-          guestNumber: resolvedSearchParams.guests,
+          priceRange: resolvedSearchParams.price ? resolvedSearchParams.price.split(',').filter(Boolean) : undefined,
+          guestNumber: resolvedSearchParams.guests ? resolvedSearchParams.guests.split(',').filter(Boolean) : undefined,
           eventType: resolvedSearchParams.eventType,
         }
       );

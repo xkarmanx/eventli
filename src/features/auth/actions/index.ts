@@ -186,7 +186,9 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath('/', 'layout');
-  redirect('/dashboard');
+  
+  // Return success instead of redirecting to avoid NEXT_REDIRECT error in toast
+  throw new Error('SUCCESS: Login successful');
 }
 
 /* -------------------------------------------------------------------------- */

@@ -29,7 +29,7 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
             alt={service.title}
             width={120}
             height={120}
-            className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 object-cover rounded-lg"
+            className="w-32 h-32 sm:w-28 sm:h-28 md:w-32 md:h-32 object-cover rounded-lg"
           />
         </div>
 
@@ -65,15 +65,13 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
               <span className="text-xs sm:text-sm">{service.guests}</span>
             </div>
 
-            <div className="flex items-center justify-between col-span-1 sm:col-span-2">
-              <div className="flex items-center">
-                <Building2 className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />
-                <span className="truncate text-xs sm:text-sm">{service.provider}</span>
-              </div>
-              <div className="hidden sm:flex items-center">
-                <Clock className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">{service.status}</span>
-              </div>
+            <div className="flex items-center">
+              <Building2 className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />
+              <span className="truncate text-xs sm:text-sm">{service.provider}</span>
+            </div>
+            <div className="flex items-center">
+              <Clock className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">{service.eventType}</span>
             </div>
           </div>
         </div>
