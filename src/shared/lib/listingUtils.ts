@@ -12,6 +12,13 @@ export function transformListingToService(listing: Listing & { profiles: { full_
     formattedPrice = `$${listing.price.toLocaleString('en-US')}`;
   }
   
+  // Format event type for display
+  const formatEventType = (eventType: string | null): string => {
+    if (!eventType) return "General";
+    // Capitalize first letter and handle common cases
+    return eventType.charAt(0).toUpperCase() + eventType.slice(1).toLowerCase();
+  };
+  
   return {
     id: listing.id,
     title: listing.title,
@@ -21,6 +28,7 @@ export function transformListingToService(listing: Listing & { profiles: { full_
     guests: listing.num_guests ? `Up to ${listing.num_guests} guests` : "Guest count not specified",
     staff: listing.num_staff ? `${listing.num_staff} staff` : "Staff count not specified",
     status: listing.is_published ? "Accepting" : "Not Available",
+    eventType: formatEventType(listing.event_type), // JC: Added event type for category display
     image: listing.image_url || "/assets/samantha-gades-7J4T1XzpJgU-unsplash.jpg",
     // JC: Fixed missing fields - Added serving_style and description mapping
     serving_style: listing.serving_style || "Not specified",

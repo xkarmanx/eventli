@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, MapPin, Users, Clock, Building2, CheckCircle, Utensils, HandPlatter } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/shared/components/ui/button'
@@ -15,9 +16,37 @@ interface ListingModalProps {
 
 export default function ListingModal({ isOpen, onClose, service }: ListingModalProps) {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const router = useRouter()
+
+  // Initialize mobile detection on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    
+    checkMobile()
+    setIsMounted(true)
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Handle mobile navigation - only after component is mounted
+  useEffect(() => {
+    if (!isMounted) return // Wait for mount to complete
+    
+    if (isOpen && service && isMobile) {
+      // On mobile, navigate to the listing page instead of showing modal
+      router.push(`/listing/${service.id}`)
+      onClose() // Close the modal state
+      return
+    }
+  }, [isOpen, service, isMobile, router, onClose, isMounted])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isMounted || !isOpen || isMobile) return // Don't set up modal behavior on mobile
 
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -31,9 +60,10 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
       document.removeEventListener('keydown', handleEscKey)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, isMobile, isMounted])
 
-  if (!isOpen || !service) return null
+  // Don't render modal on mobile (navigation handled above) or before mount
+  if (!isMounted || !isOpen || !service || isMobile) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
