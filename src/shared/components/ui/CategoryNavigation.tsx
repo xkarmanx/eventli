@@ -11,12 +11,12 @@ export default function CategoryNavigation() {
       icon: "/birthday.svg"
     },
     {
-      name: "Ceremony",
+      name: "Corporate", //Corporate from ceremony (matches actual event types)
       icon: "/ceremony.svg"
     },
     {
-      name: "Funeral",
-      icon: "/funeral.svg"
+      name: "Concert",  //Concert from funeral (matches actual event types)
+      icon: "/concert_icon.svg"
     },
     {
       name: "Others",
