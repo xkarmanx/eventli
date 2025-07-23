@@ -1,9 +1,9 @@
 import Image from "next/image"
-import { MapPin, Users, Clock, Building2 } from "lucide-react"
+import { MapPin, Users, Clock, Building2, Zap } from "lucide-react"
 import { Service } from "@/shared/lib/mockData"
 
 interface ServiceCardProps {
-  service: Service;
+  service: Service & { boost_priority?: number | null }; // ✅ CHANGE: Allow boost_priority prop
   onViewClick?: (service: Service) => void;
 }
 
@@ -23,7 +23,7 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
     >
       <div className="flex space-x-3 sm:space-x-4">
         {/* Service Image */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 relative"> {/*✅ Change: Added relative positioning*/}
           <Image
             src={service.image}
             alt={service.title}
@@ -32,6 +32,14 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
             className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-cover rounded-lg"
           />
         </div>
+
+        {/* ✅ ADD: Boosted Badge */}
+          {service.boost_priority && service.boost_priority > 0 && (
+             <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Zap className="w-3 h-3" />
+              Featured
+            </div>
+          )}
 
         {/* Service Details */}
         <div className="flex-1 min-w-0 flex flex-col justify-between">

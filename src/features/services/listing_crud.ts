@@ -235,6 +235,7 @@ export async function getPublicListings(limit?: number) {
   let query = supabase
     .from("listings")
     .select("*")
+    .order("boost_priority", { ascending: false })
     .order("created_at", { ascending: false });
   
   if (limit) {
