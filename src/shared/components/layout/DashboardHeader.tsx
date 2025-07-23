@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { User, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { User, LogOut, ChevronDown, Home } from 'lucide-react'
 import { signOut } from '@/features/auth/actions'
 import { createClient } from '@/shared/lib/supabase/client' // JC: Get user data from database
 import Link from 'next/link'
@@ -23,7 +23,6 @@ export default function DashboardHeader({ userType, title = 'Dashboard', subtitl
 
   // JC: Get correct routes based on user type
   const profileRoute = userType === 'seller' ? '/dashboard/seller/profile' : '/dashboard/customer/profile'
-  const settingsRoute = userType === 'seller' ? '/dashboard/seller/settings' : '/dashboard/customer/settings'
 
   // JC: Get user data and profile from database
   useEffect(() => {
@@ -208,21 +207,21 @@ export default function DashboardHeader({ userType, title = 'Dashboard', subtitl
               {/* Menu Items */}
               <div className="py-1">
                 <Link
+                  href="/"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <Home className="w-4 h-4" />
+                  Browse Listings
+                </Link>
+
+                <Link
                   href={profileRoute}
                   className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
                   onClick={() => setIsDropdownOpen(false)}
                 >
                   <User className="w-4 h-4" />
                   My Profile
-                </Link>
-
-                <Link
-                  href={settingsRoute}
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
-                  onClick={() => setIsDropdownOpen(false)}
-                >
-                  <Settings className="w-4 h-4" />
-                  Settings
                 </Link>
               </div>
 
