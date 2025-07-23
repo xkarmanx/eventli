@@ -240,9 +240,10 @@ export async function getPublicListings(limit?: number) {
       profiles!listings_seller_id_fkey (
         full_name
       )
-    `)
-    .eq("is_published", true)
-    .order("created_at", { ascending: false });
+    `)                                   // << keep the JOIN
+    .eq("is_published", true)            // << keep the filter
+    .order("boost_priority", { ascending: false })  // << from HEAD
+    .order("created_at",      { ascending: false }); // << from incoming
   
   if (limit) {
     query = query.limit(limit);
