@@ -5,6 +5,10 @@ import { User, Mail, Phone, MapPin, Calendar, Star, Award, Settings, Edit, Globe
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
+import { updateProfileComplete, updateProfile } from "@/features/services/profile_crud";
+import { toast } from "sonner";
+
+const supabase = createClient();
 
 export default function SellerProfilePage() {
   // JC: State to control edit modal open/close
@@ -16,17 +20,11 @@ export default function SellerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
 
-  //CT: Hold the time period for pending email validity
-  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
-  const now = new Date();
-  const pendingDate = new Date(profile?.pending_email_requested_at || 0);
-  const isPendingStillValid = profile?.pending_email && (now.getTime() - pendingDate.getTime()) < THIRTY_DAYS;
-  const displayEmail = isPendingStillValid ? profile.pending_email : user?.email;
+  // CT: hold timer for resend cooldown
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // JC: Get user login info when page loads
   useEffect(() => {
-    const supabase = createClient();
-    
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -65,13 +63,21 @@ export default function SellerProfilePage() {
     }
   }, [user?.id, authLoading]);
 
+  // CT: Countdown timer for resend verification email
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+
   // JC: Function to get user profile from database
   const fetchProfile = async () => {
     if (!user?.id) return;
     
     setLoading(true);
     try {
-      const supabase = createClient();
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -83,6 +89,7 @@ export default function SellerProfilePage() {
         setProfile(null);
       } else {
         setProfile(data);
+        await updateProfileComplete(user.id);
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
@@ -99,6 +106,33 @@ export default function SellerProfilePage() {
 
     console.log("Profile Data:", profile);
     console.log("Profile complete?:", profile.is_setup_complete);
+  };
+
+    //CT: Hold the time period for pending email validity
+  const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7; //7 days
+  const now = new Date();
+  const pendingDate = new Date(profile?.pending_email_requested_at || 0);
+  const isPendingStillValid = profile?.pending_email && (now.getTime() - pendingDate.getTime()) < SEVEN_DAYS;
+  const displayEmail = isPendingStillValid ? profile.pending_email : user?.email;
+
+  // CT: Resend email verification function
+  const handleResendVerificationEmail = async () => {
+    try {
+      if (!user) return;
+
+      if (!profile.pending_email) {
+        alert("No pending email to resend verification.");
+        return;
+      }
+
+      await updateProfile(profile.id, { email: profile.pending_email });
+
+      setResendCooldown(60);
+      toast.success("Verification email resent! Please check your inbox.");
+    } 
+    catch (err) {
+      console.error("Resend error:", err);
+    }
   };
 
   // JC: Show loading screen while getting user data
@@ -232,16 +266,36 @@ export default function SellerProfilePage() {
                         {displayEmail || "No email"}
                         {isPendingStillValid && (
                           <div className="group inline-block relative ml-4">
-                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default">
+                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default ml-10">
                               Unverified
                             </span>
                               <div className="absolute left-0 top-full mt-1 w-max max-w-xs whitespace-normal 
                                 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg 
                                 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 
                                 border border-gray-700">
-                                Please verify this email address. A confirmation email was sent. 
-                                <br></br><br></br>
-                                If the new email is not verified within 30 days, it will revert back to the original email.
+
+                                <p className="mb-2">
+                                  A confirmation email was sent to both emails. 
+                                  <br/><br/>
+                                  Please verify this email by clicking the link in both inboxes.
+                                </p>
+
+                                <p className="mb-2">
+                                  This link expires in 30 minutes. 
+                                </p>
+
+                                {resendCooldown > 0 ? (
+                                  <p className="text-yellow-300">
+                                    You can resend the verification email in {resendCooldown}s.
+                                  </p>
+                                ) : (
+                                  <button
+                                    onClick={handleResendVerificationEmail}
+                                    className="text-blue-300 hover:text-blue-200 underline mt-2"
+                                  >
+                                    Resend Verification Email
+                                  </button>
+                                )}
                               </div>
                           </div>
                         )}

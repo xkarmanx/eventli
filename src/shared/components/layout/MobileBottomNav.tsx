@@ -1,14 +1,20 @@
 'use client'
 
-import { Search, User, Home } from "lucide-react"
+import { Filter, User, Home } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
-import FilterModal, { FilterValues } from "@/shared/components/ui/FilterModal"
+import SearchSlideSheet, { FilterValues } from "@/shared/components/ui/SearchSlideSheet"
+import AuthModal from "@/shared/components/ui/AuthModal"
+import { useAuth } from "@/shared/hooks/useAuth"
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, loading } = useAuth()
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authModalType, setAuthModalType] = useState<'login' | 'signup'>('login')
 
   const handleSearchClick = () => {
     setIsSearchModalOpen(true)
@@ -18,10 +24,64 @@ export default function MobileBottomNav() {
     setIsSearchModalOpen(false)
   }
 
-  const handleSearchApply = (filters: FilterValues) => {
-    // For now, just close the modal. In a real app, you'd apply the filters
-    console.log('Search filters applied:', filters)
+  const handleProfileClick = () => {
+    if (loading) return // Wait for auth check to complete
+    
+    if (user) {
+      // User is logged in, navigate to profile
+      router.push('/dashboard/customer/profile')
+    } else {
+      // User is not logged in, show login modal
+      setAuthModalType('login')
+      setIsAuthModalOpen(true)
+    }
+  }
+
+  const handleAuthClose = () => {
+    setIsAuthModalOpen(false)
+  }
+
+  const handleAuthModeSwitch = (newType: 'login' | 'signup') => {
+    setAuthModalType(newType)
+  }
+
+  const handleSearchApply = (query: string, filters: FilterValues) => {
+    console.log('📱 MobileBottomNav: handleSearchApply called with:', { query, filters })
+    
+    // If everything is empty, just go to homepage to show all listings
+    if (!query.trim() && !filters.priceRange && !filters.guestNumber) {
+      console.log('📱 MobileBottomNav: Empty search detected, redirecting to homepage')
+      setIsSearchModalOpen(false)
+      
+      // Always navigate to clear any existing search params
+      console.log('📱 MobileBottomNav: Navigating to / to clear search')
+      router.push('/')
+      return
+    }
+
+    // Create URL search params to pass search query and filters
+    const searchParams = new URLSearchParams()
+    
+    if (query.trim()) {
+      searchParams.set('q', query.trim())
+    }
+    
+    if (filters.priceRange) {
+      searchParams.set('price', filters.priceRange)
+    }
+    
+    if (filters.guestNumber) {
+      searchParams.set('guests', filters.guestNumber)
+    }
+
+    // Navigate to homepage with search parameters
+    const searchParamsString = searchParams.toString()
+    const targetUrl = searchParamsString ? `/?${searchParamsString}` : '/'
+    
+    console.log('📱 MobileBottomNav: Navigating to:', targetUrl)
     setIsSearchModalOpen(false)
+    
+    router.push(targetUrl)
   }
 
   return (
@@ -41,18 +101,18 @@ export default function MobileBottomNav() {
             <span className="text-xs font-medium">Home</span>
           </Link>
 
-          {/* Search */}
+          {/* Filter */}
           <button
             onClick={handleSearchClick}
             className="flex flex-col items-center justify-center px-3 py-2 rounded-lg transition-colors text-gray-600 hover:text-teal-600 hover:bg-gray-50"
           >
-            <Search className="w-5 h-5 mb-1" />
-            <span className="text-xs font-medium">Search</span>
+            <Filter className="w-5 h-5 mb-1" />
+            <span className="text-xs font-medium">Filter</span>
           </button>
 
           {/* Profile */}
-          <Link
-            href="/dashboard/customer/profile"
+          <button
+            onClick={handleProfileClick}
             className={`flex flex-col items-center justify-center px-3 py-2 rounded-lg transition-colors ${
               pathname.startsWith('/dashboard/customer/profile')
                 ? 'text-teal-600 bg-teal-50'
@@ -61,15 +121,23 @@ export default function MobileBottomNav() {
           >
             <User className="w-5 h-5 mb-1" />
             <span className="text-xs font-medium">Profile</span>
-          </Link>
+          </button>
         </div>
       </div>
 
-      {/* Search Modal */}
-      <FilterModal
+      {/* Search Slide Sheet */}
+      <SearchSlideSheet
         isOpen={isSearchModalOpen}
         onClose={handleSearchClose}
-        onApplyFilters={handleSearchApply}
+        onSearch={handleSearchApply}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={handleAuthClose}
+        type={authModalType}
+        onSwitchMode={handleAuthModeSwitch}
       />
     </>
   )
