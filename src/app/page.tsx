@@ -1,69 +1,41 @@
-'use client';
-
-import React from 'react';
-import { useSearchParams } from 'next/navigation';
 import HomepageContent from "@/shared/components/homepage/HomepageContent";
 import { getPublicListingsAsServices, searchAndFilterListings } from "@/features/services/listing_crud";
 import { Service } from "@/shared/types/service";
 
-export default function HomePage() {
-  // Use the standard hook to get search params on the client
-  const searchParams = useSearchParams();
-  const [services, setServices] = React.useState<Service[]>([]);
-  const [loading, setLoading] = React.useState(true);
+type SearchParams = {
+  q?: string;
+  price?: string;
+  guests?: string;
+  eventType?: string;
+};
 
-  // Fetch data on the client based on the search params
-  React.useEffect(() => {
-    const fetchServices = async () => {
-      setLoading(true);
-      try {
-        const q = searchParams.get('q');
-        const price = searchParams.get('price');
-        const guests = searchParams.get('guests');
-        const eventType = searchParams.get('eventType');
+interface HomePageProps {
+  searchParams: Promise<SearchParams>; // ✅ Next 15 expects a Promise
+}
 
-        const hasSearchParams = q || price || guests || eventType;
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const sp = await searchParams; // ✅ await it
+  let services: Service[] = [];
 
-        let serviceData: Service[];
-        if (hasSearchParams) {
-          serviceData = await searchAndFilterListings(
-            q ?? undefined,
-            {
-              priceRange: price ? price.split(',').filter(Boolean) : undefined,
-              guestNumber: guests ? guests.split(',').filter(Boolean) : undefined,
-              eventType: eventType ?? undefined,
-            }
-          );
-        } else {
-          serviceData = await getPublicListingsAsServices();
-        }
-        setServices(serviceData);
-      } catch (error) {
-        console.error('🏠 HomePage: Error fetching services:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  console.log("🏠 HomePage: searchParams received:", sp);
 
-    fetchServices();
-  }, [searchParams]);
+  try {
+    const hasSearchParams = sp.q || sp.price || sp.guests || sp.eventType;
 
-  const currentSearchParams = {
-    q: searchParams.get('q') ?? undefined,
-    price: searchParams.get('price') ?? undefined,
-    guests: searchParams.get('guests') ?? undefined,
-    eventType: searchParams.get('eventType') ?? undefined,
-  };
-  
-  // Optional: Show a loading state while fetching
-  if (loading) {
-    return <div className="text-center p-10">Loading services...</div>;
+    if (hasSearchParams) {
+      services = await searchAndFilterListings(sp.q, {
+        priceRange: sp.price ? sp.price.split(",").filter(Boolean) : undefined,
+        guestNumber: sp.guests ? sp.guests.split(",").filter(Boolean) : undefined,
+        eventType: sp.eventType,
+      });
+    } else {
+      services = await getPublicListingsAsServices();
+    }
+
+    console.log("🏠 HomePage: Found", services.length, "services");
+  } catch (error) {
+    console.error("🏠 HomePage: Error fetching services:", error);
   }
 
-  return (
-    <HomepageContent 
-      initialServices={services} 
-      searchParams={currentSearchParams}
-    />
-  );
+  return <HomepageContent initialServices={services} searchParams={sp} />;
 }
