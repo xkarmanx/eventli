@@ -160,7 +160,7 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
                     </div>
                     <h3 className="text-xl font-semibold text-gray-700 mb-2">No listings yet</h3>
                     <p className="text-gray-500 text-center max-w-sm">
-                      You haven't created any listings yet. Create your first listing to get started!
+                      You haven not created any listings yet. Create your first listing to get started!
                     </p>
                   </div>
                 ) : (

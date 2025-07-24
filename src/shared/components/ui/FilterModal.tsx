@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Label } from '@/shared/components/ui/label'
@@ -9,15 +10,15 @@ import { RadioGroup, RadioGroupItem } from '@/shared/components/ui/radio-group'
 interface FilterModalProps {
   isOpen: boolean
   onClose: () => void
-  onApplyFilters: (filters: FilterValues) => void
 }
 
 export interface FilterValues {
-  priceRange?: string
-  guestNumber?: string
+  priceRange?: string[]
+  guestNumber?: string[]
 }
 
-export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterModalProps) {
+export default function FilterModal({ isOpen, onClose }: FilterModalProps) {
+  const router = useRouter()
   const [selectedFilters, setSelectedFilters] = useState<FilterValues>({})
   const [lastAppliedFilters, setLastAppliedFilters] = useState<FilterValues>({}) // JC: Track what was actually applied
 
@@ -31,7 +32,21 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
   // JC: Handle "Show Results" - apply the selected filters
   const handleShowResults = () => {
     setLastAppliedFilters(selectedFilters) // JC: Remember what we applied
-    onApplyFilters(selectedFilters)
+    
+    // Navigate to URL with filter parameters for server-side filtering
+    const searchParams = new URLSearchParams()
+    
+    if (selectedFilters.priceRange && selectedFilters.priceRange.length > 0) {
+      searchParams.set('price', selectedFilters.priceRange.join(','))
+    }
+    
+    if (selectedFilters.guestNumber && selectedFilters.guestNumber.length > 0) {
+      searchParams.set('guests', selectedFilters.guestNumber.join(','))
+    }
+
+    // Navigate to homepage with filters
+    const queryString = searchParams.toString()
+    router.push(queryString ? `/?${queryString}` : '/')
     onClose()
   }
 
@@ -40,7 +55,9 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
     const emptyFilters: FilterValues = {} // JC: Type the empty object
     setSelectedFilters(emptyFilters)
     setLastAppliedFilters(emptyFilters)
-    onApplyFilters(emptyFilters)
+    
+    // Navigate to homepage without any filter parameters
+    router.push('/')
     onClose()
   }
 
@@ -116,13 +133,20 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
                 {priceRanges.map((range) => (
                   <button
                     key={range.value}
-                    onClick={() => setSelectedFilters(prev => ({ 
-                      ...prev, 
-                      priceRange: prev.priceRange === range.value ? '' : range.value 
-                    }))}
+                    onClick={() => setSelectedFilters(prev => {
+                      const currentPriceRanges = prev.priceRange || []
+                      const isSelected = currentPriceRanges.includes(range.value)
+                      
+                      return {
+                        ...prev,
+                        priceRange: isSelected
+                          ? currentPriceRanges.filter(val => val !== range.value)
+                          : [...currentPriceRanges, range.value]
+                      }
+                    })}
                     className={`p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                      selectedFilters.priceRange === range.value
-                        ? 'border-teal-600 bg-teal-50 text-teal-700'
+                      selectedFilters.priceRange?.includes(range.value)
+                        ? 'border-teal-600 bg-teal-600 text-white shadow-md transform scale-105'
                         : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -141,13 +165,20 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters }: FilterM
                 {guestNumbers.map((guest) => (
                   <button
                     key={guest.value}
-                    onClick={() => setSelectedFilters(prev => ({ 
-                      ...prev, 
-                      guestNumber: prev.guestNumber === guest.value ? '' : guest.value 
-                    }))}
+                    onClick={() => setSelectedFilters(prev => {
+                      const currentGuestNumbers = prev.guestNumber || []
+                      const isSelected = currentGuestNumbers.includes(guest.value)
+                      
+                      return {
+                        ...prev,
+                        guestNumber: isSelected
+                          ? currentGuestNumbers.filter(val => val !== guest.value)
+                          : [...currentGuestNumbers, guest.value]
+                      }
+                    })}
                     className={`p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                      selectedFilters.guestNumber === guest.value
-                        ? 'border-teal-600 bg-teal-50 text-teal-700'
+                      selectedFilters.guestNumber?.includes(guest.value)
+                        ? 'border-teal-600 bg-teal-600 text-white shadow-md transform scale-105'
                         : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >

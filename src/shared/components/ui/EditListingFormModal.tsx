@@ -23,7 +23,7 @@ const eventTypes = [
   "Birthday",
   "Wedding",
   "Corporate",
-  "Concert",
+  "Funeral",
   "Other",
 ];
 

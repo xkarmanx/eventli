@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -16,6 +17,9 @@ interface BookingModalProps {
 export default function BookingModal({ isOpen, onClose, service }: BookingModalProps) {
   const [selectedDate, setSelectedDate] = useState<number | null>(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [isMobile, setIsMobile] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -26,8 +30,44 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
     endTime: '18:00 PM'
   })
 
+  const [formErrors, setFormErrors] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    address: '',
+    timeRange: ''
+  })
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Initialize mobile detection on mount
   useEffect(() => {
-    if (!isOpen) return
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    
+    checkMobile()
+    setIsMounted(true)
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Handle mobile navigation - only after component is mounted
+  useEffect(() => {
+    if (!isMounted) return // Wait for mount to complete
+    
+    if (isOpen && service && isMobile) {
+      // On mobile, navigate to the booking page instead of showing modal
+      router.push(`/listing/${service.id}/booking`)
+      onClose() // Close the modal state
+      return
+    }
+  }, [isOpen, service, isMobile, router, onClose, isMounted])
+
+  useEffect(() => {
+    if (!isMounted || !isOpen || isMobile) return // Don't set up modal behavior on mobile
 
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -41,9 +81,10 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
       document.removeEventListener('keydown', handleEscKey)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, isMobile, isMounted])
 
-  if (!isOpen || !service) return null
+  // Don't render modal on mobile (navigation handled above) or before mount
+  if (!isMounted || !isOpen || !service || isMobile) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -53,12 +94,128 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    
+    // Clear error when user starts typing
+    if (formErrors[field as keyof typeof formErrors]) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }))
+    }
   }
 
-  const handleSubmitBooking = () => {
-    // TODO: Implement booking submission
-    console.log('Submit booking:', { service, selectedDate, formData })
-    onClose()
+  // Validation functions
+  const validateEmail = (email: string): string => {
+    if (!email) return 'Email is required'
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    if (!emailRegex.test(email)) return 'Please enter a valid email address'
+    return ''
+  }
+
+  const validatePhoneNumber = (phone: string): string => {
+    if (!phone) return 'Phone number is required'
+    // Remove all non-digit characters
+    const digitsOnly = phone.replace(/\D/g, '')
+    // Check for valid US/International phone number (10-15 digits)
+    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+      return 'Please enter a valid phone number (10-15 digits)'
+    }
+    return ''
+  }
+
+  const validateName = (name: string, fieldName: string): string => {
+    if (!name.trim()) return `${fieldName} is required`
+    if (name.trim().length < 2) return `${fieldName} must be at least 2 characters`
+    if (name.trim().length > 50) return `${fieldName} must be less than 50 characters`
+    // Check for valid name characters (letters, spaces, hyphens, apostrophes)
+    const nameRegex = /^[a-zA-Z\s'-]+$/
+    if (!nameRegex.test(name.trim())) return `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`
+    return ''
+  }
+
+  const validateAddress = (address: string): string => {
+    if (!address.trim()) return 'Address is required'
+    if (address.trim().length < 10) return 'Please enter a complete address'
+    if (address.trim().length > 200) return 'Address must be less than 200 characters'
+    return ''
+  }
+
+  const validateTimeRange = (startTime: string, endTime: string): string => {
+    if (!startTime || !endTime) return 'Both start and end times are required'
+    
+    // Convert time strings to comparable format
+    const convertTo24Hour = (timeStr: string): number => {
+      const [time, period] = timeStr.split(' ')
+      let [hours, minutes] = time.split(':').map(Number)
+      
+      if (period === 'PM' && hours !== 12) hours += 12
+      if (period === 'AM' && hours === 12) hours = 0
+      
+      return hours * 60 + (minutes || 0)
+    }
+
+    const startMinutes = convertTo24Hour(startTime)
+    const endMinutes = convertTo24Hour(endTime)
+    
+    if (endMinutes <= startMinutes) {
+      return 'End time must be after start time'
+    }
+    
+    // Minimum 1 hour booking
+    if (endMinutes - startMinutes < 60) {
+      return 'Booking must be at least 1 hour long'
+    }
+    
+    return ''
+  }
+
+  const validateForm = (): boolean => {
+    const errors = {
+      firstName: validateName(formData.firstName, 'First name'),
+      lastName: validateName(formData.lastName, 'Last name'),
+      email: validateEmail(formData.email),
+      phoneNumber: validatePhoneNumber(formData.phoneNumber),
+      address: validateAddress(formData.address),
+      timeRange: validateTimeRange(formData.startTime, formData.endTime)
+    }
+
+    setFormErrors(errors)
+    
+    // Check if any errors exist
+    return Object.values(errors).every(error => error === '')
+  }
+
+  const handleSubmitBooking = async () => {
+    if (!selectedDate) {
+      // You could add a visual indicator for date selection
+      return
+    }
+
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+    
+    try {
+      // TODO: Implement actual booking submission
+      console.log('Submit booking:', { 
+        service, 
+        selectedDate, 
+        formData: {
+          ...formData,
+          // Clean up phone number
+          phoneNumber: formData.phoneNumber.replace(/\D/g, '')
+        }
+      })
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      onClose()
+    } catch (error) {
+      console.error('Booking submission error:', error)
+      // You could add toast notification here
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // Calendar logic
@@ -68,6 +225,10 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
     "July", "August", "September", "October", "November", "December"]
   
   const days = []
+  const today = new Date()
+  const currentYear = today.getFullYear()
+  const currentMonthIndex = today.getMonth()
+  const currentDay = today.getDate()
   
   // Empty cells for days before the first day of the month
   for (let i = 0; i < firstDayOfMonth; i++) {
@@ -76,14 +237,22 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
   
   // Days of the month
   for (let day = 1; day <= daysInMonth; day++) {
+    // Check if this day is in the past
+    const isCurrentMonth = currentMonth.getFullYear() === currentYear && currentMonth.getMonth() === currentMonthIndex
+    const isPastDay = isCurrentMonth && day < currentDay
+    const isDisabled = isPastDay
+    
     days.push(
       <button
         key={day}
-        onClick={() => setSelectedDate(day)}
-        className={`w-8 h-8 text-sm rounded-lg hover:bg-blue-100 transition-colors ${
-          selectedDate === day 
-            ? 'bg-blue-600 text-white' 
-            : 'text-gray-700 hover:text-blue-600'
+        onClick={() => !isDisabled && setSelectedDate(day)}
+        disabled={isDisabled}
+        className={`w-8 h-8 text-sm rounded-lg transition-colors ${
+          isDisabled 
+            ? 'text-gray-300 cursor-not-allowed bg-gray-100' 
+            : selectedDate === day 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-700 hover:bg-blue-100 hover:text-blue-600'
         }`}
       >
         {day}
@@ -92,12 +261,39 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
   }
 
   const goToPreviousMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
+    const currentDate = new Date()
+    const newMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
+    
+    // Don't allow going before current month
+    if (newMonth.getFullYear() < currentDate.getFullYear() || 
+        (newMonth.getFullYear() === currentDate.getFullYear() && newMonth.getMonth() < currentDate.getMonth())) {
+      return
+    }
+    
+    setCurrentMonth(newMonth)
   }
 
   const goToNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
+    const currentDate = new Date()
+    const maxDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth())
+    const newMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
+    
+    // Don't allow going more than 1 year in the future
+    if (newMonth > maxDate) {
+      return
+    }
+    
+    setCurrentMonth(newMonth)
   }
+
+  // Check if navigation buttons should be disabled
+  const currentDate = new Date()
+  const isAtMinMonth = currentMonth.getFullYear() === currentDate.getFullYear() && 
+                      currentMonth.getMonth() === currentDate.getMonth()
+  
+  const maxDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth())
+  const isAtMaxMonth = currentMonth.getFullYear() === maxDate.getFullYear() && 
+                       currentMonth.getMonth() === maxDate.getMonth()
 
   return (
     <div
@@ -143,13 +339,23 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
                   <div className="flex space-x-2">
                     <button
                       onClick={goToPreviousMonth}
-                      className="p-1 hover:bg-gray-200 rounded"
+                      disabled={isAtMinMonth}
+                      className={`p-1 rounded transition-colors ${
+                        isAtMinMonth 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : 'hover:bg-gray-200 text-gray-600'
+                      }`}
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={goToNextMonth}
-                      className="p-1 hover:bg-gray-200 rounded"
+                      disabled={isAtMaxMonth}
+                      className={`p-1 rounded transition-colors ${
+                        isAtMaxMonth 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : 'hover:bg-gray-200 text-gray-600'
+                      }`}
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
@@ -177,82 +383,106 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                      First Name
+                      First Name *
                     </Label>
                     <Input
                       id="firstName"
                       type="text"
                       value={formData.firstName}
                       onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      className="mt-1"
+                      className={`mt-1 ${formErrors.firstName ? 'border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="Enter your first name"
                     />
+                    {formErrors.firstName && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.firstName}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                      Last Name
+                      Last Name *
                     </Label>
                     <Input
                       id="lastName"
                       type="text"
                       value={formData.lastName}
                       onChange={(e) => handleInputChange('lastName', e.target.value)}
-                      className="mt-1"
+                      className={`mt-1 ${formErrors.lastName ? 'border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="Enter your last name"
                     />
+                    {formErrors.lastName && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.lastName}</p>
+                    )}
                   </div>
                 </div>
 
                 {/* Email */}
                 <div>
                   <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                    Email
+                    Email *
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="mt-1"
+                    className={`mt-1 ${formErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="your.email@example.com"
                   />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                  )}
                 </div>
 
                 {/* Phone Number */}
                 <div>
                   <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700">
-                    Phone Number
+                    Phone Number *
                   </Label>
                   <Input
                     id="phoneNumber"
                     type="tel"
                     value={formData.phoneNumber}
                     onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                    className="mt-1"
+                    className={`mt-1 ${formErrors.phoneNumber ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="(555) 123-4567"
                   />
+                  {formErrors.phoneNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.phoneNumber}</p>
+                  )}
                 </div>
 
                 {/* Address */}
                 <div>
                   <Label htmlFor="address" className="text-sm font-medium text-gray-700">
-                    Address
+                    Event Address *
                   </Label>
                   <Input
                     id="address"
                     type="text"
                     value={formData.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    className="mt-1"
+                    className={`mt-1 ${formErrors.address ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="123 Main St, City, State 12345"
                   />
+                  {formErrors.address && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.address}</p>
+                  )}
                 </div>
 
                 {/* Time Range */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Time
+                    Event Time *
                   </Label>
                   <div className="flex items-center space-x-4">
                     <select
                       value={formData.startTime}
                       onChange={(e) => handleInputChange('startTime', e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                        formErrors.timeRange 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     >
                       <option value="12:00 AM">12:00 AM</option>
                       <option value="01:00 AM">01:00 AM</option>
@@ -279,13 +509,16 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
                       <option value="10:00 PM">10:00 PM</option>
                       <option value="11:00 PM">11:00 PM</option>
                     </select>
-                    <span className="text-gray-500">-</span>
+                    <span className="text-gray-500 font-medium">to</span>
                     <select
                       value={formData.endTime}
                       onChange={(e) => handleInputChange('endTime', e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                        formErrors.timeRange 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     >
-                      <option value="12:00 AM">12:00 AM</option>
                       <option value="01:00 AM">01:00 AM</option>
                       <option value="02:00 AM">02:00 AM</option>
                       <option value="03:00 AM">03:00 AM</option>
@@ -309,20 +542,38 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
                       <option value="09:00 PM">09:00 PM</option>
                       <option value="10:00 PM">10:00 PM</option>
                       <option value="11:00 PM">11:00 PM</option>
-                      <option value="18:00 PM">18:00 PM</option>
+                      <option value="11:59 PM">11:59 PM</option>
                     </select>
                   </div>
+                  {formErrors.timeRange && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.timeRange}</p>
+                  )}
                 </div>
 
                 {/* Submit Button */}
                 <div className="pt-6">
+                  {!selectedDate && (
+                    <p className="mb-3 text-sm text-red-600 text-center">
+                      Please select a date from the calendar above
+                    </p>
+                  )}
                   <Button
                     onClick={handleSubmitBooking}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium"
-                    disabled={!selectedDate || !formData.firstName || !formData.email}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-medium transition-colors"
+                    disabled={!selectedDate || isSubmitting}
                   >
-                    Request Booking
+                    {isSubmitting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Submitting...
+                      </div>
+                    ) : (
+                      'Request Booking'
+                    )}
                   </Button>
+                  <p className="mt-2 text-xs text-gray-500 text-center">
+                    * Required fields. Your booking request will be sent to the service provider for confirmation.
+                  </p>
                 </div>
               </div>
             </div>
