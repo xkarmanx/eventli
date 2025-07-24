@@ -133,12 +133,12 @@ export default function BoostingPage() {
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
       {/* header / hero */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
               Boost Your Listings
             </h1>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-6">
+            <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto mb-4 sm:mb-6">
               Increase your visibility and get more bookings with our premium boosting options
             </p>
             <div className="flex items-center justify-center gap-4 mb-2">
@@ -149,6 +149,7 @@ export default function BoostingPage() {
           </div>
         </div>
       </div>
+
 
       {/* main content */}
       <div className="py-8 px-6 sm:px-8 flex-1 w-full">
@@ -174,6 +175,7 @@ export default function BoostingPage() {
                     return (
                       <PlanCard
                         key={plan.id}
+
                         plan={plan}
                         Icon={Icon}
                         onSelect={() => openModalForPlan(plan)}
@@ -184,7 +186,6 @@ export default function BoostingPage() {
               </div>
             </div>
           </div>
-
           {/* active boosts */}
           <div className="mb-12">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">

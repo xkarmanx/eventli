@@ -21,7 +21,7 @@ export default function SellerDashboardPage() {
       {/* Dashboard Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2 sm:gap-3 text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2 sm:gap-3 text-black mb-2">
             <div className="p-1.5 sm:p-2 bg-blue-50 rounded-full">
               <LayoutDashboard className="w-6 h-6 sm:w-8 sm:h-8 text-teal-700" />
             </div>
@@ -50,7 +50,7 @@ export default function SellerDashboardPage() {
             <CardDescription className="text-sm text-gray-500">Active offerings</CardDescription>
           </CardHeader>
           <CardContent>
-            <span className="text-3xl font-bold text-gray-900">--</span>
+            <span className="text-3xl font-bold text-black">--</span>
           </CardContent>
         </Card>
 
@@ -65,7 +65,7 @@ export default function SellerDashboardPage() {
             <CardDescription className="text-sm text-gray-500">Next 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <span className="text-3xl font-bold text-gray-900">--</span>
+            <span className="text-3xl font-bold text-black">--</span>
           </CardContent>
         </Card>
 
@@ -80,7 +80,7 @@ export default function SellerDashboardPage() {
             <CardDescription className="text-sm text-gray-500">Scheduled events</CardDescription>
           </CardHeader>
           <CardContent>
-            <span className="text-3xl font-bold text-gray-900">--</span>
+            <span className="text-3xl font-bold text-black">--</span>
           </CardContent>
         </Card>
       </div>
@@ -88,7 +88,7 @@ export default function SellerDashboardPage() {
       {/* Manage Listings (Preview Table) */}
       <Card className="bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 group">
         <CardHeader className="border-b border-gray-100 pb-4">
-          <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900">Manage Listings</CardTitle>
+          <CardTitle className="text-lg sm:text-xl font-semibold text-black">Manage Listings</CardTitle>
           <CardDescription className="text-sm sm:text-base text-gray-600">Preview of your top listings</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -97,7 +97,7 @@ export default function SellerDashboardPage() {
             {[1,2,3].map((item, idx) => (
               <div key={idx} className="p-4 border-b border-gray-100 last:border-b-0">
                 <div className="flex justify-between items-start mb-2">
-                  <div className="font-medium text-gray-900">--</div>
+                  <div className="font-medium text-black">--</div>
                   <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">--</span>
                 </div>
                 <div className="text-sm text-gray-600 mb-2">Bookings: --</div>
@@ -194,7 +194,7 @@ export default function SellerDashboardPage() {
       {/* Ratings & Reviews */}
       <Card className="bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 group">
         <CardHeader className="border-b border-gray-100 pb-4">
-          <CardTitle className="text-xl font-semibold text-gray-900">Ratings & Reviews</CardTitle>
+          <CardTitle className="text-xl font-semibold text-black">Ratings & Reviews</CardTitle>
           <CardDescription className="text-gray-600">See how your services are performing</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-8 items-center pt-6">
@@ -203,19 +203,19 @@ export default function SellerDashboardPage() {
               <Star className="text-yellow-500 w-7 h-7" fill="#EAB308" />
             </div>
             <div>
-              <span className="text-3xl font-bold text-gray-900">--</span>
+              <span className="text-3xl font-bold text-black">--</span>
               <span className="text-gray-500 text-lg">/ 5</span>
             </div>
           </div>
           <div className="flex-1">
-            <div className="text-lg font-semibold mb-2 text-gray-900">Recent Review</div>
+            <div className="text-lg font-semibold mb-2 text-black">Recent Review</div>
             <blockquote className="italic text-gray-600 border-l-4 border-yellow-300 pl-4 py-2 bg-yellow-50 rounded-r-lg">
               --
             </blockquote>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-xl">
             <div className="text-sm text-gray-500 mb-1">Total Reviews</div>
-            <div className="text-2xl font-bold text-gray-900">--</div>
+            <div className="text-2xl font-bold text-black">--</div>
           </div>
         </CardContent>
       </Card>

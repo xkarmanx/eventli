@@ -55,23 +55,13 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
   // CT: stores the image file for upload
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // CT: Track if the user has edited their email so useEffect doesnt override it
+  // CT: Track if the user has edited their email so useEffect doesnt override it. Also state to store previous email
   const [hasEditedEmail, setHasEditedEmail] = useState(false);
 
-  // JC: Update form when new user data comes in
-  useEffect(() => {
-    if (userData) {
-      setName(userData.name || "");
-      if (!hasEditedEmail)
-        setEmail(userData.email || "");
-      setPhone(userData.phone || "");
-      setLocation(userData.location || "");
-      setBio(userData.bio || "");
-      setWebsite(userData.website || "");
-      setProfilePic(userData.profilePic || null);
-      setPreviewPic(userData.profilePic || null);
-    }
-  }, [userData, hasEditedEmail]);
+  const [previousEmail, setPreviousEmail] = useState(userData?.email || "");
+
+  // CT: Error state for phone validation
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -98,11 +88,29 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
     fileInputRef.current?.click();
   };
 
+  
+  // CT: Format phone number to XXX-XXX-XXXX
+  function formatPhoneNumber(value: string) {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+
+    // Format as XXX-XXX-XXXX
+    const part1 = digits.slice(0, 3);
+    const part2 = digits.slice(3, 6);
+    const part3 = digits.slice(6, 10);
+
+    let formatted = part1;
+    if (part2) formatted += `-${part2}`;
+    if (part3) formatted += `-${part3}`;
+
+    return formatted;
+  }
+
   // JC: Save form data when user submits
-  const handleSubmit = async(e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // CT: Upload profile picture to storage if a new image is selected
+    // Upload profile picture to storage if a new image is selected
     let uploadedUrl = profilePic;
 
     if (imageFile) {
@@ -110,12 +118,9 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
-
       const { error: uploadError } = await supabase.storage
         .from("profile-avatar-images")
-        .upload(filePath, imageFile, {
-          upsert: true,
-        });
+        .upload(filePath, imageFile, { upsert: true });
 
       if (uploadError) {
         console.error("Image upload failed:", uploadError);
@@ -127,6 +132,15 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
       }
     }
 
+    // Validate phone number
+    const phoneRegex = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
+    if (phone && !phoneRegex.test(phone)) {
+      setPhoneError("Please enter a valid phone number (e.g. 123-456-7890)");
+      return;
+    }
+
+    setPhoneError(null);
+
     const updatedData: ProfileUpdate = {
       full_name: name,
       email,
@@ -137,18 +151,51 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
       avatar_url: uploadedUrl
     };
 
-    // CT: Logic to update profile in database
+
     try {
-      await updateProfile(userId, updatedData);
+      if (email !== previousEmail) {
+        // If email changed, call updateProfile normally (includes auth.email update)
+        await updateProfile(userId, updatedData);
+        setPreviousEmail(email); // track the new confirmed/pending email
+        toast.success("Profile and email update request sent!");
+      } else {
+        // Remove email to skip auth update
+        const { email, ...rest } = updatedData;
+        await updateProfile(userId, rest);
+        toast.success("Profile updated successfully!");
+      }
+
       await updateProfileComplete(userId);
-      toast.success("Profile updated successfully!");
-    } catch (error) {
-      console.error("Failed to update profile:", error);
+
+      onSave?.();
+      onCloseAction();
+    } catch (error: any) {
+      if (error.name === "AuthApiError") {
+        toast.error("Please wait before requesting another email update.");
+      } else {
+        toast.error("Failed to update profile.");
+      }
+      console.error("Profile update error:", error);
     }
 
-    onSave?.();
-    onCloseAction();
   };
+
+  // JC: Update form when new user data comes in
+  useEffect(() => {
+    if (userData) {
+      setName(userData.name || "");
+      if (!hasEditedEmail) {
+        setEmail(userData.email || "");
+        setPreviousEmail(userData.email || "");
+      }
+      setPhone(userData.phone || "");
+      setLocation(userData.location || "");
+      setBio(userData.bio || "");
+      setWebsite(userData.website || "");
+      setProfilePic(userData.profilePic || null);
+      setPreviewPic(userData.profilePic || null);
+    }
+  }, [userData, hasEditedEmail]);
 
   // JC: Close modal when user presses escape key and prevent body scroll
   useEffect(() => {
@@ -295,17 +342,26 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
                     <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
                       Phone Number
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                      <input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Enter your phone number"
-                      />
-                    </div>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <input
+                          id="phone"
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => {
+                            const formatted = formatPhoneNumber(e.target.value);
+                            setPhone(formatted);
+                            if (phoneError) setPhoneError(null);
+                          }}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-200
+                            ${phoneError ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-teal-500"}
+                          `}
+                          placeholder="Enter your phone number"
+                        />
+                        {phoneError && (
+                          <p className="text-sm text-red-600 mt-1">{phoneError}</p>
+                        )}
+                      </div>
                   </div>
 
                   <div>
