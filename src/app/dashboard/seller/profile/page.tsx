@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { User, Mail, Phone, MapPin, Calendar, Star, Award, Settings, Edit, Globe, Building } from "lucide-react";
+import { Award, Building, Calendar, Edit, Globe, Mail, MapPin, Phone, Settings, Star, User } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
-import { updateProfileComplete, updateProfile } from "@/features/services/profile_crud";
+import { toast } from "sonner";
 
 const supabase = createClient();
 
 export default function SellerProfilePage() {
   // JC: State to control edit modal open/close
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
+
   // JC: State to store real user data from database instead of mock data
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -24,7 +25,7 @@ export default function SellerProfilePage() {
 
   // JC: Get user login info when page loads
   useEffect(() => {
-    const getInitialSession = async () => {
+    (async () => { // KSch: For simplicity, this should be an anonymous arrow function.
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
@@ -39,9 +40,7 @@ export default function SellerProfilePage() {
       } finally {
         setAuthLoading(false);
       }
-    };
-
-    getInitialSession();
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -55,26 +54,10 @@ export default function SellerProfilePage() {
     };
   }, []);
 
-  // JC: Get user profile data from database when user is logged in
-  useEffect(() => {
-    if (user?.id && !authLoading) {
-      fetchProfile();
-    }
-  }, [user?.id, authLoading]);
-
-  // CT: Countdown timer for resend verification email
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
-
-
   // JC: Function to get user profile from database
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user?.id) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -96,18 +79,32 @@ export default function SellerProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  // JC: Get user profile data from database when user is logged in
+  useEffect(() => {
+    if (user?.id && !authLoading)
+      fetchProfile();
+  }, [user?.id, authLoading, fetchProfile]);
+
+  // CT: Countdown timer for resend verification email
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // JC: Function to refresh profile data after user saves changes
-  const handleProfileUpdate = () => {
+  function handleProfileUpdate() {
     // Refresh profile data after update
     fetchProfile();
 
     console.log("Profile Data:", profile);
     console.log("Profile complete?:", profile.is_setup_complete);
-  };
+  }
 
-    //CT: Hold the time period for pending email validity
+  //CT: Hold the time period for pending email validity
   const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7; //7 days
   const now = new Date();
   const pendingDate = new Date(profile?.pending_email_requested_at || 0);
@@ -115,7 +112,7 @@ export default function SellerProfilePage() {
   const displayEmail = isPendingStillValid ? profile.pending_email : user?.email;
 
   // CT: Resend email verification function
-  const handleResendVerificationEmail = async () => {
+  async function handleResendVerificationEmail() {
     try {
       if (!user) return;
 
@@ -127,12 +124,11 @@ export default function SellerProfilePage() {
       await updateProfile(profile.id, { email: profile.pending_email });
 
       setResendCooldown(60);
-      alert("Verification email resent! Please check your inbox.");
-    } 
-    catch (err) {
+      toast.success("Verification email resent! Please check your inbox.");
+    } catch (err) {
       console.error("Resend error:", err);
     }
-  };
+  }
 
   // JC: Show loading screen while getting user data
   if (authLoading || loading) {
@@ -182,7 +178,7 @@ export default function SellerProfilePage() {
       {/* Main Content */}
       <div className="flex-1 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          
+
           {/* JC: Simple stats cards using real data */}
           {/*<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-4 sm:p-6 text-center hover:shadow-lg transition-shadow duration-300">
@@ -192,10 +188,12 @@ export default function SellerProfilePage() {
               <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">4.9</div>
               <div className="text-xs sm:text-sm text-gray-600">Average Rating</div>
             </div>
+
             
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-4 sm:p-6 text-center hover:shadow-lg transition-shadow duration-300">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+
               </div>
               <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">0</div>
               <div className="text-xs sm:text-sm text-gray-600">Events Completed</div>
@@ -204,6 +202,7 @@ export default function SellerProfilePage() {
 
           <div className="space-y-6 sm:space-y-8">
             
+
             {/* JC: Personal info section with real user data from database */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-200">
@@ -229,9 +228,12 @@ export default function SellerProfilePage() {
               </div>
               
               <div className="p-4 sm:p-6 lg:p-8">
+
                 {/* JC: Show user profile picture and basic info using real data */}
                 <div className="flex flex-col items-center text-center md:flex-row md:items-start md:text-left gap-6 sm:gap-8 mb-6 sm:mb-8">
                   <div className="relative">
+                    {/* Change from img to Image if actually needed */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={
                         profile.avatar_url ||
@@ -286,6 +288,7 @@ export default function SellerProfilePage() {
                               {resendCooldown > 0 ? (
                                 <p className="text-yellow-300">
                                   You can resend the verification email in {resendCooldown}s.
+
                                 </p>
                               ) : (
                                 <button
@@ -300,11 +303,11 @@ export default function SellerProfilePage() {
                         )}
                       </div>
                     </div>
-                  </div>
-                  
+                  </div>                  
                   <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center">
                       <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs sm:text-sm font-semibold text-gray-700">Phone Number</div>
@@ -315,6 +318,7 @@ export default function SellerProfilePage() {
                   <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center">
                       <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs sm:text-sm font-semibold text-gray-700">Location</div>
@@ -325,6 +329,7 @@ export default function SellerProfilePage() {
                   <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center">
                       <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs sm:text-sm font-semibold text-gray-700">Role</div>
@@ -351,6 +356,7 @@ export default function SellerProfilePage() {
               
               {/*<div className="p-4 sm:p-6 lg:p-8">
                 <div className="grid grid-cols-1 gap-4 sm:gap-6">*/}
+
                   {/* JC: Show website if user has one */}
                   {/*{profile.website && (
                     <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -365,6 +371,7 @@ export default function SellerProfilePage() {
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="text-blue-600 hover:text-blue-700 hover:underline truncate inline-block max-w-full"
+
                           >
                             {profile.website}
                           </a>
@@ -372,13 +379,14 @@ export default function SellerProfilePage() {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* JC: Show message if no website provided */}
                   {/*{!profile.website && (
                     <div className="text-center py-6 sm:py-8 text-gray-500">
                       <Globe className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-300" />
                       <p className="text-sm sm:text-base">No website information provided</p>
                       <p className="text-xs sm:text-sm">Click "Edit Profile" to add your website</p>
+
                     </div>
                   )}
                 </div>
@@ -401,6 +409,7 @@ export default function SellerProfilePage() {
               
               <div className="p-4 sm:p-6 lg:p-8">
                 <div className="space-y-4 sm:space-y-6">
+
                   {/* JC: Show user role from database */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="text-center sm:text-left">
@@ -413,7 +422,7 @@ export default function SellerProfilePage() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* JC: Show if profile setup is complete */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="text-center sm:text-left">
@@ -424,6 +433,7 @@ export default function SellerProfilePage() {
                       <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                         profile.is_setup_complete 
                           ? 'bg-green-100 text-green-700' 
+
                           : 'bg-orange-100 text-orange-700'
                       }`}>
                         {profile.is_setup_complete ? 'Complete' : 'Incomplete'}
@@ -438,9 +448,9 @@ export default function SellerProfilePage() {
       </div>
 
       {/* JC: Edit modal with real user data passed to it */}
-      <ProfileEditModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)}
+      <ProfileEditModal
+        isOpen={isEditModalOpen}
+        onCloseAction={() => setIsEditModalOpen(false)}
         userType="seller"
         userId={profile.id}
         userData={{

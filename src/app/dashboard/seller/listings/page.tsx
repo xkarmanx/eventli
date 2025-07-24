@@ -11,11 +11,14 @@ import { getListings } from "@/features/services/listing_crud";
 import { createClient } from '@/shared/lib/supabase/client';
 // kvs: Removed react-toastify imports - no longer needed as all modals use Sonner toast
 
+import BoostingModal from "@/shared/components/ui/BoostingModal"; // ✅ ADD: Import BoostingModal
+
 export default function ListingsPage() {
   // JC: State to manage modals and listings data
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [boostOpen, setBoostOpen] = useState(false); // ✅ ADD: State for boost modal
   const [selectedListing, setSelectedListing] = useState<any>(null); // JC: Track which listing is being edited/deleted
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,10 +117,30 @@ export default function ListingsPage() {
     setSelectedListing(null);
   };
 
+    // ✅ ADD: Handle boost button click from card - open boosting modal
+
+  const handleBoostRequest = (listing: any) => {
+
+    setSelectedListing(listing);
+
+    setBoostOpen(true);
+
+  };
+
   // JC: Close delete modal and clear selected listing
   const handleDeleteModalClose = () => {
     setDeleteOpen(false);
     setSelectedListing(null);
+  };
+
+    // ✅ ADD: Close boosting modal and clear selected listing
+
+  const handleBoostModalClose = () => {
+
+    setBoostOpen(false);
+
+    setSelectedListing(null);
+
   };
 
   if (authLoading) {
@@ -319,6 +342,18 @@ export default function ListingsPage() {
         onClose={handleDeleteModalClose} 
         listing={selectedListing}
         onDelete={handleListingDelete}
+      />
+
+            {/* ✅ ADD: Render the BoostingModal */}
+
+      <BoostingModal
+
+        isOpen={boostOpen}
+
+        onClose={handleBoostModalClose}
+
+        listing={selectedListing}
+
       />
 
       {/* kvs: Removed ToastContainer as all toast notifications now use Sonner which is globally configured in layout.tsx */}

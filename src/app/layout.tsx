@@ -31,8 +31,10 @@ export default function RootLayout({
           {children}
         </main>
         {/* <Footer/> */}
+
         <MobileBottomNav />
-        <Toaster />
+        <Toaster position='top-right' />
+
       </body>
     </html>
   )

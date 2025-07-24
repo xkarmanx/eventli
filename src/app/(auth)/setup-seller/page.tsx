@@ -1,32 +1,36 @@
-import { createClient } from '@/shared/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Label } from '@/shared/components/ui/label'
-import { Input } from '@/shared/components/ui/input'
-import { Button } from '@/shared/components/ui/button'
-import { Textarea } from '@/shared/components/ui/textarea'
-import { updateSellerProfile } from '@/features/auth/actions'
-import Link from 'next/link'
-import Image from 'next/image'
+import Image from 'next/image';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { updateSellerProfile } from '@/features/auth/actions';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { createClient } from '@/shared/lib/supabase/server';
+import { Role } from '@/shared/types/database';
+
+type profile = {
+  role: Role;
+  is_setup_complete: boolean | null;
+}
 
 export default async function SetupSellerPage() {
-  const supabase = await createClient()
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!user)
     return redirect('/login');
-  }
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, is_setup_complete')
     .eq('id', user.id)
-    .single()
-  
+    .single() as { data: profile };
+
   // This page is only for sellers who have NOT completed setup.
-  if (profile?.role !== 'seller' || profile?.is_setup_complete) {
-    return redirect('/dashboard')
-  }
+  if (profile?.role !== 'seller' || profile?.is_setup_complete)
+    return redirect('/dashboard');
 
   return (
     <div className="w-full min-h-screen flex flex-col items-center justify-center bg-teal-900 p-4">
@@ -84,8 +88,8 @@ export default async function SetupSellerPage() {
               />
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
             >
               Complete Profile & Go to Dashboard
@@ -94,5 +98,5 @@ export default async function SetupSellerPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

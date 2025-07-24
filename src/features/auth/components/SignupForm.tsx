@@ -53,7 +53,7 @@ export function SignupForm() {
   const [isCaptchaVerified, setIsCaptchaVerified] = React.useState<boolean>(false);
   const recaptchaRef = React.useRef<ReCaptchaComponentRef>(null); // Ref for reCAPTCHA component
 
-  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   function handleCaptchaChange(token: string | null) {
     console.log('reCAPTCHA token:', token);

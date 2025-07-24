@@ -1,9 +1,19 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Button } from "@/shared/components/ui/button";
+import {
+  ArrowRight,
+  Bell,
+  CalendarDays,
+  LayoutDashboard,
+  ListOrdered,
+  Megaphone,
+  MessageSquare,
+  Pencil,
+  Star
+} from "lucide-react";
 import Link from "next/link";
-import {ListOrdered,CalendarDays,LayoutDashboard,Bell,MessageSquare,Megaphone,Star,ArrowRight,Pencil} from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 
 export default function SellerDashboardPage() {
   return (
@@ -26,7 +36,7 @@ export default function SellerDashboardPage() {
           </Button>
         </Link>
       </div>
-      
+
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         <Card className="bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
@@ -97,7 +107,7 @@ export default function SellerDashboardPage() {
               </div>
             ))}
           </div>
-          
+
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -125,7 +135,7 @@ export default function SellerDashboardPage() {
               </tbody>
             </table>
           </div>
-          
+
           <div className="p-4 sm:p-6 border-t border-gray-100 bg-gray-50">
             <Link href="/dashboard/listings/new">
               <Button className="w-full sm:w-auto cursor-pointer shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-teal-700 hover:text-white">
@@ -136,11 +146,11 @@ export default function SellerDashboardPage() {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Recent Activity / Notifications */}
       <Card className="bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 group">
         <CardHeader className="border-b border-gray-100 pb-4">
-          <CardTitle className="text-lg sm:text-xl font-semibold text-black">Recent Activity & Notifications</CardTitle>
+          <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900">Recent Activity &amp; Notifications</CardTitle>
           <CardDescription className="text-sm sm:text-base text-gray-600">Stay updated with what&apos;s happening</CardDescription>
         </CardHeader>
         <CardContent className="pt-4 sm:pt-6">
@@ -180,7 +190,7 @@ export default function SellerDashboardPage() {
           </ul>
         </CardContent>
       </Card>
-      
+
       {/* Ratings & Reviews */}
       <Card className="bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 group">
         <CardHeader className="border-b border-gray-100 pb-4">
