@@ -11,6 +11,7 @@ interface HomePageProps {
   };
 }
 
+//removed the await for searchparams
 export default async function HomePage({ searchParams }: HomePageProps) {
   let services: Service[] = [];
   console.log('🏠 HomePage: searchParams received:', searchParams);
