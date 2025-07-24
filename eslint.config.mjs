@@ -17,7 +17,7 @@ const eslintConfig = [
     ],
     rules: {
       'react/display-name': 'off',
-      'semi': ['error', 'always']
+      'semi': 'off'
     }
   })
   // reactHooks.configs['recommended-latest']
