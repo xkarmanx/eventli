@@ -71,78 +71,122 @@ export function LoginForm() {
     password: false
   });
 
-  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 
   /* ========== VALIDATION FUNCTIONS ========== */
+  
+  /**
+   * Validates email address according to industry standards
+   * - Must be a valid email format
+   * - Maximum length of 254 characters (RFC 5321)
+   * - Basic sanitization against common attacks
+   */
   const validateEmail = (email: string): string => {
     if (!email.trim()) {
       return 'Email address is required';
     }
+    
     if (email.length > 254) {
       return 'Email address is too long';
     }
-    const emailRegex =
-      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    
+    // Industry standard email regex (RFC 5322 compliant)
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    
     if (!emailRegex.test(email)) {
       return 'Please enter a valid email address';
     }
+    
+    // Check for suspicious patterns
     if (email.includes('..') || email.startsWith('.') || email.endsWith('.')) {
       return 'Please enter a valid email address';
     }
+    
     return '';
   };
 
+  /**
+   * Validates password according to security best practices
+   * - Minimum 8 characters
+   * - Maximum 128 characters (prevent DoS attacks)
+   * - Must contain at least one number, one letter
+   * - No leading/trailing whitespace
+   */
   const validatePassword = (password: string): string => {
     if (!password) {
       return 'Password is required';
     }
+    
     if (password !== password.trim()) {
       return 'Password cannot start or end with spaces';
     }
+    
     if (password.length < 8) {
       return 'Password must be at least 8 characters long';
     }
+    
     if (password.length > 128) {
       return 'Password is too long (maximum 128 characters)';
     }
+    
+    // Check for at least one letter and one number
     const hasLetter = /[a-zA-Z]/.test(password);
     const hasNumber = /\d/.test(password);
+    
     if (!hasLetter) {
       return 'Password must contain at least one letter';
     }
+    
     if (!hasNumber) {
       return 'Password must contain at least one number';
     }
+    
     return '';
   };
 
+  /**
+   * Validates the entire form and returns true if valid
+   */
   const validateForm = (): boolean => {
     const emailError = validateEmail(formData.email);
     const passwordError = validatePassword(formData.password);
+    
     setErrors({
       email: emailError,
       password: passwordError
     });
+    
     return !emailError && !passwordError;
   };
 
   /* ========== EVENT HANDLERS ========== */
+
+  /**
+   * Handles input changes with real-time validation and security sanitization
+   */
   const handleInputChange = (field: 'email' | 'password', value: string) => {
+    // Security: Prevent potential XSS and injection attacks
     let sanitizedValue = value;
+    
     if (field === 'email') {
+      // For email, remove potentially dangerous characters but keep valid email chars
       sanitizedValue = value.replace(/[<>'"]/g, '').slice(0, 254);
     } else {
+      // For password, limit length but preserve all characters for security
       sanitizedValue = value.slice(0, 128);
     }
+    
     setFormData(prev => ({
       ...prev,
       [field]: sanitizedValue
     }));
+    
+    // Real-time validation only after field has been touched to avoid annoying users
     if (touched[field]) {
-      const error =
-        field === 'email'
-          ? validateEmail(sanitizedValue)
-          : validatePassword(sanitizedValue);
+      const error = field === 'email' 
+        ? validateEmail(sanitizedValue) 
+        : validatePassword(sanitizedValue);
+      
       setErrors(prev => ({
         ...prev,
         [field]: error
@@ -150,103 +194,136 @@ export function LoginForm() {
     }
   };
 
+  /**
+   * Handles field blur events to mark fields as touched and trigger validation
+   */
   const handleBlur = (field: 'email' | 'password') => {
     setTouched(prev => ({
       ...prev,
       [field]: true
     }));
-    const error =
-      field === 'email'
-        ? validateEmail(formData[field])
-        : validatePassword(formData[field]);
+    
+    // Validate on blur to provide immediate feedback
+    const error = field === 'email' 
+      ? validateEmail(formData[field]) 
+      : validatePassword(formData[field]);
+    
     setErrors(prev => ({
       ...prev,
       [field]: error
     }));
   };
 
+  /**
+   * Resets form validation state (useful for retry scenarios)
+   */
   const resetValidation = () => {
     setErrors({ email: '', password: '' });
     setTouched({ email: false, password: false });
   };
 
   /* ========== reCAPTCHA HANDLERS ========== */
+  
+  /**
+   * Handles reCAPTCHA token changes
+   */
   function handleCaptchaChange(token: string | null) {
     console.log('reCAPTCHA token:', token);
     setRecaptchaToken(token);
-    setIsCaptchaVerified(!!token);
+    setIsCaptchaVerified(!!token); // true if token exists, false otherwise
   }
 
+  /**
+   * Handles reCAPTCHA token expiration
+   */
   function handleCaptchaExpired() {
     console.warn('reCAPTCHA token expired. Please re-verify.');
     toast.error('reCAPTCHA has expired. Please verify again.');
     setRecaptchaToken(null);
     setIsCaptchaVerified(false);
-    recaptchaRef.current?.reset();
+    recaptchaRef.current?.reset(); // Reset the reCAPTCHA widget
   }
 
   /* ========== EFFECTS ========== */
+  
+  // Check for URL error parameters on component mount
   React.useEffect(() => {
     const error = searchParams.get('error');
     if (error) toast.error(decodeURIComponent(error));
   }, [searchParams]);
 
-  /* ========== FORM SUBMISSION HANDLER (UPDATED) ========== */
+  /* ========== FORM SUBMISSION HANDLERS ========== */
+  
+  /**
+   * Handles form submission with comprehensive validation and security measures
+   */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    
+    // Security: Prevent double submission
     if (loading) return;
-
-    setTouched({ email: true, password: true });
-
+    
+    // Mark all fields as touched to show validation errors
+    setTouched({
+      email: true,
+      password: true
+    });
+    
+    // Validate form before submission
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
       return;
     }
-
+    
+    // Check reCAPTCHA verification
     if (!isCaptchaVerified) {
       toast.error('Please complete the reCAPTCHA verification');
       return;
     }
-
+    
     setLoading(true);
     toast.info('Signing you in...');
-
+    
     try {
+      // Security: Create FormData with sanitized and validated inputs
       const submitData = new FormData();
-      submitData.append('email', formData.email.trim().toLowerCase());
+      submitData.append('email', formData.email.trim().toLowerCase()); // Normalize email
       submitData.append('password', formData.password);
       submitData.append('recaptchaToken', recaptchaToken as string);
 
-      // ✅ FIX: Check the return value instead of catching a success error
-      const result = await login(submitData);
-
-      if (result?.success) {
+      await login(submitData);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
+        // ✅ Handle success case - show success message and redirect
         toast.success('Login successful!');
+        // Clear sensitive form data on success
         setFormData({ email: '', password: '' });
         resetValidation();
         setTimeout(() => router.push('/dashboard'), 1000);
       } else {
-        throw new Error('Failed to sign in');
+        // Handle authentication errors
+        const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
+        toast.error(errorMessage);
+        
+        // Security: Reset reCAPTCHA on failed attempts to prevent brute force
+        setRecaptchaToken(null);
+        setIsCaptchaVerified(false);
+        recaptchaRef.current?.reset();
+        
+        // Clear password on failed login for security
+        setFormData(prev => ({ ...prev, password: '' }));
+        
+        // Reset validation for retry
+        resetValidation();
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'An unknown error occurred';
-      toast.error(errorMessage);
-
-      // Reset reCAPTCHA
-      setRecaptchaToken(null);
-      setIsCaptchaVerified(false);
-      recaptchaRef.current?.reset();
-
-      // Clear password on failed login for security
-      setFormData(prev => ({ ...prev, password: '' }));
-      resetValidation();
     } finally {
       setLoading(false);
     }
   }
 
-  /* ========== GOOGLE SIGN-IN HANDLER ========== */
+  /**
+   * Handles Google Sign-In
+   */
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
     toast.info('Redirecting to Google...');
@@ -264,200 +341,204 @@ export function LoginForm() {
 
   return (
     <>
-      <Card className='w-full max-w-md bg-white shadow-md rounded-lg border'>
-        <CardHeader className='text-center p-4'>
-          <Link href='/' className='inline-block mx-auto'>
+    <Card className='w-full max-w-md bg-white shadow-md rounded-lg border'>
+      <CardHeader className='text-center p-4'>
+        <Link href='/' className='inline-block mx-auto'>
           <Image
-              src='/logo.svg'
-              alt='Eventli Logo'
-              width={32}
-              height={32}
-              className='h-8 w-auto'
-            />
-          </Link>
-          <CardTitle className='text-xl font-bold text-gray-900 pt-3'>
-            Welcome back
-          </CardTitle>
-          <CardDescription className='pt-1 text-sm text-gray-600'>
-            Sign in to continue to Eventli.
-          </CardDescription>
-        </CardHeader>
+            src='/logo.svg'
+            alt='Eventli Logo'
+            width={32}
+            height={32}
+            className='h-8 w-auto'
+          />
+        </Link>
+        <CardTitle className='text-xl font-bold text-gray-900 pt-3'>
+          Welcome back
+        </CardTitle>
+        <CardDescription className='pt-1 text-sm text-gray-600'>
+          Sign in to continue to Eventli.
+        </CardDescription>
+      </CardHeader>
 
-        <CardContent className='p-6 pt-0'>
-          <form onSubmit={handleSubmit} className='space-y-4'>
-            {/* Email Input Field with Validation */}
-            <div className='space-y-1.5'>
-              <Label htmlFor='email'>Email Address</Label>
+      <CardContent className='p-6 pt-0'>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          {/* Email Input Field with Validation */}
+          <div className='space-y-1.5'>
+            <Label htmlFor='email'>Email Address</Label>
+            <Input
+              id='email'
+              name='email'
+              type='email'
+              placeholder='you@example.com'
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              onBlur={() => handleBlur('email')}
+              required
+              disabled={loading}
+              className={cn(
+                'h-10 text-sm transition-colors',
+                errors.email && touched.email
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:border-teal-500 focus:ring-teal-500'
+              )}
+              aria-invalid={errors.email && touched.email ? 'true' : 'false'}
+              aria-describedby={errors.email && touched.email ? 'email-error' : undefined}
+            />
+            {/* Email Error Message */}
+            {errors.email && touched.email && (
+              <p 
+                id="email-error" 
+                className="text-sm text-red-600 flex items-center mt-1"
+                role="alert"
+              >
+                <span className="text-red-500 mr-1">⚠</span>
+                {errors.email}
+              </p>
+            )}
+          </div>
+
+          {/* Password Input Field with Validation */}
+          <div className='space-y-1.5'>
+            <div className='flex items-center justify-between'>
+              <Label htmlFor='password'>Password</Label>
+              <Link
+                href='/forgot-password'
+                className='text-sm font-medium text-teal-600 hover:text-teal-700 transition'
+              >
+                Forgot password?
+              </Link>
+            </div>
+
+            <div className='relative'>
               <Input
-                id='email'
-                name='email'
-                type='email'
-                placeholder='you@example.com'
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                onBlur={() => handleBlur('email')}
+                id='password'
+                name='password'
+                type={showPassword ? 'text' : 'password'}
+                placeholder='••••••••'
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                onBlur={() => handleBlur('password')}
                 required
                 disabled={loading}
                 className={cn(
-                  'h-10 text-sm transition-colors',
-                  errors.email && touched.email
+                  'h-10 text-sm pr-10 transition-colors',
+                  '[&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden',
+                  errors.password && touched.password
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:border-teal-500 focus:ring-teal-500'
                 )}
-                aria-invalid={errors.email && touched.email ? 'true' : 'false'}
-                aria-describedby={errors.email && touched.email ? 'email-error' : undefined}
+                aria-invalid={errors.password && touched.password ? 'true' : 'false'}
+                aria-describedby={errors.password && touched.password ? 'password-error' : undefined}
               />
-              {errors.email && touched.email && (
-                <p 
-                  id="email-error" 
-                  className="text-sm text-red-600 flex items-center mt-1"
-                  role="alert"
-                >
-                  <span className="text-red-500 mr-1">⚠</span>
-                  {errors.email}
-                </p>
-              )}
+
+              {/* Password Visibility Toggle Button */}
+              <button
+                type='button'
+                onClick={() => setShowPassword(!showPassword)}
+                className='absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors'
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                disabled={loading}
+              >
+                {showPassword ? (
+                  <EyeOff className='h-5 w-5' />
+                ) : (
+                  <Eye className='h-5 w-5' />
+                )}
+              </button>
             </div>
-
-            {/* Password Input Field with Validation */}
-            <div className='space-y-1.5'>
-              <div className='flex items-center justify-between'>
-                <Label htmlFor='password'>Password</Label>
-                <Link
-                  href='/forgot-password'
-                  className='text-sm font-medium text-teal-600 hover:text-teal-700 transition'
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              <div className='relative'>
-                <Input
-                  id='password'
-                  name='password'
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder='••••••••'
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  onBlur={() => handleBlur('password')}
-                  required
-                  disabled={loading}
-                  className={cn(
-                    'h-10 text-sm pr-10 transition-colors',
-                    '[&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden',
-                    errors.password && touched.password
-                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-teal-500 focus:ring-teal-500'
-                  )}
-                  aria-invalid={errors.password && touched.password ? 'true' : 'false'}
-                  aria-describedby={errors.password && touched.password ? 'password-error' : undefined}
-                />
-
-                <button
-                  type='button'
-                  onClick={() => setShowPassword(!showPassword)}
-                  className='absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors'
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  disabled={loading}
-                >
-                  {showPassword ? (
-                    <EyeOff className='h-5 w-5' />
-                  ) : (
-                    <Eye className='h-5 w-5' />
-                  )}
-                </button>
-              </div>
-              
-              {errors.password && touched.password && (
-                <p 
-                  id="password-error" 
-                  className="text-sm text-red-600 flex items-center mt-1"
-                  role="alert"
-                >
-                  <span className="text-red-500 mr-1">⚠</span>
-                  {errors.password}
-                </p>
-              )}
-            </div>
-
-            {/* reCAPTCHA Component */}
-            {RECAPTCHA_SITE_KEY ? (
-              <ReCaptchaComponent
-                className='inline-block my-auto mx-11 mb-2'
-                id='recaptcha'
-                ref={recaptchaRef}
-                sitekey={RECAPTCHA_SITE_KEY}
-                onChange={handleCaptchaChange}
-                onExpired={handleCaptchaExpired}
-              />
-            ) : (
-              <p className='text-sm text-red-500'>
-                reCAPTCHA site key is missing. Please set NEXT_PUBLIC_RECAPTCHA_SITE_KEY.
+            
+            {/* Password Error Message */}
+            {errors.password && touched.password && (
+              <p 
+                id="password-error" 
+                className="text-sm text-red-600 flex items-center mt-1"
+                role="alert"
+              >
+                <span className="text-red-500 mr-1">⚠</span>
+                {errors.password}
               </p>
             )}
-
-            {/* Submit Button */}
-            <Button
-              type='submit'
-              className={cn(
-                'w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-semibold',
-                'shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02]',
-                'disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
-              )}
-              disabled={
-                loading || 
-                !isCaptchaVerified || 
-                !formData.email.trim() || 
-                !formData.password ||
-                (touched.email && errors.email !== '') ||
-                (touched.password && errors.password !== '')
-              }
-            >
-              {loading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-              Sign In
-            </Button>
-
-            {!isCaptchaVerified && RECAPTCHA_SITE_KEY && (
-              <p className="text-sm text-amber-600 text-center">
-                Please complete the reCAPTCHA verification to continue
-              </p>
-            )}
-          </form>
-
-          <div className='relative my-4'>
-            <div className='absolute inset-0 flex items-center'>
-              <span className='w-full border-t' />
-            </div>
-            <div className='relative flex justify-center text-xs uppercase'>
-              <span className='bg-white px-2 text-muted-foreground'>or</span>
-            </div>
           </div>
 
-          <Button
-            variant='outline'
-            className='w-full'
-            onClick={handleGoogleSignIn}
-            disabled={loading || googleLoading}
-          >
-            {googleLoading ? (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            ) : (
-              <GoogleIcon />
-            )}
-            Sign In with Google
-          </Button>
+          {/* reCAPTCHA Component */}
+          {RECAPTCHA_SITE_KEY ? (
+            <ReCaptchaComponent
+              className='inline-block my-auto mx-11 mb-2'
+              id='recaptcha'
+              ref={recaptchaRef}
+              sitekey={RECAPTCHA_SITE_KEY}
+              onChange={handleCaptchaChange}
+              onExpired={handleCaptchaExpired}
+            />
+          ) : (
+            <p className='text-sm text-red-500'>
+              reCAPTCHA site key is missing. Please set NEXT_PUBLIC_RECAPTCHA_SITE_KEY.
+            </p>
+          )}
 
-          <p className='text-center text-sm text-gray-600 mt-6'>
-            {"Don't have an account?"}{' '}
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className='font-semibold text-teal-600 hover:text-teal-700 transition cursor-pointer'
-            >
-              Sign Up
-            </button>
-          </p>
-        </CardContent>
-      </Card>
+          {/* Submit Button with Enhanced Validation */}
+          <Button
+            type='submit'
+            className={cn(
+              'w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-semibold',
+              'shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02]',
+              'disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
+            )}
+            disabled={
+              loading || 
+              !isCaptchaVerified || 
+              !formData.email.trim() || 
+              !formData.password ||
+              (touched.email && errors.email !== '') ||
+              (touched.password && errors.password !== '')
+            }
+          >
+            {loading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+            Sign In
+          </Button>
+          
+          {/* Form Status Messages */}
+          {!isCaptchaVerified && RECAPTCHA_SITE_KEY && (
+            <p className="text-sm text-amber-600 text-center">
+              Please complete the reCAPTCHA verification to continue
+            </p>
+          )}
+        </form>
+
+        <div className='relative my-4'>
+          <div className='absolute inset-0 flex items-center'>
+            <span className='w-full border-t' />
+          </div>
+          <div className='relative flex justify-center text-xs uppercase'>
+            <span className='bg-white px-2 text-muted-foreground'>or</span>
+          </div>
+        </div>
+
+        <Button
+          variant='outline'
+          className='w-full'
+          onClick={handleGoogleSignIn}
+          disabled={loading || googleLoading}
+        >
+          {googleLoading ? (
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          ) : (
+            <GoogleIcon />
+          )}
+          Sign In with Google
+        </Button>
+
+        <p className='text-center text-sm text-gray-600 mt-6'>
+          {"Don't have an account?"}{' '}
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className='font-semibold text-teal-600 hover:text-teal-700 transition cursor-pointer'
+          >
+            Sign Up
+          </button>
+        </p>
+      </CardContent>
+    </Card>
 
       {/* Auth Modal for signup role selection */}
       <AuthModal
