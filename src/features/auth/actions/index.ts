@@ -70,7 +70,7 @@ type ReCaptchaVerificationResponse = {
 /* -------------------------------------------------------------------------- */
 /* Environment Variable for reCAPTCHA Secret Key                              */
 /* -------------------------------------------------------------------------- */
-const RECAPTCHA_SECRET_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SECRET_KEY;
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
 
 /* -------------------------------------------------------------------------- */
 /* Sign-up                                                                    */
