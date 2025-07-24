@@ -16,6 +16,11 @@ export default function MobileBottomNav() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authModalType, setAuthModalType] = useState<'login' | 'signup'>('login')
 
+  // Hide mobile bottom nav on listing detail pages
+  if (pathname.startsWith('/listing/')) {
+    return null
+  }
+
   const handleSearchClick = () => {
     setIsSearchModalOpen(true)
   }
@@ -49,7 +54,10 @@ export default function MobileBottomNav() {
     console.log('📱 MobileBottomNav: handleSearchApply called with:', { query, filters })
     
     // If everything is empty, just go to homepage to show all listings
-    if (!query.trim() && !filters.priceRange && !filters.guestNumber) {
+    if (!query.trim() && 
+        (!filters.priceRange || filters.priceRange.length === 0) && 
+        (!filters.guestNumber || filters.guestNumber.length === 0) && 
+        !filters.eventType) {
       console.log('📱 MobileBottomNav: Empty search detected, redirecting to homepage')
       setIsSearchModalOpen(false)
       
@@ -66,12 +74,16 @@ export default function MobileBottomNav() {
       searchParams.set('q', query.trim())
     }
     
-    if (filters.priceRange) {
-      searchParams.set('price', filters.priceRange)
+    if (filters.priceRange && filters.priceRange.length > 0) {
+      searchParams.set('price', filters.priceRange.join(','))
     }
     
-    if (filters.guestNumber) {
-      searchParams.set('guests', filters.guestNumber)
+    if (filters.guestNumber && filters.guestNumber.length > 0) {
+      searchParams.set('guests', filters.guestNumber.join(','))
+    }
+
+    if (filters.eventType) {
+      searchParams.set('eventType', filters.eventType)
     }
 
     // Navigate to homepage with search parameters

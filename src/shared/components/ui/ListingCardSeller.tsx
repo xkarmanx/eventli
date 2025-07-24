@@ -5,6 +5,7 @@ import { Edit, Trash2, MapPin, Users, Calendar, DollarSign } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import EditListingModal from './EditListingModal'
 import DeleteListingModal from './DeleteListingModal'
+import { Zap } from 'lucide-react'; // Add Zap icon for boost button
 
 // JC: Define what data each listing card expects
 interface ListingCardSellerProps {
@@ -20,14 +21,18 @@ interface ListingCardSellerProps {
     num_guests: number
     image_url: string
     created_at?: string
+    is_published: boolean | null; // Add is_published
+    boost_priority: number | null; // Add boost_priority
   }
   onUpdate?: (updatedListing: any) => void
   onDelete?: (listingId: string) => void
   onEdit?: (listing: any) => void // JC: Callback when edit button is clicked
   onDeleteRequest?: (listing: any) => void // JC: Callback when delete button is clicked
+  onBoostRequest?: (listing: any) => void; // ✅ ADD: New prop for boost request
+
 }
 
-export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit, onDeleteRequest }: ListingCardSellerProps) {
+export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit, onDeleteRequest, onBoostRequest }: ListingCardSellerProps) {
   // JC: Remove local modal state since modals are now handled by parent component
 
   // JC: Functions to handle edit and delete button clicks - now call parent callbacks
@@ -51,6 +56,11 @@ export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit,
     })
   }
 
+  const handleBoost = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onBoostRequest?.(listing);
+  };
+
   return (
     <>
       {/* JC: Main listing card with hover effects */}
@@ -62,9 +72,30 @@ export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit,
             alt={listing.title} 
             className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" 
           />
+            
           
           {/* Action Buttons Overlay */}
           <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+
+            {/* ✅ ADD: Boost button when unpublished & priority=0 */}
+
+            {listing.is_published && (listing.boost_priority ?? 0) === 0 && (
+
+              <Button
+
+                size="sm"
+
+                onClick={handleBoost}
+
+                className="cursor-pointer bg-yellow-50 text-yellow-600 border-yellow-300 hover:bg-yellow-500 hover:border-yellow-500 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
+
+              >
+
+                <Zap className="w-4 h-4" />
+
+              </Button>
+
+            )}
             <Button
               size="sm"
               onClick={handleEdit}
@@ -90,6 +121,19 @@ export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit,
             <h3 className="font-bold text-lg text-gray-800 group-hover:text-teal-700 transition-colors duration-200 line-clamp-2 flex-1 pr-2">
               {listing.title}
             </h3>
+
+             {/* ✅ ADD: “✨ Boosted” badge when priority > 0 */}
+
+            {(listing.boost_priority ?? 0) > 0 && (
+
+              <span className="ml-2 text-xs font-bold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
+
+                ✨ Boosted
+
+              </span>
+
+            )}
+
             <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <div className="w-2 h-2 bg-teal-700 rounded-full animate-pulse"></div>
             </div>

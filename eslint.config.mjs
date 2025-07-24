@@ -16,7 +16,8 @@ const eslintConfig = [
       'next/core-web-vitals'
     ],
     rules: {
-      'react/display-name': 'off'
+      'react/display-name': 'off',
+      'semi': ['error', 'always']
     }
   })
   // reactHooks.configs['recommended-latest']

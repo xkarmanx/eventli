@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { Camera, User, Mail, Phone, MapPin, Award, Settings, X } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
+import { Award, Camera, Mail, MapPin, Phone, Settings, User, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
+import { Button } from "@/shared/components/ui/button";
 import { createClient } from "@/shared/lib/supabase/client";
 import { toast } from "sonner";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void; // KSch: Renamed from "onClose" to "onCloseAction" to avoid eslint + Next.js error
   userType: 'seller' | 'customer';
   userId: string;
   userData?: {
@@ -37,7 +37,7 @@ export interface ProfileUpdate {
 
 const supabase = createClient();
 
-export default function ProfileEditModal({ isOpen, onClose, userType, userId, userData, onSave }: ProfileEditModalProps) {
+export default function ProfileEditModal({ isOpen, onCloseAction, userType, userId, userData, onSave }: ProfileEditModalProps) {
   // JC: State to store form data with initial values from props
   const [profilePic, setProfilePic] = useState<string | null>(userData?.profilePic || null);
   const [previewPic, setPreviewPic] = useState<string | null>(userData?.profilePic || null);
@@ -48,7 +48,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   const [phone, setPhone] = useState(userData?.phone || "");
   const [location, setLocation] = useState(userData?.location || "");
   const [bio, setBio] = useState(userData?.bio || "");
-  
+
   // JC: Website field for business info
   const [website, setWebsite] = useState(userData?.website || "");
 
@@ -57,6 +57,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
 
   // CT: Track if the user has edited their email so useEffect doesnt override it. Also state to store previous email
   const [hasEditedEmail, setHasEditedEmail] = useState(false);
+
   const [previousEmail, setPreviousEmail] = useState(userData?.email || "");
 
   // CT: Error state for phone validation
@@ -69,7 +70,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB limit
     const file = e.target.files?.[0];
-    
+
     if (file) {
       if (file.size > MAX_FILE_SIZE) {
         alert("File size exceeds 2MB. Please choose a smaller image.");
@@ -147,8 +148,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       location,
       bio,
       website,
-      avatar_url: uploadedUrl,
+      avatar_url: uploadedUrl
     };
+
 
     try {
       if (email !== previousEmail) {
@@ -164,8 +166,9 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       }
 
       await updateProfileComplete(userId);
+
       onSave?.();
-      onClose();
+      onCloseAction();
     } catch (error: any) {
       if (error.name === "AuthApiError") {
         toast.error("Please wait before requesting another email update.");
@@ -174,15 +177,17 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       }
       console.error("Profile update error:", error);
     }
+
   };
 
   // JC: Update form when new user data comes in
   useEffect(() => {
     if (userData) {
       setName(userData.name || "");
-      if (!hasEditedEmail) 
+      if (!hasEditedEmail) {
         setEmail(userData.email || "");
         setPreviousEmail(userData.email || "");
+      }
       setPhone(userData.phone || "");
       setLocation(userData.location || "");
       setBio(userData.bio || "");
@@ -195,7 +200,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
   // JC: Close modal when user presses escape key and prevent body scroll
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseAction();
     };
 
     if (isOpen) {
@@ -207,22 +212,22 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onCloseAction]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
-        onClick={onClose}
+        onClick={onCloseAction}
       />
-      
+
       {/* Modal Container */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
-          
+
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 rounded-t-2xl z-10">
             <div className="flex items-center justify-between">
@@ -231,7 +236,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                 <p className="text-gray-600 mt-1">Update your {userType} profile information</p>
               </div>
               <button
-                onClick={onClose}
+                onClick={onCloseAction}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                 aria-label="Close modal"
               >
@@ -243,7 +248,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
           {/* Content */}
           <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
-              
+
               {/* JC: Personal info form section */}
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
                 <div className="flex items-center gap-3 mb-6">
@@ -255,10 +260,12 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                     <p className="text-sm text-gray-600">Update your personal details and profile picture</p>
                   </div>
                 </div>
-                
+
                 {/* JC: Profile picture upload section */}
                 <div className="flex flex-col items-center gap-4 mb-8">
                   <div className="relative group">
+                    {/* Change from img to Image if actually needed */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={
                         previewPic ||
@@ -310,7 +317,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                       Email Address
@@ -323,13 +330,14 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                         value={email}
                         onChange={e => {
                           setHasEditedEmail(true);
-                          setEmail(e.target.value)}}
+                          setEmail(e.target.value);
+                        }}
                         className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
                         placeholder="Enter your email"
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
                       Phone Number
@@ -355,7 +363,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                         )}
                       </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="location" className="block text-sm font-semibold text-gray-700 mb-2">
                       Location
@@ -373,7 +381,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-6">
                   <label htmlFor="bio" className="block text-sm font-semibold text-gray-700 mb-2">
                     Professional Bio
@@ -401,7 +409,7 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
                       <p className="text-sm text-gray-600">Add your business website</p>
                     </div>
                   </div>
-                  
+
                   {/* JC: Website input field */}
                   <div>
                     <label htmlFor="website" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -421,16 +429,16 @@ export default function ProfileEditModal({ isOpen, onClose, userType, userId, us
 
               {/* JC: Save and cancel buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-end pt-6 border-t border-gray-200">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
-                  onClick={onClose}
+                  onClick={onCloseAction}
                   className="px-8 py-3 text-gray-700 border-gray-300 hover:bg-gray-50 transition-all duration-200"
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="px-8 py-3 bg-teal-600 text-white hover:bg-teal-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
                 >
                   Save Changes

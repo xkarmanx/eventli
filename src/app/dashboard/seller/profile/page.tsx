@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { User, Mail, Phone, MapPin, Calendar, Star, Award, Settings, Edit, Globe, Building } from "lucide-react";
+import { Award, Building, Calendar, Edit, Globe, Mail, MapPin, Phone, Settings, Star, User } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
-import { updateProfileComplete, updateProfile } from "@/features/services/profile_crud";
 import { toast } from "sonner";
 
 const supabase = createClient();
@@ -13,7 +13,7 @@ const supabase = createClient();
 export default function SellerProfilePage() {
   // JC: State to control edit modal open/close
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
+
   // JC: State to store real user data from database instead of mock data
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -25,7 +25,7 @@ export default function SellerProfilePage() {
 
   // JC: Get user login info when page loads
   useEffect(() => {
-    const getInitialSession = async () => {
+    (async () => { // KSch: For simplicity, this should be an anonymous arrow function.
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
@@ -40,9 +40,7 @@ export default function SellerProfilePage() {
       } finally {
         setAuthLoading(false);
       }
-    };
-
-    getInitialSession();
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -56,26 +54,10 @@ export default function SellerProfilePage() {
     };
   }, []);
 
-  // JC: Get user profile data from database when user is logged in
-  useEffect(() => {
-    if (user?.id && !authLoading) {
-      fetchProfile();
-    }
-  }, [user?.id, authLoading]);
-
-  // CT: Countdown timer for resend verification email
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
-
-
   // JC: Function to get user profile from database
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user?.id) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -97,18 +79,32 @@ export default function SellerProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  // JC: Get user profile data from database when user is logged in
+  useEffect(() => {
+    if (user?.id && !authLoading)
+      fetchProfile();
+  }, [user?.id, authLoading, fetchProfile]);
+
+  // CT: Countdown timer for resend verification email
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // JC: Function to refresh profile data after user saves changes
-  const handleProfileUpdate = () => {
+  function handleProfileUpdate() {
     // Refresh profile data after update
     fetchProfile();
 
     console.log("Profile Data:", profile);
     console.log("Profile complete?:", profile.is_setup_complete);
-  };
+  }
 
-    //CT: Hold the time period for pending email validity
+  //CT: Hold the time period for pending email validity
   const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7; //7 days
   const now = new Date();
   const pendingDate = new Date(profile?.pending_email_requested_at || 0);
@@ -116,7 +112,7 @@ export default function SellerProfilePage() {
   const displayEmail = isPendingStillValid ? profile.pending_email : user?.email;
 
   // CT: Resend email verification function
-  const handleResendVerificationEmail = async () => {
+  async function handleResendVerificationEmail() {
     try {
       if (!user) return;
 
@@ -129,11 +125,10 @@ export default function SellerProfilePage() {
 
       setResendCooldown(60);
       toast.success("Verification email resent! Please check your inbox.");
-    } 
-    catch (err) {
+    } catch (err) {
       console.error("Resend error:", err);
     }
-  };
+  }
 
   // JC: Show loading screen while getting user data
   if (authLoading || loading) {
@@ -183,7 +178,7 @@ export default function SellerProfilePage() {
       {/* Main Content */}
       <div className="flex-1 py-8 px-6 sm:px-8">
         <div className="max-w-4xl mx-auto">
-          
+
           {/* JC: Simple stats cards using real data */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 text-center hover:shadow-lg transition-shadow duration-300">
@@ -193,7 +188,7 @@ export default function SellerProfilePage() {
               <div className="text-2xl font-bold text-gray-900 mb-1">4.9</div>
               <div className="text-sm text-gray-600">Average Rating</div>
             </div>
-            
+
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 text-center hover:shadow-lg transition-shadow duration-300">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Calendar className="w-6 h-6 text-blue-600" />
@@ -204,7 +199,7 @@ export default function SellerProfilePage() {
           </div>
 
           <div className="space-y-8">
-            
+
             {/* JC: Personal info section with real user data from database */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="bg-gray-50 px-8 py-6 border-b border-gray-200">
@@ -228,11 +223,13 @@ export default function SellerProfilePage() {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="p-8">
                 {/* JC: Show user profile picture and basic info using real data */}
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-8">
                   <div className="relative">
+                    {/* Change from img to Image if actually needed */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={
                         profile.avatar_url ||
@@ -269,19 +266,19 @@ export default function SellerProfilePage() {
                             <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default ml-10">
                               Unverified
                             </span>
-                              <div className="absolute left-0 top-full mt-1 w-max max-w-xs whitespace-normal 
-                                bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg 
-                                opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 
+                              <div className="absolute left-0 top-full mt-1 w-max max-w-xs whitespace-normal
+                                bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg
+                                opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10
                                 border border-gray-700">
 
                                 <p className="mb-2">
-                                  A confirmation email was sent to both emails. 
+                                  A confirmation email was sent to both emails.
                                   <br/><br/>
                                   Please verify this email by clicking the link in both inboxes.
                                 </p>
 
                                 <p className="mb-2">
-                                  This link expires in 30 minutes. 
+                                  This link expires in 30 minutes.
                                 </p>
 
                                 {resendCooldown > 0 ? (
@@ -302,7 +299,7 @@ export default function SellerProfilePage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                       <Phone className="w-5 h-5 text-green-600" />
@@ -312,7 +309,7 @@ export default function SellerProfilePage() {
                       <div className="text-gray-900">{profile.phone || "No phone provided"}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                       <MapPin className="w-5 h-5 text-purple-600" />
@@ -322,7 +319,7 @@ export default function SellerProfilePage() {
                       <div className="text-gray-900">{profile.location || "No location provided"}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
                       <Calendar className="w-5 h-5 text-orange-600" />
@@ -349,7 +346,7 @@ export default function SellerProfilePage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-8">
                 <div className="grid grid-cols-1 gap-6">
                   {/* JC: Show website if user has one */}
@@ -361,10 +358,10 @@ export default function SellerProfilePage() {
                       <div>
                         <div className="text-sm font-semibold text-gray-700">Website</div>
                         <div className="text-gray-900">
-                          <a 
-                            href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-700 hover:underline"
                           >
                             {profile.website}
@@ -373,13 +370,13 @@ export default function SellerProfilePage() {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* JC: Show message if no website provided */}
                   {!profile.website && (
                     <div className="text-center py-8 text-gray-500">
                       <Globe className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                       <p>No website information provided</p>
-                      <p className="text-sm">Click "Edit Profile" to add your website</p>
+                      <p className="text-sm">Click &quot;Edit Profile&quot; to add your website</p>
                     </div>
                   )}
                 </div>
@@ -399,7 +396,7 @@ export default function SellerProfilePage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-8">
                 <div className="space-y-6">
                   {/* JC: Show user role from database */}
@@ -414,7 +411,7 @@ export default function SellerProfilePage() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* JC: Show if profile setup is complete */}
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div>
@@ -423,8 +420,8 @@ export default function SellerProfilePage() {
                     </div>
                     <div className="flex items-center">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        profile.is_setup_complete 
-                          ? 'bg-green-100 text-green-700' 
+                        profile.is_setup_complete
+                          ? 'bg-green-100 text-green-700'
                           : 'bg-orange-100 text-orange-700'
                       }`}>
                         {profile.is_setup_complete ? 'Complete' : 'Incomplete'}
@@ -439,9 +436,9 @@ export default function SellerProfilePage() {
       </div>
 
       {/* JC: Edit modal with real user data passed to it */}
-      <ProfileEditModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)}
+      <ProfileEditModal
+        isOpen={isEditModalOpen}
+        onCloseAction={() => setIsEditModalOpen(false)}
         userType="seller"
         userId={profile.id}
         userData={{
