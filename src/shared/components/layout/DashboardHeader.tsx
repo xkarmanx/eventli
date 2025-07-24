@@ -158,8 +158,6 @@ export default function DashboardHeader({ userType, title = 'Dashboard', subtitl
                   <span className="text-white font-semibold text-sm">{getInitials()}</span>
                 </div>
               )}
-              {/* Online indicator */}
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
 
             {/* User Info */}

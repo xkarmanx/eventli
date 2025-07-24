@@ -26,21 +26,12 @@ export default function SellerSidebar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Handle mobile menu backdrop click
+  // Handle mobile menu backdrop click and body scroll
   useEffect(() => {
-    const backdrop = document.getElementById('sidebar-backdrop');
-    if (backdrop) {
-      if (mobileOpen) {
-        backdrop.classList.remove('opacity-0', 'pointer-events-none');
-        backdrop.classList.add('opacity-100');
-        backdrop.onclick = () => setMobileOpen(false);
-        document.body.style.overflow = 'hidden';
-      } else {
-        backdrop.classList.add('opacity-0', 'pointer-events-none');
-        backdrop.classList.remove('opacity-100');
-        backdrop.onclick = null;
-        document.body.style.overflow = 'unset';
-      }
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
     
     return () => {
@@ -50,6 +41,15 @@ export default function SellerSidebar() {
 
   return (
     <>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div 
+          id="sidebar-backdrop"
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden transition-opacity duration-300"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       {/* Mobile Menu Button */}
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200 hover:bg-gray-50"
@@ -66,11 +66,11 @@ export default function SellerSidebar() {
           ${collapsed ? "w-16 sm:w-20" : "w-64 sm:w-72"}
           
           /* Mobile styles */
-          fixed lg:relative top-0 left-0 h-full z-40
+          fixed lg:sticky top-0 left-0 h-screen z-40
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           
           /* Desktop styles */
-          lg:block
+          lg:block lg:h-screen lg:overflow-y-auto
         `}
       >
         {/* Header Section */}

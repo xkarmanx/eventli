@@ -47,7 +47,7 @@ export function Footer() {
               <Link href="/signup" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                 Join as Vendor
               </Link>
-              <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+              <Link href="/dashboard" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                 Dashboard
               </Link>
               <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
