@@ -1,0 +1,98 @@
+import { createClient } from "@/shared/lib/supabase/client";
+
+// Booking status types
+export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
+
+export interface CreateBookingInput {
+  listing_id: string;
+  customer_id: string;
+  seller_id: string;
+  event_date: string;      // ISO date string (YYYY-MM-DD)
+  event_time: string;      // e.g. "18:00"
+  guest_count: number;
+  address: string;
+  event_type: string;
+  notes?: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+}
+
+const supabase = createClient();
+
+// Create a new booking request
+export async function createBooking(input: CreateBookingInput) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .insert([
+      {
+        listing_id: input.listing_id,
+        customer_id: input.customer_id,
+        seller_id: input.seller_id,
+        event_date: input.event_date,
+        event_time: input.event_time,
+        guest_count: input.guest_count,
+        address: input.address,
+        event_type: input.event_type,
+        notes: input.notes || null,
+        status: "pending",
+        customer_name: input.customer_name,
+        customer_email: input.customer_email,
+        customer_phone: input.customer_phone,
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Get all bookings for a seller
+export async function getSellerBookings(seller_id: string) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("seller_id", seller_id)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+// Get all bookings for a customer
+export async function getCustomerBookings(customer_id: string) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("customer_id", customer_id)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+// Update booking status (e.g., confirm, cancel, complete)
+export async function updateBookingStatus(booking_id: string, status: BookingStatus) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .update({ status })
+    .eq("id", booking_id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Get a single booking by ID
+export async function getBookingById(booking_id: string) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("id", booking_id)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
