@@ -282,7 +282,7 @@ export function LoginForm() {
     }
     
     setLoading(true);
-    toast.info('Signing you in...');
+    const loadingToast = toast.info('Signing you in...');
     
     try {
       // Security: Create FormData with sanitized and validated inputs
@@ -292,30 +292,39 @@ export function LoginForm() {
       submitData.append('recaptchaToken', recaptchaToken as string);
 
       await login(submitData);
+      // This line should never be reached due to server redirect
+      toast.dismiss(loadingToast);
+      toast.success('Login successful!');
+      setFormData({ email: '', password: '' });
+      resetValidation();
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
-        // ✅ Handle success case - show success message and redirect
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
+      
+      // Dismiss the loading toast first
+      toast.dismiss(loadingToast);
+      
+      // Handle server redirects (successful login)
+      if (errorMessage.includes('NEXT_REDIRECT')) {
+        // Success case - clear form and show success (though redirect may happen first)
         toast.success('Login successful!');
-        // Clear sensitive form data on success
         setFormData({ email: '', password: '' });
         resetValidation();
-        setTimeout(() => router.push('/dashboard'), 1000);
-      } else {
-        // Handle authentication errors
-        const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
-        toast.error(errorMessage);
-        
-        // Security: Reset reCAPTCHA on failed attempts to prevent brute force
-        setRecaptchaToken(null);
-        setIsCaptchaVerified(false);
-        recaptchaRef.current?.reset();
-        
-        // Clear password on failed login for security
-        setFormData(prev => ({ ...prev, password: '' }));
-        
-        // Reset validation for retry
-        resetValidation();
+        return;
       }
+      
+      // Handle actual errors
+      toast.error(errorMessage);
+      
+      // Security: Reset reCAPTCHA on failed attempts to prevent brute force
+      setRecaptchaToken(null);
+      setIsCaptchaVerified(false);
+      recaptchaRef.current?.reset();
+      
+      // Clear password on failed login for security
+      setFormData(prev => ({ ...prev, password: '' }));
+      
+      // Reset validation for retry
+      resetValidation();
     } finally {
       setLoading(false);
     }

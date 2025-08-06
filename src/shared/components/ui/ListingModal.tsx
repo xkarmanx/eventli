@@ -95,7 +95,7 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10 bg-white shadow-md"
+            className="cursor-pointer absolute top-4 right-4 p-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-300 shadow-md"
             aria-label="Close modal"
           >
             <X className="w-6 h-6" />
@@ -210,7 +210,7 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
                   </p>
                 </div>
                 <Button
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg font-medium"
+                  className="cursor-pointer bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg font-medium"
                   onClick={handleRequestBooking}
                 >
                   Request Booking

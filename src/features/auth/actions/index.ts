@@ -193,10 +193,29 @@ export async function login(formData: FormData) {
     throw new Error('Could not authenticate user');
   }
 
+  // Get user profile to determine redirect path
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    revalidatePath('/', 'layout');
+    
+    // Redirect based on user role
+    if (profile?.role === 'seller') {
+      redirect('/dashboard/seller');
+    } else {
+      redirect('/');
+    }
+  }
+
   revalidatePath('/', 'layout');
   
-  // Return success instead of redirecting to avoid NEXT_REDIRECT error in toast
-  throw new Error('SUCCESS: Login successful');
+  // Fallback redirect to home
+  redirect('/');
 }
 
 /* -------------------------------------------------------------------------- */
@@ -250,7 +269,7 @@ export async function updateSellerProfile(formData: FormData) {
   }
 
   revalidatePath('/dashboard');
-  redirect('/dashboard');
+  redirect('/dashboard/seller');
 }
 
 /* -------------------------------------------------------------------------- */
