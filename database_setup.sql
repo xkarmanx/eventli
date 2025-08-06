@@ -401,7 +401,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================================================
 -- [SCHEMA CHANGE] Add event_type, serving_style, num_staff, num_guests to listings
--- Added by: [Cody Tran], 2024-06-27
+-- Added by: [Cody Tran], 2025-06-27
 -- Purpose: To support event type, serving style, staff, and guest count in listings
 -- =============================================================================
 
@@ -420,7 +420,7 @@ ADD COLUMN IF NOT EXISTS num_guests INTEGER;
 
 -- =============================================================================
 -- [SCHEMA CHANGE] Add pending_email & pending_email_requested_at column to profiles
--- Added by: [Cody Tran], 2024-07-10
+-- Added by: [Cody Tran], 2025-07-10
 -- Purpose: To store pending email for users that are updating their email
 -- =============================================================================
 
@@ -431,7 +431,7 @@ ADD COLUMN pending_email_requested_at TIMESTAMP;
 
 -- =============================================================================
 -- [SCHEMA CHANGE] Create RLS policies for profile-avatar-images bucket in storage.objects
--- Added by: [Cody Tran], 2024-07-12
+-- Added by: [Cody Tran], 2025-07-12
 -- Purpose: 
 --   To enforce row-level security for the new 'profile-avatar-images' bucket.
 --   - Allows authenticated users to upload, update, and delete images in their own folder.
@@ -464,3 +464,25 @@ CREATE POLICY "Users can delete own profile avatars" ON storage.objects
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Creates new table (public.booking_requests) 
+-- Added by: [Cody Tran], 2024-08-06
+-- Purpose: 
+--  - To manage booking requests for listings, allowing customers to request bookings
+--  - Holds details about the request, status, and timestamps
+--  - Holds data to determine customers and sellers for booking management
+-- =============================================================================
+create table public.booking_requests (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid references listings(id) on delete cascade,
+  customer_id uuid references profiles(id) on delete cascade,
+  seller_id uuid references profiles(id) on delete cascade,
+  status text not null default 'pending',
+  event_date date not null,
+  event_time time not null,
+  guest_count int not null,
+  notes text,
+  created_at timestamp with time zone default timezone('utc', now()),
+  updated_at timestamp with time zone default timezone('utc', now())
+);

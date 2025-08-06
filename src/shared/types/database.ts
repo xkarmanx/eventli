@@ -226,5 +226,66 @@ export interface Database {
     CompositeTypes: {
       [_ in never]: never
     }
+    booking_requests: {
+      Row: {
+        id: string
+        listing_id: string
+        customer_id: string
+        seller_id: string
+        status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        event_date: string // ISO date format (YYYY-MM-DD)
+        event_time: string // ISO time format (HH:MM:SS)
+        guest_count: number
+        notes: string | null
+        created_at: string | null
+        updated_at: string | null
+      }
+      Insert: {
+        id?: string
+        listing_id: string
+        customer_id: string
+        seller_id: string
+        status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        event_date: string
+        event_time: string
+        guest_count: number
+        notes?: string | null
+        created_at?: string | null
+        updated_at?: string | null
+      }
+      Update: {
+        id?: string
+        listing_id?: string
+        customer_id?: string
+        seller_id?: string
+        status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        event_date?: string
+        event_time?: string
+        guest_count?: number
+        notes?: string | null
+        created_at?: string | null
+        updated_at?: string | null
+      }
+      Relationships: [
+        {
+          foreignKeyName: "booking_requests_listing_id_fkey"
+          columns: ["listing_id"]
+          referencedRelation: "listings"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "booking_requests_customer_id_fkey"
+          columns: ["customer_id"]
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "booking_requests_seller_id_fkey"
+          columns: ["seller_id"]
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }
+      ]
+    }
   }
 }
