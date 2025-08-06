@@ -1,0 +1,80 @@
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Image'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/evintli-repo/evintli-app:latest'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SUPABASE_URL=${_NEXT_PUBLIC_SUPABASE_URL}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SUPABASE_ANON_KEY=${_NEXT_PUBLIC_SUPABASE_ANON_KEY}'
+      - '--build-arg'
+      - 'SUPABASE_SERVICE_ROLE_KEY=${_SUPABASE_SERVICE_ROLE_KEY}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SITE_URL=${_NEXT_PUBLIC_SITE_URL}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_RECAPTCHA_SITE_KEY=${_NEXT_PUBLIC_RECAPTCHA_SITE_KEY}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_RECAPTCHA_SECRET_KEY=${_NEXT_PUBLIC_RECAPTCHA_SECRET_KEY}'
+      - '--build-arg'
+      - 'STRIPE_SECRET_KEY=${_STRIPE_SECRET_KEY}'
+      - '--build-arg'
+      - 'STRIPE_WEBHOOK_SECRET=${_STRIPE_WEBHOOK_SECRET}'
+      - '.'
+
+  # Step 2: Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/evintli-repo/evintli-app:latest'
+
+  # Step 3: Deploy the new image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy to Cloud Run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'evintli-app'  # <-- Replace with your service name
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/evintli-repo/evintli-app:latest'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      # You can add --set-env-vars here, or configure them manually in the console.
+      # It's better to manage secrets for runtime with Cloud Run's native secret manager.
+
+substitutions:
+  _NEXT_PUBLIC_SUPABASE_URL: ''
+  _NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+  _SUPABASE_SERVICE_ROLE_KEY: ''
+  _NEXT_PUBLIC_SITE_URL: ''
+  _NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ''
+  _NEXT_PUBLIC_RECAPTCHA_SECRET_KEY: ''
+  _STRIPE_SECRET_KEY: ''
+  _STRIPE_WEBHOOK_SECRET: ''
+
+# This section tells Cloud Build where to get the secret values
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/next-public-supabase-url/versions/latest
+      env: 'NEXT_PUBLIC_SUPABASE_URL'
+    - versionName: projects/$PROJECT_ID/secrets/next-public-supabase-anon-key/versions/latest
+      env: 'NEXT_PUBLIC_SUPABASE_ANON_KEY'
+    - versionName: projects/$PROJECT_ID/secrets/supabase-service-role-key/versions/latest
+      env: 'SUPABASE_SERVICE_ROLE_KEY'
+    - versionName: projects/$PROJECT_ID/secrets/next-public-site-url/versions/latest
+      env: 'NEXT_PUBLIC_SITE_URL'
+    - versionName: projects/$PROJECT_ID/secrets/next-public-recaptcha-site-key/versions/latest
+      env: 'NEXT_PUBLIC_RECAPTCHA_SITE_KEY'
+    - versionName: projects/$PROJECT_ID/secrets/next-public-recaptcha-secret-key/versions/latest
+      env: 'NEXT_PUBLIC_RECAPTCHA_SECRET_KEY'
+    - versionName: projects/$PROJECT_ID/secrets/stripe-secret-key/versions/latest
+      env: 'STRIPE_SECRET_KEY'
+    - versionName: projects/$PROJECT_ID/secrets/stripe-webhook-secret/versions/latest
+      env: 'STRIPE_WEBHOOK_SECRET'
