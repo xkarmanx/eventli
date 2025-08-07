@@ -13,17 +13,18 @@ const eslintConfig = defineConfig([
   ...compat.config({
     extends: [
       'next/core-web-vitals'
-    ]
+    ],
+    rules: {
+      'react/display-name': 'off',
+      'semi': 'off'
+    }
   }),
   {
+    files: ['**/__tests__/**/*.{js,jsx,ts,tsx}', '**/*.{spec,test}.{js,jsx,ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.jest
       }
-    },
-    rules: {
-      'react/display-name': 'off',
-      'semi': 'off'
     }
   }
 ]);
