@@ -1,10 +1,11 @@
+// src/shared/components/ReCaptchaInstance.tsx
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import ReCAPTCHA, { ReCAPTCHAProps } from 'react-google-recaptcha';
 
-export interface ReCaptchaComponentRef {
+export type ReCaptchaComponentRef = {
   reset: () => void;
   execute: () => void; // For invisible reCAPTCHA
-}
+};
 
 // 1. Extend ReCAPTCHAProps for our component's specific props
 // We want to pass some ReCAPTCHAProps directly, but also have our own handlers.

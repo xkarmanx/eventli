@@ -1,17 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { ArrowLeft, Calendar, Clock, Users, MapPin, Phone, Mail, User } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Mail, MapPin, Phone, User, Users } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState } from 'react'
 import { Button } from '@/shared/components/ui/button'
 import { Service } from '@/shared/types/service'
 
-interface BookingPageProps {
+type Props = {
   service: Service
 }
 
-export default function BookingPage({ service }: BookingPageProps) {
+export default function BookingPage({ service }: Props) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,7 +41,7 @@ export default function BookingPage({ service }: BookingPageProps) {
       ...prev,
       [name]: value
     }))
-    
+
     // Clear error when user starts typing
     if (formErrors[name as keyof typeof formErrors]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }))
@@ -79,14 +79,14 @@ export default function BookingPage({ service }: BookingPageProps) {
     const selectedDate = new Date(date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     if (selectedDate < today) return 'Event date cannot be in the past'
-    
+
     // Check if date is more than 2 years in the future
     const maxDate = new Date()
     maxDate.setFullYear(maxDate.getFullYear() + 2)
     if (selectedDate > maxDate) return 'Event date cannot be more than 2 years in the future'
-    
+
     return ''
   }
 
@@ -125,11 +125,11 @@ export default function BookingPage({ service }: BookingPageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
-    
+
     setIsSubmitting(true)
 
     try {
@@ -140,13 +140,13 @@ export default function BookingPage({ service }: BookingPageProps) {
         // Clean up phone number
         phone: formData.phone.replace(/\D/g, '')
       })
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
+
       // Show success message or redirect
       alert('Booking request submitted successfully!')
-      
+
     } catch (error) {
       console.error('Error submitting booking:', error)
       alert('Error submitting booking request. Please try again.')
@@ -194,7 +194,7 @@ export default function BookingPage({ service }: BookingPageProps) {
         {/* Personal Information */}
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -207,8 +207,8 @@ export default function BookingPage({ service }: BookingPageProps) {
                 value={formData.name}
                 onChange={handleInputChange}
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                  formErrors.name 
-                    ? 'border-red-500 focus:ring-red-500' 
+                  formErrors.name
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-teal-500'
                 }`}
                 placeholder="Enter your full name"
@@ -229,8 +229,8 @@ export default function BookingPage({ service }: BookingPageProps) {
                 value={formData.email}
                 onChange={handleInputChange}
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                  formErrors.email 
-                    ? 'border-red-500 focus:ring-red-500' 
+                  formErrors.email
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-teal-500'
                 }`}
                 placeholder="your.email@example.com"
@@ -251,8 +251,8 @@ export default function BookingPage({ service }: BookingPageProps) {
                 value={formData.phone}
                 onChange={handleInputChange}
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                  formErrors.phone 
-                    ? 'border-red-500 focus:ring-red-500' 
+                  formErrors.phone
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-teal-500'
                 }`}
                 placeholder="(555) 123-4567"
@@ -267,7 +267,7 @@ export default function BookingPage({ service }: BookingPageProps) {
         {/* Event Details */}
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -281,8 +281,8 @@ export default function BookingPage({ service }: BookingPageProps) {
                 onChange={handleInputChange}
                 min={new Date().toISOString().split('T')[0]}
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                  formErrors.eventDate 
-                    ? 'border-red-500 focus:ring-red-500' 
+                  formErrors.eventDate
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-teal-500'
                 }`}
               />
@@ -302,8 +302,8 @@ export default function BookingPage({ service }: BookingPageProps) {
                 value={formData.eventTime}
                 onChange={handleInputChange}
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                  formErrors.eventTime 
-                    ? 'border-red-500 focus:ring-red-500' 
+                  formErrors.eventTime
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-teal-500'
                 }`}
               />
@@ -325,8 +325,8 @@ export default function BookingPage({ service }: BookingPageProps) {
                 min="1"
                 max="10000"
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                  formErrors.guestCount 
-                    ? 'border-red-500 focus:ring-red-500' 
+                  formErrors.guestCount
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-teal-500'
                 }`}
                 placeholder="Enter number of guests"
@@ -345,8 +345,8 @@ export default function BookingPage({ service }: BookingPageProps) {
                 value={formData.eventType}
                 onChange={handleInputChange}
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                  formErrors.eventType 
-                    ? 'border-red-500 focus:ring-red-500' 
+                  formErrors.eventType
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-teal-500'
                 }`}
               >
@@ -368,7 +368,7 @@ export default function BookingPage({ service }: BookingPageProps) {
         {/* Additional Notes */}
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Special Requests or Notes
