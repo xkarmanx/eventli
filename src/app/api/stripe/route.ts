@@ -3,8 +3,13 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+/**
+ * NOTE: Stripe is now initialized *inside* the request handler.
+ * This ensures:
+ * - Secrets (STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET) are only accessed at runtime.
+ * - Prevents issues during build/static generation phases in Next.js.
+ * - Optimizes compatibility with serverless/edge environments.
+ */
 
 /**
  * This API route handles incoming webhooks from Stripe.
@@ -12,6 +17,10 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
  * such as activating a listing boost after a successful payment.
  */
 export async function POST(request: Request) {
+  // ✅ Initialize Stripe only when the route is called
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
   const body = await request.text();
   const signature = (await headers()).get("stripe-signature")!;
 

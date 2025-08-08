@@ -2,7 +2,7 @@
 'use server';
 
 import axios from 'axios';
-import filter  from 'leo-profanity';
+import filter from 'leo-profanity';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -13,7 +13,7 @@ import { createClient } from '@/shared/lib/supabase/server';
 filter.loadDictionary('en');
 
 /* -------------------------------------------------------------------------- */
-/* SignUp Schema (strong password policy + role required)                            */
+/* SignUp Schema (strong password policy + role required)                     */
 /* -------------------------------------------------------------------------- */
 const signupSchema = z.object({
   fullName: z.string().min(2, {
@@ -59,23 +59,20 @@ const loginSchema = z.object({
 });
 
 type ReCaptchaVerificationResponse = {
-  success: boolean; // whether this request was a valid reCAPTCHA verification
-  challenge_ts?: string; // timestamp of the challenge load (ISO format yyyy-MM-dd'T'HH:mm:ssZZ)
-  hostname?: string; // the hostname of the site where the reCAPTCHA was solved
-  'error-codes'?: string[]; // optional: array of error codes
-  score?: number; // optional: only for reCAPTCHA v3, the score for the request (0.0 - 1.0)
-  action?: string; // optional: only for reCAPTCHA v3, the action name for the request
-}
-
-/* -------------------------------------------------------------------------- */
-/* Environment Variable for reCAPTCHA Secret Key                              */
-/* -------------------------------------------------------------------------- */
-const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
+  success: boolean;
+  challenge_ts?: string;
+  hostname?: string;
+  'error-codes'?: string[];
+  score?: number;
+  action?: string;
+};
 
 /* -------------------------------------------------------------------------- */
 /* Sign-up                                                                    */
 /* -------------------------------------------------------------------------- */
-export async function signup(formData: FormData) {
+export async function signup(
+  formData: FormData
+): Promise<{ status: 'success' | 'error'; message: string }> {
   const origin = (await headers()).get('origin');
   const fromEntries = Object.fromEntries(formData.entries());
   const validated = signupSchema.safeParse(fromEntries);
@@ -83,23 +80,29 @@ export async function signup(formData: FormData) {
   if (!validated.success) {
     const fieldErrors = validated.error.flatten().fieldErrors;
     const combined = Object.values(fieldErrors).flat().join(' ');
-    throw new Error(combined || 'Invalid form data. Please check your inputs and try again.');
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: combined || 'Invalid form data. Please check your inputs and try again.' };
   }
 
   const { fullName, email, password, role, recaptchaToken } = validated.data;
 
-  if (filter.check(fullName))
-    throw new Error('Your full name contains innappropiate language. Please choose a different name.');
+  if (filter.check(fullName)) {
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: 'Your full name contains inappropriate language. Please choose a different name.' };
+  }
 
-  // Verify reCAPTCHA secret key is in environmental variables
-  if (!RECAPTCHA_SECRET_KEY)
-    throw new Error('Server configuration error: reCAPTCHA secret key is missing.');
+  // CHANGED: read env var locally (keeps serverless cold starts cleaner)
+  const RECAPTCHA_SECRET_KEY_VAR = process.env.RECAPTCHA_SECRET_KEY;
+  if (!RECAPTCHA_SECRET_KEY_VAR) {
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: 'Server configuration error: reCAPTCHA secret key is missing.' };
+  }
 
   try {
     const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
     const verificationResponse = await axios.post(verificationUrl, null, {
       params: {
-        secret: RECAPTCHA_SECRET_KEY,
+        secret: RECAPTCHA_SECRET_KEY_VAR,
         response: recaptchaToken
       }
     });
@@ -108,14 +111,15 @@ export async function signup(formData: FormData) {
 
     if (!reCaptchaData.success) {
       console.error('reCAPTCHA verification failed:', reCaptchaData['error-codes']);
-      throw new Error('reCAPTCHA verification failed. Please try again.');
+      // CHANGED: return structured error instead of throwing
+      return { status: 'error', message: 'reCAPTCHA verification failed. Please try again.' };
     }
   } catch (error) {
     console.error('Error during reCAPTCHA verification request:', error);
-    throw new Error('Failed to verify reCAPTCHA. Please try again.');
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: 'Failed to verify reCAPTCHA. Please try again.' };
   }
 
-  // ✅ Continue with signup after successful reCAPTCHA verification
   const supabase = await createClient();
 
   const { data: { user }, error } = await supabase.auth.signUp({
@@ -126,77 +130,69 @@ export async function signup(formData: FormData) {
       data: {
         full_name: fullName,
         role,
-        is_setup_complete: role === 'customer' // ✅ customers complete by default
+        is_setup_complete: role === 'customer' // customers complete by default
       },
-      emailRedirectTo: `${origin}/api/auth/callback` // ✅ ENABLED email confirmation
+      emailRedirectTo: `${origin}/api/auth/callback` // enabled email confirmation
     }
   });
 
   if (error || !user) {
     console.error('Signup Error:', error?.message);
-    throw new Error(error?.message || 'Could not sign up user.');
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: error?.message || 'Could not sign up user.' };
   }
 
-  // ✅ Don't redirect immediately - let user check email first
-  revalidatePath('/', 'layout');
-
-  // Show success message instead of redirecting
-  throw new Error('SUCCESS: Please check your email to confirm your account before signing in.');
+  revalidatePath('/', 'layout'); // keep cache clean
+  // CHANGED: return structured success instead of throwing "SUCCESS:..."
+  return { status: 'success', message: 'Please check your email to confirm your account before signing in.' };
 }
 
 /* -------------------------------------------------------------------------- */
 /* Login                                                                      */
 /* -------------------------------------------------------------------------- */
-export async function login(formData: FormData) {
+export async function login(
+  formData: FormData
+): Promise<{ status: 'success' | 'error'; message: string }> {
+  // CHANGED: function now returns a {status,message} object (consistent with signup)
   const fromEntries = Object.fromEntries(formData.entries());
   const validated = loginSchema.safeParse(fromEntries);
 
   if (!validated.success) {
     const fieldErrors = validated.error.flatten().fieldErrors;
     const combined = Object.values(fieldErrors).flat().join(' ');
-    throw new Error(combined || 'Invalid login data. Please check your inputs and try again.');
+    return { status: 'error', message: combined || 'Invalid login data.' };
   }
 
   const { email, password, recaptchaToken } = validated.data;
+  const RECAPTCHA_SECRET_KEY_VAR = process.env.RECAPTCHA_SECRET_KEY; // CHANGED
 
-  // Verify reCAPTCHA secret key is in environmental variables
-  if (!RECAPTCHA_SECRET_KEY)
-    throw new Error('Server configuration error: reCAPTCHA secret key is missing.');
+  if (!RECAPTCHA_SECRET_KEY_VAR) {
+    return { status: 'error', message: 'Server configuration error: reCAPTCHA secret key is missing.' };
+  }
 
   try {
     const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
     const verificationResponse = await axios.post(verificationUrl, null, {
-      params: {
-        secret: RECAPTCHA_SECRET_KEY,
-        response: recaptchaToken
-      }
+      params: { secret: RECAPTCHA_SECRET_KEY_VAR, response: recaptchaToken },
     });
-
     const reCaptchaData: ReCaptchaVerificationResponse = verificationResponse.data;
-
     if (!reCaptchaData.success) {
-      console.error('reCAPTCHA verification failed:', reCaptchaData['error-codes']);
-      throw new Error('reCAPTCHA verification failed. Please try again.');
+      return { status: 'error', message: 'reCAPTCHA verification failed. Please try again.' };
     }
-  } catch (error) {
-    console.error('Error during reCAPTCHA verification request:', error);
-    throw new Error('Failed to verify reCAPTCHA. Please try again.');
+  } catch (_error) {
+    return { status: 'error', message: 'Failed to verify reCAPTCHA. Please try again.' };
   }
 
-  // ✅ Continue with login after successful reCAPTCHA verification
   const supabase = await createClient();
-
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     console.error('Login Error:', error.message);
-    throw new Error('Could not authenticate user');
+    return { status: 'error', message: 'Invalid login credentials. Please try again.' };
   }
 
   revalidatePath('/', 'layout');
-  
-  // Return success instead of redirecting to avoid NEXT_REDIRECT error in toast
-  throw new Error('SUCCESS: Login successful');
+  return { status: 'success', message: 'Login successful' };
 }
 
 /* -------------------------------------------------------------------------- */
