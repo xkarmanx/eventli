@@ -9,7 +9,7 @@ export interface CreateBookingInput {
   seller_id: string;
   event_date: string;      // ISO date string (YYYY-MM-DD)
   event_time: string;      // e.g. "18:00"
-  guest_count: number;
+  guest_count: string;
   address: string;
   event_type: string;
   notes?: string;

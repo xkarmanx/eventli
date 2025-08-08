@@ -187,6 +187,8 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
   }
 
 const handleSubmitBooking = async () => {
+
+  console.log("service:", service);
   if (!selectedDate) {
     console.log("No date selected");
     return;
@@ -210,10 +212,10 @@ const handleSubmitBooking = async () => {
     const bookingInput = {
       listing_id: service.id,
       customer_id, // from auth
-      seller_id: service.seller_id, //connected to the listing
+      seller_id: service.seller_id, //sellers id thats connected to the listing
       event_date: eventDate,
       event_time: `${formData.startTime} - ${formData.endTime}`,
-      guest_count: Number(service.guests) || 1,
+      guest_count: service.guests,
       address: formData.address,
       event_type: service.eventType || "", // camelCase
       customer_name: `${formData.firstName} ${formData.lastName}`,

@@ -237,7 +237,7 @@ export interface Database {
         event_date: string // ISO date format (YYYY-MM-DD)
         event_time: string // e.g. "11:00 AM - 04:00 PM"
         event_type: string
-        guest_count: number
+        guest_count: string
         notes: string | null
         customer_name: string
         customer_email: string

@@ -481,7 +481,7 @@ create table public.booking_requests (
   status text not null default 'pending',
   event_date date not null,
   event_time text not null, -- changed from `time` to `text` so "11:00 AM - 04:00 PM" works
-  guest_count int not null,
+  guest_count text not null,
   notes text,
   address text,
   event_type text,
