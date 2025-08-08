@@ -7,6 +7,8 @@ import Image from 'next/image'
 import { Button } from '@/shared/components/ui/button'
 import { Service } from '@/shared/types/service'
 import BookingModal from './BookingModal'
+import { createClient } from "@/shared/lib/supabase/client"
+import { toast } from "sonner"
 
 interface ListingModalProps {
   isOpen: boolean
@@ -20,23 +22,42 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
   const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
 
+  // Auth state
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+
   // Initialize mobile detection on mount
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768) // md breakpoint
     }
-    
     checkMobile()
     setIsMounted(true)
     window.addEventListener('resize', checkMobile)
-    
     return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Fetch user and profile
+  useEffect(() => {
+    const supabase = createClient()
+    const getUserAndProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user || null)
+      if (session?.user?.id) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single()
+        setProfile(profileData)
+      }
+    }
+    getUserAndProfile()
   }, [])
 
   // Handle mobile navigation - only after component is mounted
   useEffect(() => {
     if (!isMounted) return // Wait for mount to complete
-    
     if (isOpen && service && isMobile) {
       // On mobile, navigate to the listing page instead of showing modal
       router.push(`/listing/${service.id}`)
@@ -47,7 +68,6 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
 
   useEffect(() => {
     if (!isMounted || !isOpen || isMobile) return // Don't set up modal behavior on mobile
-
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose()
@@ -55,7 +75,6 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
     }
     document.addEventListener('keydown', handleEscKey)
     document.body.style.overflow = 'hidden'
-
     return () => {
       document.removeEventListener('keydown', handleEscKey)
       document.body.style.overflow = 'unset'
@@ -72,6 +91,15 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
   }
 
   const handleRequestBooking = () => {
+    if (!user) {
+      // Not logged in, redirect to signup
+      router.push("/signup?role=customer")
+      return
+    }
+    if (profile?.role === "seller") {
+      toast.error("You cannot request bookings as a seller.")
+      return
+    }
     setIsBookingModalOpen(true)
   }
 
@@ -140,7 +168,6 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
                   <div className="flex items-center space-x-3">
                     <HandPlatter className="w-6 h-6 text-gray-400 flex-shrink-0" />
                     <div>
-                      {/* JC: Fixed this part Changed hardcoded "5-10 staff" to use actual service data */}
                       <p className="text-sm text-gray-600">{service.staff || 'Staff info not available'}</p>
                     </div>
                   </div>
@@ -162,7 +189,6 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
                   <div className="flex items-center space-x-3">
                     <Utensils className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     <div>
-                      {/* JC: Fixed this part Changed hardcoded "Serving Style: Buffet" to use actual service data */}
                       <p className="text-sm text-gray-600">Serving Style: {service.serving_style}</p>
                     </div>
                   </div>
@@ -197,7 +223,6 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
               <div className="mb-8">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
                 <div className="text-sm text-gray-600">
-                  {/* Fixed: Changed hardcoded description list to use actual service data */}
                   <p>{service.description || 'No description available'}</p>
                 </div>
               </div>
