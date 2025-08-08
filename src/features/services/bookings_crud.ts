@@ -23,19 +23,19 @@ const supabase = createClient();
 // Create a new booking request
 export async function createBooking(input: CreateBookingInput) {
   const { data, error } = await supabase
-    .from("bookings")
+    .from("booking_requests")
     .insert([
       {
         listing_id: input.listing_id,
         customer_id: input.customer_id,
         seller_id: input.seller_id,
+        status: "pending",
+        address: input.address,
         event_date: input.event_date,
         event_time: input.event_time,
-        guest_count: input.guest_count,
-        address: input.address,
         event_type: input.event_type,
+        guest_count: input.guest_count,
         notes: input.notes || null,
-        status: "pending",
         customer_name: input.customer_name,
         customer_email: input.customer_email,
         customer_phone: input.customer_phone,
@@ -52,7 +52,7 @@ export async function createBooking(input: CreateBookingInput) {
 // Get all bookings for a seller
 export async function getSellerBookings(seller_id: string) {
   const { data, error } = await supabase
-    .from("bookings")
+    .from("booking_requests")
     .select("*")
     .eq("seller_id", seller_id)
     .order("created_at", { ascending: false });
@@ -64,7 +64,7 @@ export async function getSellerBookings(seller_id: string) {
 // Get all bookings for a customer
 export async function getCustomerBookings(customer_id: string) {
   const { data, error } = await supabase
-    .from("bookings")
+    .from("booking_requests")
     .select("*")
     .eq("customer_id", customer_id)
     .order("created_at", { ascending: false });
@@ -76,7 +76,7 @@ export async function getCustomerBookings(customer_id: string) {
 // Update booking status (e.g., confirm, cancel, complete)
 export async function updateBookingStatus(booking_id: string, status: BookingStatus) {
   const { data, error } = await supabase
-    .from("bookings")
+    .from("booking_requests")
     .update({ status })
     .eq("id", booking_id)
     .select()
@@ -89,7 +89,7 @@ export async function updateBookingStatus(booking_id: string, status: BookingSta
 // Get a single booking by ID
 export async function getBookingById(booking_id: string) {
   const { data, error } = await supabase
-    .from("bookings")
+    .from("booking_requests")
     .select("*")
     .eq("id", booking_id)
     .single();
