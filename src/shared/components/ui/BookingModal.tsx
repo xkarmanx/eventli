@@ -228,7 +228,7 @@ const handleSubmitBooking = async () => {
 
     // Show toast notifications
     import("sonner").then(({ toast }) => {
-      toast.success("Booking requested, please check your email for more information.");
+      toast.success("Booking requested, please check your profile for more information.");
     });
 
     onClose();
