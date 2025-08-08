@@ -233,10 +233,15 @@ export interface Database {
         customer_id: string
         seller_id: string
         status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        address: string
         event_date: string // ISO date format (YYYY-MM-DD)
-        event_time: string // ISO time format (HH:MM:SS)
+        event_time: string // e.g. "11:00 AM - 04:00 PM"
+        event_type: string
         guest_count: number
         notes: string | null
+        customer_name: string
+        customer_email: string
+        customer_phone: string
         created_at: string | null
         updated_at: string | null
       }
@@ -246,10 +251,15 @@ export interface Database {
         customer_id: string
         seller_id: string
         status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        address: string
         event_date: string
         event_time: string
+        event_type: string
         guest_count: number
         notes?: string | null
+        customer_name: string
+        customer_email: string
+        customer_phone: string
         created_at?: string | null
         updated_at?: string | null
       }
@@ -259,10 +269,15 @@ export interface Database {
         customer_id?: string
         seller_id?: string
         status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        address?: string
         event_date?: string
         event_time?: string
+        event_type?: string
         guest_count?: number
         notes?: string | null
+        customer_name?: string
+        customer_email?: string
+        customer_phone?: string
         created_at?: string | null
         updated_at?: string | null
       }
