@@ -7,12 +7,16 @@ import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Service } from '@/shared/types/service'
+import { createBooking } from "@/features/services/bookings_crud";
+import { createClient } from "@/shared/lib/supabase/client";
 
 interface BookingModalProps {
   isOpen: boolean
   onClose: () => void
   service: Service | null
 }
+
+const supabase = createClient();
 
 export default function BookingModal({ isOpen, onClose, service }: BookingModalProps) {
   const [selectedDate, setSelectedDate] = useState<number | null>(null)
@@ -182,41 +186,59 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
     return Object.values(errors).every(error => error === '')
   }
 
-  const handleSubmitBooking = async () => {
-    if (!selectedDate) {
-      // You could add a visual indicator for date selection
-      return
-    }
-
-    if (!validateForm()) {
-      return
-    }
-
-    setIsSubmitting(true)
-    
-    try {
-      // TODO: Implement actual booking submission
-      console.log('Submit booking:', { 
-        service, 
-        selectedDate, 
-        formData: {
-          ...formData,
-          // Clean up phone number
-          phoneNumber: formData.phoneNumber.replace(/\D/g, '')
-        }
-      })
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      onClose()
-    } catch (error) {
-      console.error('Booking submission error:', error)
-      // You could add toast notification here
-    } finally {
-      setIsSubmitting(false)
-    }
+const handleSubmitBooking = async () => {
+  if (!selectedDate) {
+    console.log("No date selected");
+    return;
   }
+  if (!validateForm()) {
+    console.log("Form validation failed", formErrors);
+    return;
+  }
+  setIsSubmitting(true);
+
+  try {
+    //Get the current session
+    const { data: { session } } = await supabase.auth.getSession();
+    const customer_id = session?.user?.id || "";
+
+    // Compose booking input
+    const eventDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate)
+      .toISOString().slice(0, 10); // YYYY-MM-DD Format
+
+    // You may need to get the seller_id from the service object
+    const bookingInput = {
+      listing_id: service.id,
+      customer_id, // from auth
+      seller_id: service.seller_id, //connected to the listing
+      event_date: eventDate,
+      event_time: `${formData.startTime} - ${formData.endTime}`,
+      guest_count: Number(service.guests) || 1,
+      address: formData.address,
+      event_type: service.eventType || "", // camelCase
+      customer_name: `${formData.firstName} ${formData.lastName}`,
+      customer_email: formData.email,
+      customer_phone: formData.phoneNumber.replace(/\D/g, ''),
+    };
+
+    console.log("Booking input:", bookingInput);
+    await createBooking(bookingInput);
+
+    // Show toast notifications
+    import("sonner").then(({ toast }) => {
+      toast.success("Booking requested, please check your email for more information.");
+    });
+
+    onClose();
+  } catch (error) {
+    import("sonner").then(({ toast }) => {
+      toast.error("There was an error submitting your booking. Please try again.");
+    });
+    console.error("Booking error:", error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Calendar logic
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()

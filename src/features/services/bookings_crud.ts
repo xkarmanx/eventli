@@ -45,6 +45,7 @@ export async function createBooking(input: CreateBookingInput) {
     .single();
 
   if (error) throw error;
+  if (!data) throw new Error("Booking not created (no data returned)");
   return data;
 }
 

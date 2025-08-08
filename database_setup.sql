@@ -486,3 +486,41 @@ create table public.booking_requests (
   created_at timestamp with time zone default timezone('utc', now()),
   updated_at timestamp with time zone default timezone('utc', now())
 );
+
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Create RLS policies for public.booking_requests table
+-- Added by: [Cody Tran], 2024-08-07
+-- Purpose: 
+--  - Customers can view their own booking requests
+--  - Sellers can view booking requests for their listings
+--  - Customers can create new booking requests
+--  - Sellers can update their own booking requests
+--  - Customers can delete their own booking requests
+--  - Sellers can delete their own booking requests
+-- =============================================================================
+ALTER TABLE public.booking_requests ENABLE ROW LEVEL SECURITY;
+
+-- Allow customers to view their own booking requests
+CREATE POLICY "Customers can view own booking requests" ON public.booking_requests
+  FOR SELECT USING (auth.uid() = customer_id);
+
+-- Allow sellers to view booking requests for their listings
+CREATE POLICY "Sellers can view own listing booking requests" ON public.booking_requests
+  FOR SELECT USING (auth.uid() = seller_id);
+
+-- Allow customers to create new booking requests
+CREATE POLICY "Customers can create booking requests" ON public.booking_requests
+  FOR INSERT WITH CHECK (auth.uid() = customer_id);
+
+-- Allow sellers to update their own booking requests
+CREATE POLICY "Sellers can update own booking requests" ON public.booking_requests
+  FOR UPDATE USING (auth.uid() = seller_id);
+
+-- Allow customers to delete their own booking requests
+CREATE POLICY "Customers can delete own booking requests" ON public.booking_requests
+  FOR DELETE USING (auth.uid() = customer_id);
+
+-- Allow sellers to delete their own booking requests
+CREATE POLICY "Sellers can delete own booking requests" ON public.booking_requests
+  FOR DELETE USING (auth.uid() = seller_id);
