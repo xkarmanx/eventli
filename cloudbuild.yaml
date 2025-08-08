@@ -1,11 +1,12 @@
 steps:
-  # Step 1: Build the Docker image with a unique tag for versioning
+  # Step 1: Build the Docker image with a unique tag (the commit SHA) for versioning
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build'
     args:
       - 'build'
       - '-t'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/eventli-repo/eventli-app:$COMMIT_SHA'
+      # Pass ONLY the public variables needed for the Next.js build process
       - '--build-arg'
       - 'NEXT_PUBLIC_SUPABASE_URL=$_NEXT_PUBLIC_SUPABASE_URL'
       - '--build-arg'
@@ -30,18 +31,19 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'eventli-webapp' # <-- Your Cloud Run service name
+      - 'evintli-webapp'  # Your Cloud Run service name
       - '--image'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/eventli-repo/eventli-app:$COMMIT_SHA'
       - '--region'
       - 'us-central1'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
 
-# This section tells Cloud Build where to get the values for the --build-arg flags
+# Define substitution variables that will be set in the Cloud Build Trigger
 substitutions:
   _NEXT_PUBLIC_SUPABASE_URL: ''
   _NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
   _NEXT_PUBLIC_SITE_URL: ''
   _NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ''
+
+# ✅ ADD THIS BLOCK TO FIX THE LOGGING ERROR
+options:
+  logging: CLOUD_LOGGING_ONLY
