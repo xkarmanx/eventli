@@ -1,7 +1,7 @@
 import { createClient } from "@/shared/lib/supabase/client";
 
 // Booking status types
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
+export type BookingStatus = "pending" | "accepted" | "declined" | "completed";
 
 export interface CreateBookingInput {
   listing_id: string;

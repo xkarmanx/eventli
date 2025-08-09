@@ -6,7 +6,7 @@ import { createClient } from "@/shared/lib/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Loader2, Calendar, MapPin, Users, Clock, Tag, CheckCircle2, XCircle, Hourglass, FileText } from "lucide-react";
 
-type BookingStatus = "all" | "pending" | "confirmed" | "cancelled" | "completed";
+type BookingStatus = "all" | "pending" | "accepted" | "declined" | "completed";
 
 interface Booking {
   id: string;
@@ -31,8 +31,8 @@ interface Booking {
 const STATUS_LABELS: Record<BookingStatus, string> = {
   all: "All",
   pending: "Pending",
-  confirmed: "Confirmed",
-  cancelled: "Cancelled",
+  accepted: "Accepted",
+  declined: "Declined",
   completed: "Completed",
 };
 

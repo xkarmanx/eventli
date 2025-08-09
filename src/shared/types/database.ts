@@ -232,7 +232,7 @@ export interface Database {
         listing_id: string
         customer_id: string
         seller_id: string
-        status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        status: 'pending' | 'accepted' | 'declined' | 'completed'
         address: string
         event_date: string // ISO date format (YYYY-MM-DD)
         event_time: string // e.g. "11:00 AM - 04:00 PM"
@@ -250,7 +250,7 @@ export interface Database {
         listing_id: string
         customer_id: string
         seller_id: string
-        status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        status?: 'pending' | 'accepted' | 'declined' | 'completed'
         address: string
         event_date: string
         event_time: string
@@ -268,7 +268,7 @@ export interface Database {
         listing_id?: string
         customer_id?: string
         seller_id?: string
-        status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+        status?: 'pending' | 'accepted' | 'declined' | 'completed'
         address?: string
         event_date?: string
         event_time?: string
