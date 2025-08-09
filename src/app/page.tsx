@@ -1,57 +1,41 @@
-import HomepageContent from "@/shared/components/homepage/HomepageContent"
-import { getPublicListingsAsServices, searchAndFilterListings } from "@/features/services/listing_crud"
-import { Service } from "@/shared/types/service"
+import HomepageContent from "@/shared/components/homepage/HomepageContent";
+import { getPublicListingsAsServices, searchAndFilterListings } from "@/features/services/listing_crud";
+import { Service } from "@/shared/types/service";
+
+type SearchParams = {
+  q?: string;
+  price?: string;
+  guests?: string;
+  eventType?: string;
+};
 
 interface HomePageProps {
-  searchParams: {
-    q?: string
-    price?: string
-    guests?: string
-    eventType?: string
-  }
+  searchParams: Promise<SearchParams>; // ✅ Next 15 expects a Promise
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
+  const sp = await searchParams; // ✅ await it
   let services: Service[] = [];
-  
-  // In Next.js 15, searchParams is a Promise and needs to be awaited
-  const resolvedSearchParams = await searchParams;
-  
-  console.log('🏠 HomePage: searchParams received:', resolvedSearchParams)
-  
+
+  console.log("🏠 HomePage: searchParams received:", sp);
+
   try {
-    // Check if there are search parameters
-    const hasSearchParams = resolvedSearchParams.q || resolvedSearchParams.price || resolvedSearchParams.guests || resolvedSearchParams.eventType
-    
-    console.log('🏠 HomePage: hasSearchParams:', hasSearchParams)
-    
+    const hasSearchParams = sp.q || sp.price || sp.guests || sp.eventType;
+
     if (hasSearchParams) {
-      console.log('🏠 HomePage: Using search functionality')
-      // Use search functionality when parameters are present
-      services = await searchAndFilterListings(
-        resolvedSearchParams.q,
-        {
-          priceRange: resolvedSearchParams.price ? resolvedSearchParams.price.split(',').filter(Boolean) : undefined,
-          guestNumber: resolvedSearchParams.guests ? resolvedSearchParams.guests.split(',').filter(Boolean) : undefined,
-          eventType: resolvedSearchParams.eventType,
-        }
-      );
+      services = await searchAndFilterListings(sp.q, {
+        priceRange: sp.price ? sp.price.split(",").filter(Boolean) : undefined,
+        guestNumber: sp.guests ? sp.guests.split(",").filter(Boolean) : undefined,
+        eventType: sp.eventType,
+      });
     } else {
-      console.log('🏠 HomePage: Fetching all public listings')
-      // Fetch all public listings when no search parameters
       services = await getPublicListingsAsServices();
     }
-    
-    console.log('🏠 HomePage: Found', services.length, 'services')
+
+    console.log("🏠 HomePage: Found", services.length, "services");
   } catch (error) {
-    console.error('🏠 HomePage: Error fetching services:', error);
-    // If there's an error, we'll show an empty state
+    console.error("🏠 HomePage: Error fetching services:", error);
   }
 
-  return (
-    <HomepageContent 
-      initialServices={services} 
-      searchParams={resolvedSearchParams}
-    />
-  )
+  return <HomepageContent initialServices={services} searchParams={sp} />;
 }

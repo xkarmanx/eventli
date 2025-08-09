@@ -299,7 +299,7 @@ export default function ListingsPage() {
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-black mb-2 sm:mb-3 text-center">No listings yet</h3>
                   <p className="text-sm sm:text-base text-gray-500 text-center max-w-md mb-6 sm:mb-8 leading-relaxed">
-                    You haven't created any listings yet. Start showcasing your events and services to potential clients by creating your first listing.
+                    You haven&apos;t created any listings yet. Start showcasing your events and services to potential clients by creating your first listing.
                   </p>
                   <Button 
                     onClick={() => setAddOpen(true)}

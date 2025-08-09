@@ -206,7 +206,7 @@ export default function DeleteListingModal({ isOpen, onClose, listing, onDelete 
                 </div>
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">No listings yet</h3>
                 <p className="text-gray-500 text-center max-w-sm">
-                  You haven't created any listings yet. Create your first listing to get started!
+                  You haven&apos;t created any listings yet. Create your first listing to get started!
                 </p>
               </div>
             ) : (
@@ -299,7 +299,7 @@ export default function DeleteListingModal({ isOpen, onClose, listing, onDelete 
                 Are you sure you want to delete
               </p>
               <p className="font-semibold text-red-600 mb-6">
-                "{deleteTarget.title}"?
+                &quot;{deleteTarget.title}&quot;?
               </p>
               <p className="text-sm text-gray-500 mb-8">
                 This action cannot be undone. This will permanently delete your listing.
