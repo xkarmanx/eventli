@@ -339,85 +339,52 @@ With a working authentication system, the team can now proceed with building out
 
 --- FILE: cloudbuild.yaml ---
 steps:
-  # Step 1: Build the Docker image
+  # Step 1: Build the Docker image with a unique tag for versioning
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'Build Image'
+    id: 'Build'
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/evintli-repo/evintli-app:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/eventli-repo/eventli-app:$COMMIT_SHA'
       - '--build-arg'
-      - 'NEXT_PUBLIC_SUPABASE_URL=${_NEXT_PUBLIC_SUPABASE_URL}'
+      - 'NEXT_PUBLIC_SUPABASE_URL=$_NEXT_PUBLIC_SUPABASE_URL'
       - '--build-arg'
-      - 'NEXT_PUBLIC_SUPABASE_ANON_KEY=${_NEXT_PUBLIC_SUPABASE_ANON_KEY}'
+      - 'NEXT_PUBLIC_SUPABASE_ANON_KEY=$_NEXT_PUBLIC_SUPABASE_ANON_KEY'
       - '--build-arg'
-      - 'SUPABASE_SERVICE_ROLE_KEY=${_SUPABASE_SERVICE_ROLE_KEY}'
+      - 'NEXT_PUBLIC_SITE_URL=$_NEXT_PUBLIC_SITE_URL'
       - '--build-arg'
-      - 'NEXT_PUBLIC_SITE_URL=${_NEXT_PUBLIC_SITE_URL}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_RECAPTCHA_SITE_KEY=${_NEXT_PUBLIC_RECAPTCHA_SITE_KEY}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_RECAPTCHA_SECRET_KEY=${_NEXT_PUBLIC_RECAPTCHA_SECRET_KEY}'
-      - '--build-arg'
-      - 'STRIPE_SECRET_KEY=${_STRIPE_SECRET_KEY}'
-      - '--build-arg'
-      - 'STRIPE_WEBHOOK_SECRET=${_STRIPE_WEBHOOK_SECRET}'
+      - 'NEXT_PUBLIC_RECAPTCHA_SITE_KEY=$_NEXT_PUBLIC_RECAPTCHA_SITE_KEY'
       - '.'
 
-  # Step 2: Push the image to Artifact Registry
+  # Step 2: Push the uniquely tagged image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'Push Image'
+    id: 'Push'
     args:
       - 'push'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/evintli-repo/evintli-app:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/eventli-repo/eventli-app:$COMMIT_SHA'
 
-  # Step 3: Deploy the new image to Cloud Run
+  # Step 3: Deploy the new image revision to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Deploy to Cloud Run'
+    id: 'Deploy'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'deploy'
-      - 'evintli-app'  # <-- Replace with your service name
+      - 'eventli-webapp' # <-- Your Cloud Run service name
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/evintli-repo/evintli-app:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/eventli-repo/eventli-app:$COMMIT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      # You can add --set-env-vars here, or configure them manually in the console.
-      # It's better to manage secrets for runtime with Cloud Run's native secret manager.
 
+# This section tells Cloud Build where to get the values for the --build-arg flags
 substitutions:
   _NEXT_PUBLIC_SUPABASE_URL: ''
   _NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
-  _SUPABASE_SERVICE_ROLE_KEY: ''
   _NEXT_PUBLIC_SITE_URL: ''
   _NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ''
-  _NEXT_PUBLIC_RECAPTCHA_SECRET_KEY: ''
-  _STRIPE_SECRET_KEY: ''
-  _STRIPE_WEBHOOK_SECRET: ''
-
-# This section tells Cloud Build where to get the secret values
-availableSecrets:
-  secretManager:
-    - versionName: projects/$PROJECT_ID/secrets/next-public-supabase-url/versions/latest
-      env: 'NEXT_PUBLIC_SUPABASE_URL'
-    - versionName: projects/$PROJECT_ID/secrets/next-public-supabase-anon-key/versions/latest
-      env: 'NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    - versionName: projects/$PROJECT_ID/secrets/supabase-service-role-key/versions/latest
-      env: 'SUPABASE_SERVICE_ROLE_KEY'
-    - versionName: projects/$PROJECT_ID/secrets/next-public-site-url/versions/latest
-      env: 'NEXT_PUBLIC_SITE_URL'
-    - versionName: projects/$PROJECT_ID/secrets/next-public-recaptcha-site-key/versions/latest
-      env: 'NEXT_PUBLIC_RECAPTCHA_SITE_KEY'
-    - versionName: projects/$PROJECT_ID/secrets/next-public-recaptcha-secret-key/versions/latest
-      env: 'NEXT_PUBLIC_RECAPTCHA_SECRET_KEY'
-    - versionName: projects/$PROJECT_ID/secrets/stripe-secret-key/versions/latest
-      env: 'STRIPE_SECRET_KEY'
-    - versionName: projects/$PROJECT_ID/secrets/stripe-webhook-secret/versions/latest
-      env: 'STRIPE_WEBHOOK_SECRET'
 
 --- FILE: database_setup.sql ---
 -- EventLi Core Database Setup (Profiles + Listings)
@@ -1004,26 +971,17 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
-# Accept build-time environment variables
+# Accept only the necessary PUBLIC build-time environment variables
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG SUPABASE_SERVICE_ROLE_KEY
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-ARG NEXT_PUBLIC_RECAPTCHA_SECRET_KEY
-ARG STRIPE_SECRET_KEY
-ARG STRIPE_WEBHOOK_SECRET
 
-# Persist to runtime
+# Expose them to the Next.js build process
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_RECAPTCHA_SITE_KEY=$NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-ENV NEXT_PUBLIC_RECAPTCHA_SECRET_KEY=$NEXT_PUBLIC_RECAPTCHA_SECRET_KEY
-ENV STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
-ENV STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
-
 
 # Build the Next.js application
 RUN npm run build
@@ -1570,6 +1528,8 @@ const nextConfig: NextConfig = {
     return config;
   },
   images: {
+
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -1840,12 +1800,12 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
+        // CHANGED: only set cookies on the **response**, and spread options properly
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
           response.cookies.set({ name, value, ...options })
         },
+        // CHANGED: remove via response cookie w/ empty value + options (no request mutation)
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
           response.cookies.set({ name, value: '', ...options })
         },
       },
@@ -1860,16 +1820,10 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }
+
 
 --- FILE: src\testDatabase.ts ---
 
@@ -2483,8 +2437,13 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+/**
+ * NOTE: Stripe is now initialized *inside* the request handler.
+ * This ensures:
+ * - Secrets (STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET) are only accessed at runtime.
+ * - Prevents issues during build/static generation phases in Next.js.
+ * - Optimizes compatibility with serverless/edge environments.
+ */
 
 /**
  * This API route handles incoming webhooks from Stripe.
@@ -2492,6 +2451,10 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
  * such as activating a listing boost after a successful payment.
  */
 export async function POST(request: Request) {
+  // ✅ Initialize Stripe only when the route is called
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
   const body = await request.text();
   const signature = (await headers()).get("stripe-signature")!;
 
@@ -2557,6 +2520,7 @@ export async function POST(request: Request) {
   // 4. Acknowledge receipt of the event to Stripe.
   return NextResponse.json({ received: true });
 }
+
 
 --- FILE: src\app\dashboard\layout.tsx ---
 import SellerSidebar from "@/shared/components/layout/SellerSidebar";
@@ -4560,7 +4524,7 @@ export default function SupportSection() {
 'use server';
 
 import axios from 'axios';
-import filter  from 'leo-profanity';
+import filter from 'leo-profanity';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -4571,7 +4535,7 @@ import { createClient } from '@/shared/lib/supabase/server';
 filter.loadDictionary('en');
 
 /* -------------------------------------------------------------------------- */
-/* SignUp Schema (strong password policy + role required)                            */
+/* SignUp Schema (strong password policy + role required)                     */
 /* -------------------------------------------------------------------------- */
 const signupSchema = z.object({
   fullName: z.string().min(2, {
@@ -4617,23 +4581,20 @@ const loginSchema = z.object({
 });
 
 type ReCaptchaVerificationResponse = {
-  success: boolean; // whether this request was a valid reCAPTCHA verification
-  challenge_ts?: string; // timestamp of the challenge load (ISO format yyyy-MM-dd'T'HH:mm:ssZZ)
-  hostname?: string; // the hostname of the site where the reCAPTCHA was solved
-  'error-codes'?: string[]; // optional: array of error codes
-  score?: number; // optional: only for reCAPTCHA v3, the score for the request (0.0 - 1.0)
-  action?: string; // optional: only for reCAPTCHA v3, the action name for the request
-}
-
-/* -------------------------------------------------------------------------- */
-/* Environment Variable for reCAPTCHA Secret Key                              */
-/* -------------------------------------------------------------------------- */
-const RECAPTCHA_SECRET_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SECRET_KEY;
+  success: boolean;
+  challenge_ts?: string;
+  hostname?: string;
+  'error-codes'?: string[];
+  score?: number;
+  action?: string;
+};
 
 /* -------------------------------------------------------------------------- */
 /* Sign-up                                                                    */
 /* -------------------------------------------------------------------------- */
-export async function signup(formData: FormData) {
+export async function signup(
+  formData: FormData
+): Promise<{ status: 'success' | 'error'; message: string }> {
   const origin = (await headers()).get('origin');
   const fromEntries = Object.fromEntries(formData.entries());
   const validated = signupSchema.safeParse(fromEntries);
@@ -4641,23 +4602,29 @@ export async function signup(formData: FormData) {
   if (!validated.success) {
     const fieldErrors = validated.error.flatten().fieldErrors;
     const combined = Object.values(fieldErrors).flat().join(' ');
-    throw new Error(combined || 'Invalid form data. Please check your inputs and try again.');
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: combined || 'Invalid form data. Please check your inputs and try again.' };
   }
 
   const { fullName, email, password, role, recaptchaToken } = validated.data;
 
-  if (filter.check(fullName))
-    throw new Error('Your full name contains innappropiate language. Please choose a different name.');
+  if (filter.check(fullName)) {
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: 'Your full name contains inappropriate language. Please choose a different name.' };
+  }
 
-  // Verify reCAPTCHA secret key is in environmental variables
-  if (!RECAPTCHA_SECRET_KEY)
-    throw new Error('Server configuration error: reCAPTCHA secret key is missing.');
+  // CHANGED: read env var locally (keeps serverless cold starts cleaner)
+  const RECAPTCHA_SECRET_KEY_VAR = process.env.RECAPTCHA_SECRET_KEY;
+  if (!RECAPTCHA_SECRET_KEY_VAR) {
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: 'Server configuration error: reCAPTCHA secret key is missing.' };
+  }
 
   try {
     const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
     const verificationResponse = await axios.post(verificationUrl, null, {
       params: {
-        secret: RECAPTCHA_SECRET_KEY,
+        secret: RECAPTCHA_SECRET_KEY_VAR,
         response: recaptchaToken
       }
     });
@@ -4666,14 +4633,15 @@ export async function signup(formData: FormData) {
 
     if (!reCaptchaData.success) {
       console.error('reCAPTCHA verification failed:', reCaptchaData['error-codes']);
-      throw new Error('reCAPTCHA verification failed. Please try again.');
+      // CHANGED: return structured error instead of throwing
+      return { status: 'error', message: 'reCAPTCHA verification failed. Please try again.' };
     }
   } catch (error) {
     console.error('Error during reCAPTCHA verification request:', error);
-    throw new Error('Failed to verify reCAPTCHA. Please try again.');
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: 'Failed to verify reCAPTCHA. Please try again.' };
   }
 
-  // ✅ Continue with signup after successful reCAPTCHA verification
   const supabase = await createClient();
 
   const { data: { user }, error } = await supabase.auth.signUp({
@@ -4684,77 +4652,69 @@ export async function signup(formData: FormData) {
       data: {
         full_name: fullName,
         role,
-        is_setup_complete: role === 'customer' // ✅ customers complete by default
+        is_setup_complete: role === 'customer' // customers complete by default
       },
-      emailRedirectTo: `${origin}/api/auth/callback` // ✅ ENABLED email confirmation
+      emailRedirectTo: `${origin}/api/auth/callback` // enabled email confirmation
     }
   });
 
   if (error || !user) {
     console.error('Signup Error:', error?.message);
-    throw new Error(error?.message || 'Could not sign up user.');
+    // CHANGED: return structured error instead of throwing
+    return { status: 'error', message: error?.message || 'Could not sign up user.' };
   }
 
-  // ✅ Don't redirect immediately - let user check email first
-  revalidatePath('/', 'layout');
-
-  // Show success message instead of redirecting
-  throw new Error('SUCCESS: Please check your email to confirm your account before signing in.');
+  revalidatePath('/', 'layout'); // keep cache clean
+  // CHANGED: return structured success instead of throwing "SUCCESS:..."
+  return { status: 'success', message: 'Please check your email to confirm your account before signing in.' };
 }
 
 /* -------------------------------------------------------------------------- */
 /* Login                                                                      */
 /* -------------------------------------------------------------------------- */
-export async function login(formData: FormData) {
+export async function login(
+  formData: FormData
+): Promise<{ status: 'success' | 'error'; message: string }> {
+  // CHANGED: function now returns a {status,message} object (consistent with signup)
   const fromEntries = Object.fromEntries(formData.entries());
   const validated = loginSchema.safeParse(fromEntries);
 
   if (!validated.success) {
     const fieldErrors = validated.error.flatten().fieldErrors;
     const combined = Object.values(fieldErrors).flat().join(' ');
-    throw new Error(combined || 'Invalid login data. Please check your inputs and try again.');
+    return { status: 'error', message: combined || 'Invalid login data.' };
   }
 
   const { email, password, recaptchaToken } = validated.data;
+  const RECAPTCHA_SECRET_KEY_VAR = process.env.RECAPTCHA_SECRET_KEY; // CHANGED
 
-  // Verify reCAPTCHA secret key is in environmental variables
-  if (!RECAPTCHA_SECRET_KEY)
-    throw new Error('Server configuration error: reCAPTCHA secret key is missing.');
+  if (!RECAPTCHA_SECRET_KEY_VAR) {
+    return { status: 'error', message: 'Server configuration error: reCAPTCHA secret key is missing.' };
+  }
 
   try {
     const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
     const verificationResponse = await axios.post(verificationUrl, null, {
-      params: {
-        secret: RECAPTCHA_SECRET_KEY,
-        response: recaptchaToken
-      }
+      params: { secret: RECAPTCHA_SECRET_KEY_VAR, response: recaptchaToken },
     });
-
     const reCaptchaData: ReCaptchaVerificationResponse = verificationResponse.data;
-
     if (!reCaptchaData.success) {
-      console.error('reCAPTCHA verification failed:', reCaptchaData['error-codes']);
-      throw new Error('reCAPTCHA verification failed. Please try again.');
+      return { status: 'error', message: 'reCAPTCHA verification failed. Please try again.' };
     }
-  } catch (error) {
-    console.error('Error during reCAPTCHA verification request:', error);
-    throw new Error('Failed to verify reCAPTCHA. Please try again.');
+  } catch (_error) {
+    return { status: 'error', message: 'Failed to verify reCAPTCHA. Please try again.' };
   }
 
-  // ✅ Continue with login after successful reCAPTCHA verification
   const supabase = await createClient();
-
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     console.error('Login Error:', error.message);
-    throw new Error('Could not authenticate user');
+    return { status: 'error', message: 'Invalid login credentials. Please try again.' };
   }
 
   revalidatePath('/', 'layout');
-  
-  // Return success instead of redirecting to avoid NEXT_REDIRECT error in toast
-  throw new Error('SUCCESS: Login successful');
+  return { status: 'success', message: 'Login successful' };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -4820,6 +4780,7 @@ export async function signOut() {
   revalidatePath('/', 'layout');
   redirect('/');
 }
+
 
 --- FILE: src\features\auth\components\ForgotPasswordForm.tsx ---
 // Forgot Password Form Component
@@ -5087,63 +5048,61 @@ export function LoginForm() {
    */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    
-    // Security: Prevent double submission
     if (loading) return;
-    
-    // Mark all fields as touched to show validation errors
-    setTouched({
-      email: true,
-      password: true
-    });
-    
-    // Validate form before submission
+
+    setTouched({ email: true, password: true });
+
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
       return;
     }
-    
-    // Check reCAPTCHA verification
+
     if (!isCaptchaVerified) {
       toast.error('Please complete the reCAPTCHA verification');
       return;
     }
-    
+
     setLoading(true);
     toast.info('Signing you in...');
-    
+
     try {
-      // Security: Create FormData with sanitized and validated inputs
       const submitData = new FormData();
-      submitData.append('email', formData.email.trim().toLowerCase()); // Normalize email
+      submitData.append('email', formData.email.trim().toLowerCase());
       submitData.append('password', formData.password);
       submitData.append('recaptchaToken', recaptchaToken as string);
 
-      await login(submitData);
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
-        // ✅ Handle success case - show success message and redirect
+      // ✅ FIX: Check status instead of success property
+      const result = await login(submitData);
+
+      if (result.status === 'success') { // FIXED: Use status property
         toast.success('Login successful!');
-        // Clear sensitive form data on success
         setFormData({ email: '', password: '' });
         resetValidation();
         setTimeout(() => router.push('/dashboard'), 1000);
       } else {
-        // Handle authentication errors
-        const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
-        toast.error(errorMessage);
+        // Show the specific error message from the server
+        toast.error(result.message || 'Failed to sign in');
         
-        // Security: Reset reCAPTCHA on failed attempts to prevent brute force
+        // Reset reCAPTCHA on failed login
         setRecaptchaToken(null);
         setIsCaptchaVerified(false);
         recaptchaRef.current?.reset();
         
         // Clear password on failed login for security
         setFormData(prev => ({ ...prev, password: '' }));
-        
-        // Reset validation for retry
         resetValidation();
       }
+    } catch (error) {
+      // Handle unexpected errors
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      toast.error(errorMessage);
+      
+      // Reset form state
+      setRecaptchaToken(null);
+      setIsCaptchaVerified(false);
+      recaptchaRef.current?.reset();
+      setFormData(prev => ({ ...prev, password: '' }));
+      resetValidation();
     } finally {
       setLoading(false);
     }
@@ -5446,6 +5405,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { cn } from '@/shared/lib/utils';
+// CHANGED: fix import path (components → actions is up one level)
 import { signInWithGoogle, signup } from '../actions';
 import { PasswordStrength } from './PasswordStrength';
 
@@ -5490,16 +5450,14 @@ export function SignupForm() {
   const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   function handleCaptchaChange(token: string | null) {
-    console.log('reCAPTCHA token:', token);
     setRecaptchaToken(token);
-    setIsCaptchaVerified(!!token); // true if token exists, false otherwise
+    setIsCaptchaVerified(!!token);
   }
 
   function handleCaptchaExpired() {
-    console.warn('reCAPTCHA token expired. Please re-verify.');
     setRecaptchaToken(null);
     setIsCaptchaVerified(false);
-    recaptchaRef.current?.reset(); // Reset the reCAPTCHA widget
+    recaptchaRef.current?.reset();
   }
 
   // Hydration-safe way to get the role parameter
@@ -5507,41 +5465,8 @@ export function SignupForm() {
     setIsClient(true);
     const roleParam = searchParams.get('role');
     setRole(roleParam);
-
-    // If no role is in the URL, redirect back to the homepage to force a selection.
-    // This is a security measure to ensure no one lands on this page directly.
     if (!roleParam) router.push('/');
   }, [searchParams, router]);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    toast.info('Creating your account...');
-    try {
-      const formData = new FormData(e.currentTarget);
-      formData.append('recaptchaToken', recaptchaToken as string | Blob);
-
-      await signup(formData);
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
-        // ✅ Handle success case - show success message and redirect to login
-        toast.success('Account created! Please check your email to confirm your account.');
-        setTimeout(() => router.push('/login'), 2000);
-      } else {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'An unknown error occurred during signup.'
-        );
-        // In case of failure, reset reCAPTCHA and form
-        setRecaptchaToken(null);
-        setIsCaptchaVerified(false);
-        recaptchaRef.current?.reset();
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
@@ -5549,12 +5474,33 @@ export function SignupForm() {
     try {
       await signInWithGoogle();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Failed to sign in with Google'
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to sign in with Google');
       setGoogleLoading(false);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    toast.info('Creating your account...');
+
+    const formData = new FormData(e.currentTarget);
+    formData.append('recaptchaToken', recaptchaToken as string);
+
+    // CHANGED: use returned result object from server action (no throw-catching)
+    const result = await signup(formData);
+
+    setLoading(false);
+
+    if (result.status === 'success') {
+      toast.success('Account created! Please check your email to confirm your account.');
+      setTimeout(() => router.push('/login'), 2000);
+    } else {
+      toast.error(result.message);
+      // Reset reCAPTCHA on failed attempts
+      setRecaptchaToken(null);
+      setIsCaptchaVerified(false);
+      recaptchaRef.current?.reset();
     }
   }
 
@@ -5652,7 +5598,6 @@ export function SignupForm() {
           {/* reCAPTCHA component */}
           {RECAPTCHA_SITE_KEY ? (
             <ReCaptchaComponent
-              // 'my-auto mx-10' is the tailwind CSS equivalent of `margin: auto 2.5rem`
               className='inline-block my-auto mx-10 mb-2'
               id='recaptcha'
               ref={recaptchaRef}
