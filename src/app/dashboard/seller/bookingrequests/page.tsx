@@ -219,7 +219,7 @@ export default function SellerBookingRequestsPage() {
           {/* Booking Requests (Pending) */}
           {(incomingFilter === "all" || incomingFilter === "booking_requests") && (
             <div>
-              <h2 className="text-xl font-semibold mb-3">Booking Requests</h2>
+              <h2 className="text-xl font-semibold mb-3 p-2">Booking Requests</h2>
               {pendingBookings.length === 0 ? (
                 <div className="p-6 bg-muted rounded-md text-center text-gray-600">
                   <p>No pending booking requests.</p>
@@ -329,7 +329,7 @@ export default function SellerBookingRequestsPage() {
           {/* Declined Bookings */}
           {(incomingFilter === "all" || incomingFilter === "declined") && (
             <div>
-              <h2 className="text-xl font-semibold mb-3">Declined Bookings</h2>
+              <h2 className="text-xl font-semibold mb-3 p-2">Declined Bookings</h2>
               {declinedBookings.length === 0 ? (
                 <div className="p-6 bg-muted rounded-md text-center text-gray-600">
                   <p>No declined bookings.</p>
@@ -420,7 +420,7 @@ export default function SellerBookingRequestsPage() {
           {/* Completed Bookings */}
           {(incomingFilter === "all" || incomingFilter === "completed") && (
             <div>
-              <h2 className="text-xl font-semibold mb-3">Completed Bookings</h2>
+              <h2 className="text-xl font-semibold mb-3 p-2">Completed Bookings</h2>
               {completedBookings.length === 0 ? (
                 <div className="p-6 bg-muted rounded-md text-center text-gray-600">
                   <p>No completed bookings.</p>
