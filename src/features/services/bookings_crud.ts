@@ -16,6 +16,7 @@ export interface CreateBookingInput {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  image?: string; // Optional image URL
 }
 
 const supabase = createClient();
@@ -65,12 +66,21 @@ export async function getSellerBookings(seller_id: string) {
 export async function getCustomerBookings(customer_id: string) {
   const { data, error } = await supabase
     .from("booking_requests")
-    .select("*")
+    .select(`
+      *,
+      listings (
+        image_url
+      )
+    `)
     .eq("customer_id", customer_id)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data;
+  // Map the image_url from the joined listing to the booking object
+  return (data ?? []).map((b: any) => ({
+    ...b,
+    image: b.listings?.image_url ?? null,
+  }));
 }
 
 // Update booking status (e.g., confirm, cancel, complete)

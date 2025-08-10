@@ -25,6 +25,7 @@ interface Booking {
   customer_phone: string;
   created_at?: string | null;
   updated_at?: string | null;
+  image?: string | null;
 }
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -126,6 +127,16 @@ export default function CustomerBookingsPage() {
               key={booking.id}
               className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:shadow-md transition relative"
             >
+              {/* Booking Image */}
+              {booking.image && (
+                <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                  <img
+                    src={booking.image}
+                    alt={booking.event_type || "Booking image"}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+              )}
               {/* Left: Status & Title */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
