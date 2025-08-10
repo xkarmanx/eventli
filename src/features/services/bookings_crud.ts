@@ -54,12 +54,20 @@ export async function createBooking(input: CreateBookingInput) {
 export async function getSellerBookings(seller_id: string) {
   const { data, error } = await supabase
     .from("booking_requests")
-    .select("*")
+    .select(`
+      *,
+      listings (
+        image_url
+      )
+    `)
     .eq("seller_id", seller_id)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data;
+  return (data ?? []).map((b: any) => ({
+    ...b,
+    image: b.listings?.image_url ?? null,
+  }));
 }
 
 // Get all bookings for a customer

@@ -4,9 +4,22 @@ import { useEffect, useState, JSX } from "react";
 import { getSellerBookings, updateBookingStatus } from "@/features/services/bookings_crud";
 import { createClient } from "@/shared/lib/supabase/client";
 import { Button } from "@/shared/components/ui/button";
-import { Loader2, Calendar, MapPin, Users, Clock, Tag, CheckCircle2, XCircle, Hourglass, FileText, Mail, Phone } from "lucide-react";
+import {
+  Loader2,
+  Calendar,
+  MapPin,
+  Users,
+  Clock,
+  Tag,
+  CheckCircle2,
+  XCircle,
+  Hourglass,
+  FileText,
+  Mail,
+  Phone,
+  User
+} from "lucide-react";
 
-type BookingStatus = "pending" | "accepted" | "declined" | "completed";
 type IncomingFilter = "all" | "booking_requests" | "declined" | "completed";
 
 interface Booking {
@@ -26,6 +39,7 @@ interface Booking {
   customer_phone: string;
   created_at?: string | null;
   updated_at?: string | null;
+  image?: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -50,7 +64,6 @@ export default function SellerBookingRequestsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [incomingFilter, setIncomingFilter] = useState<IncomingFilter>("all");
 
-  // Fetch current seller
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -58,7 +71,6 @@ export default function SellerBookingRequestsPage() {
     });
   }, []);
 
-  // Fetch bookings for this seller
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
@@ -70,7 +82,6 @@ export default function SellerBookingRequestsPage() {
       .catch(() => setLoading(false));
   }, [userId]);
 
-  // Accept or decline booking
   const handleAction = async (bookingId: string, status: "accepted" | "declined") => {
     setActionLoading(bookingId + status);
     try {
@@ -85,21 +96,148 @@ export default function SellerBookingRequestsPage() {
     }
   };
 
-  // Upcoming bookings: accepted, ordered by event_date descending
   const upcomingBookings = [...bookings]
     .filter((b) => b.status === "accepted")
     .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime());
 
-  // Incoming bookings: pending, declined, completed
   const pendingBookings = bookings.filter((b) => b.status === "pending");
   const declinedBookings = bookings.filter((b) => b.status === "declined");
   const completedBookings = bookings.filter((b) => b.status === "completed");
 
+  const BookingImage = ({ booking }: { booking: Booking }) =>
+    booking.image ? (
+      <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+        <img
+          src={booking.image}
+          alt={booking.event_type || "Listing image"}
+          className="object-cover w-full h-full"
+          loading="lazy"
+        />
+      </div>
+    ) : (
+      <div className="w-32 h-32 flex-shrink-0 rounded-lg bg-gray-50 border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400">
+        No Image
+      </div>
+    );
+
+  // 4-item grid (2x2) for event meta: Date, Time, Guests, Address
+  const EventMetaGrid = ({ booking }: { booking: Booking }) => (
+    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mb-2">
+      <div className="flex items-center gap-2">
+        <Calendar className="w-5 h-5 text-blue-500" />
+        <span className="text-gray-700 font-medium">{booking.event_date}</span>
+      </div>
+      <div className="flex items-center gap-2 -ml-40">
+        <Clock className="w-5 h-5 text-purple-500" />
+        <span className="text-gray-700 font-medium">{booking.event_time}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Users className="w-5 h-5 text-orange-500" />
+        <span className="text-gray-700">{booking.guest_count}</span>
+      </div>
+      <div className="flex items-center gap-2 -ml-40">
+        <MapPin className="w-5 h-5 text-pink-500" />
+        <span className="text-gray-700 truncate">{booking.address}</span>
+      </div>
+    </div>
+  );
+
+  const TopRow = ({ booking }: { booking: Booking }) => (
+    <div className="flex flex-col sm:flex-row items-start gap-4">
+      <BookingImage booking={booking} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-2">
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}
+          >
+            {STATUS_ICONS[booking.status] || <FileText className="w-4 h-4 mr-1 inline" />}
+            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+          </span>
+          <span className="ml-2 text-xs sm:text-sm text-gray-400">
+            {booking.event_date ? `Event: ${new Date(booking.event_date).toLocaleDateString()}` : ""}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Tag className="w-5 h-5 text-teal-500" />
+          <span className="font-bold text-lg text-black truncate">{booking.event_type}</span>
+        </div>
+        <EventMetaGrid booking={booking} />
+        {booking.notes && (
+          <div className="text-gray-600 text-sm">
+            <span className="font-medium">Notes:</span> {booking.notes}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const CustomerInfo = ({ booking }: { booking: Booking }) => (
+    <div className="pt-4 mt-4 border-t border-gray-100 w-full">
+      <div className="font-semibold text-gray-700 mb-2">Customer Information</div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-x-10 gap-y-2 text-sm">
+        <div className="flex items-center gap-2">
+          <User className="w-5 h-5 text-blue-500" />
+          <span className="text-black">{booking.customer_name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Mail className="w-5 h-5 text-indigo-500" />
+          <span className="text-gray-700 break-all">{booking.customer_email}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Phone className="w-5 h-5 text-green-500" />
+          <span className="text-gray-700">{booking.customer_phone}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const MetaBlock = ({ booking }: { booking: Booking }) => (
+    <div className="flex flex-col gap-2 items-end text-xs text-gray-500">
+      <div>
+        <span className="block">
+          <span className="font-medium">Created:</span>{" "}
+          {booking.created_at ? new Date(booking.created_at).toLocaleString() : "--"}
+        </span>
+        <span className="block">
+          <span className="font-medium">Updated:</span>{" "}
+          {booking.updated_at ? new Date(booking.updated_at).toLocaleString() : "--"}
+        </span>
+      </div>
+      <div>
+        <span className="block">
+          <span className="font-medium">Booking ID:</span> {booking.id}
+        </span>
+      </div>
+    </div>
+  );
+
+  const CardWrapper = ({
+    booking,
+    children,
+    extraTopRight
+  }: {
+    booking: Booking;
+    children: JSX.Element | JSX.Element[];
+    extraTopRight?: JSX.Element;
+  }) => (
+    <div className="relative bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col gap-2 hover:shadow-md transition">
+      {extraTopRight && (
+        <div className="absolute top-4 right-4 flex gap-2 z-10">{extraTopRight}</div>
+      )}
+      <div className="pr-0 md:pr-48">{children}</div>
+      <div className="hidden md:flex flex-col gap-2 items-end absolute right-5 bottom-5">
+        <MetaBlock booking={booking} />
+      </div>
+      <div className="mt-4 md:hidden">
+        <MetaBlock booking={booking} />
+      </div>
+    </div>
+  );
+
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-black">Booking Requests</h1>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-6">
         <Button
           variant={tab === "upcoming" ? "default" : "outline"}
@@ -113,7 +251,7 @@ export default function SellerBookingRequestsPage() {
           className={tab === "incoming" ? "bg-teal-600 text-white" : ""}
           onClick={() => setTab("incoming")}
         >
-          Incoming Bookings
+          Manage Bookings
         </Button>
       </div>
 
@@ -131,72 +269,18 @@ export default function SellerBookingRequestsPage() {
           ) : (
             <div className="space-y-6">
               {upcomingBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:shadow-md transition relative"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}
-                      >
-                        {STATUS_ICONS[booking.status] || <FileText className="w-4 h-4 mr-1 inline" />}
-                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                      </span>
-                      <span className="ml-2 text-sm text-gray-400">
-                        {booking.event_date ? `Event: ${new Date(booking.event_date).toLocaleDateString()}` : ""}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Tag className="w-5 h-5 text-teal-500" />
-                      <span className="font-bold text-lg text-black truncate">{booking.event_type}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="w-5 h-5 text-blue-500" />
-                      <span className="text-gray-700 font-medium">{booking.event_date}</span>
-                      <Clock className="w-5 h-5 text-purple-500 ml-4" />
-                      <span className="text-gray-700 font-medium">{booking.event_time}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <MapPin className="w-5 h-5 text-pink-500" />
-                      <span className="text-gray-700">{booking.address}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-5 h-5 text-orange-500" />
-                      <span className="text-gray-700">{booking.guest_count}</span>
-                    </div>
-                    {booking.notes && (
-                      <div className="mt-2 text-gray-600 text-sm">
-                        <span className="font-medium">Notes:</span> {booking.notes}
-                      </div>
-                    )}
-                  </div>
-                  {/* Right: Meta */}
-                  <div className="flex flex-col gap-2 items-end min-w-[160px] absolute right-5 bottom-5">
-                    <div className="text-xs text-gray-500">
-                      <span className="block">
-                        <span className="font-medium">Created:</span>{" "}
-                        {booking.created_at ? new Date(booking.created_at).toLocaleString() : "--"}
-                      </span>
-                      <span className="block">
-                        <span className="font-medium">Updated:</span>{" "}
-                        {booking.updated_at ? new Date(booking.updated_at).toLocaleString() : "--"}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      <span className="block">
-                        <span className="font-medium">Booking ID:</span> {booking.id}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <CardWrapper key={booking.id} booking={booking}>
+                  <>
+                    <TopRow booking={booking} />
+                    <CustomerInfo booking={booking} />
+                  </>
+                </CardWrapper>
               ))}
             </div>
           )}
         </div>
       ) : (
         <div>
-          {/* Incoming Bookings Filter */}
           <div className="flex gap-2 mb-4">
             {["all", "booking_requests", "declined", "completed"].map((filter) => (
               <Button
@@ -216,10 +300,9 @@ export default function SellerBookingRequestsPage() {
             ))}
           </div>
 
-          {/* Booking Requests (Pending) */}
           {(incomingFilter === "all" || incomingFilter === "booking_requests") && (
-            <div>
-              <h2 className="text-xl font-semibold mb-3 p-2">Booking Requests</h2>
+            <div className="mb-10">
+              <h2 className="text-xl font-semibold mb-3">Booking Requests</h2>
               {pendingBookings.length === 0 ? (
                 <div className="p-6 bg-muted rounded-md text-center text-gray-600">
                   <p>No pending booking requests.</p>
@@ -227,109 +310,52 @@ export default function SellerBookingRequestsPage() {
               ) : (
                 <div className="space-y-6">
                   {pendingBookings.map((booking) => (
-                    <div
+                    <CardWrapper
                       key={booking.id}
-                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:shadow-md transition relative"
-                    >
-                      {/* Accept/Decline Buttons - now top right */}
-                      <div className="absolute right-5 top-5 flex gap-2">
-                        <Button
-                          size="sm"
-                          className="bg-green-600 text-white"
-                          disabled={actionLoading === booking.id + "accepted"}
-                          onClick={() => handleAction(booking.id, "accepted")}
-                        >
-                          {actionLoading === booking.id + "accepted" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Accept"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-red-600 text-white"
-                          disabled={actionLoading === booking.id + "declined"}
-                          onClick={() => handleAction(booking.id, "declined")}
-                        >
-                          {actionLoading === booking.id + "declined" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Decline"}
-                        </Button>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}
+                      booking={booking}
+                      extraTopRight={
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-green-600 text-white"
+                            disabled={actionLoading === booking.id + "accepted"}
+                            onClick={() => handleAction(booking.id, "accepted")}
                           >
-                            {STATUS_ICONS[booking.status] || <FileText className="w-4 h-4 mr-1 inline" />}
-                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                          </span>
-                          <span className="ml-2 text-sm text-gray-400">
-                            {booking.created_at ? `Requested: ${new Date(booking.created_at).toLocaleDateString()}` : ""}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Tag className="w-5 h-5 text-teal-500" />
-                          <span className="font-bold text-lg text-black truncate">{booking.event_type}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Calendar className="w-5 h-5 text-blue-500" />
-                          <span className="text-gray-700 font-medium">{booking.event_date}</span>
-                          <Clock className="w-5 h-5 text-purple-500 ml-4" />
-                          <span className="text-gray-700 font-medium">{booking.event_time}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <MapPin className="w-5 h-5 text-pink-500" />
-                          <span className="text-gray-700">{booking.address}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="w-5 h-5 text-orange-500" />
-                          <span className="text-gray-700">{booking.guest_count}</span>
-                        </div>
-                        {/* Customer Info */}
-                        <div className="mt-4">
-                          <div className="font-semibold text-gray-700 mb-1">Customer Information</div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-black">{booking.customer_name}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Mail className="w-5 h-5 text-indigo-500" />
-                            <span className="text-gray-700">{booking.customer_email}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Phone className="w-5 h-5 text-green-500" />
-                            <span className="text-gray-700">{booking.customer_phone}</span>
-                          </div>
-                        </div>
-                        {booking.notes && (
-                          <div className="mt-2 text-gray-600 text-sm">
-                            <span className="font-medium">Notes:</span> {booking.notes}
-                          </div>
-                        )}
-                      </div>
-                      {/* Right: Meta */}
-                      <div className="flex flex-col gap-2 items-end min-w-[160px] absolute right-5 bottom-5">
-                        <div className="text-xs text-gray-500">
-                          <span className="block">
-                            <span className="font-medium">Created:</span>{" "}
-                            {booking.created_at ? new Date(booking.created_at).toLocaleString() : "--"}
-                          </span>
-                          <span className="block">
-                            <span className="font-medium">Updated:</span>{" "}
-                            {booking.updated_at ? new Date(booking.updated_at).toLocaleString() : "--"}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          <span className="block">
-                            <span className="font-medium">Booking ID:</span> {booking.id}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                            {actionLoading === booking.id + "accepted" ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              "Accept"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-red-600 text-white"
+                            disabled={actionLoading === booking.id + "declined"}
+                            onClick={() => handleAction(booking.id, "declined")}
+                          >
+                            {actionLoading === booking.id + "declined" ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              "Decline"
+                            )}
+                          </Button>
+                        </>
+                      }
+                    >
+                      <>
+                        <TopRow booking={booking} />
+                        <CustomerInfo booking={booking} />
+                      </>
+                    </CardWrapper>
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Declined Bookings */}
           {(incomingFilter === "all" || incomingFilter === "declined") && (
-            <div>
-              <h2 className="text-xl font-semibold mb-3 p-2">Declined Bookings</h2>
+            <div className="mb-10">
+              <h2 className="text-xl font-semibold mb-3">Declined Bookings</h2>
               {declinedBookings.length === 0 ? (
                 <div className="p-6 bg-muted rounded-md text-center text-gray-600">
                   <p>No declined bookings.</p>
@@ -337,90 +363,21 @@ export default function SellerBookingRequestsPage() {
               ) : (
                 <div className="space-y-6">
                   {declinedBookings.map((booking) => (
-                    <div
-                      key={booking.id}
-                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:shadow-md transition relative"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}
-                          >
-                            {STATUS_ICONS[booking.status] || <FileText className="w-4 h-4 mr-1 inline" />}
-                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                          </span>
-                          <span className="ml-2 text-sm text-gray-400">
-                            {booking.updated_at ? `Declined: ${new Date(booking.updated_at).toLocaleDateString()}` : ""}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Tag className="w-5 h-5 text-teal-500" />
-                          <span className="font-bold text-lg text-black truncate">{booking.event_type}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Calendar className="w-5 h-5 text-blue-500" />
-                          <span className="text-gray-700 font-medium">{booking.event_date}</span>
-                          <Clock className="w-5 h-5 text-purple-500 ml-4" />
-                          <span className="text-gray-700 font-medium">{booking.event_time}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <MapPin className="w-5 h-5 text-pink-500" />
-                          <span className="text-gray-700">{booking.address}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="w-5 h-5 text-orange-500" />
-                          <span className="text-gray-700">{booking.guest_count}</span>
-                        </div>
-                        {/* Customer Info */}
-                        <div className="mt-4">
-                          <div className="font-semibold text-gray-700 mb-1">Customer Information</div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-black">{booking.customer_name}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Mail className="w-5 h-5 text-indigo-500" />
-                            <span className="text-gray-700">{booking.customer_email}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Phone className="w-5 h-5 text-green-500" />
-                            <span className="text-gray-700">{booking.customer_phone}</span>
-                          </div>
-                        </div>
-                        {booking.notes && (
-                          <div className="mt-2 text-gray-600 text-sm">
-                            <span className="font-medium">Notes:</span> {booking.notes}
-                          </div>
-                        )}
-                      </div>
-                      {/* Right: Meta */}
-                      <div className="flex flex-col gap-2 items-end min-w-[160px] absolute right-5 bottom-5">
-                        <div className="text-xs text-gray-500">
-                          <span className="block">
-                            <span className="font-medium">Created:</span>{" "}
-                            {booking.created_at ? new Date(booking.created_at).toLocaleString() : "--"}
-                          </span>
-                          <span className="block">
-                            <span className="font-medium">Updated:</span>{" "}
-                            {booking.updated_at ? new Date(booking.updated_at).toLocaleString() : "--"}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          <span className="block">
-                            <span className="font-medium">Booking ID:</span> {booking.id}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <CardWrapper key={booking.id} booking={booking}>
+                      <>
+                        <TopRow booking={booking} />
+                        <CustomerInfo booking={booking} />
+                      </>
+                    </CardWrapper>
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Completed Bookings */}
           {(incomingFilter === "all" || incomingFilter === "completed") && (
             <div>
-              <h2 className="text-xl font-semibold mb-3 p-2">Completed Bookings</h2>
+              <h2 className="text-xl font-semibold mb-3">Completed Bookings</h2>
               {completedBookings.length === 0 ? (
                 <div className="p-6 bg-muted rounded-md text-center text-gray-600">
                   <p>No completed bookings.</p>
@@ -428,80 +385,12 @@ export default function SellerBookingRequestsPage() {
               ) : (
                 <div className="space-y-6">
                   {completedBookings.map((booking) => (
-                    <div
-                      key={booking.id}
-                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:shadow-md transition relative"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}
-                          >
-                            {STATUS_ICONS[booking.status] || <FileText className="w-4 h-4 mr-1 inline" />}
-                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                          </span>
-                          <span className="ml-2 text-sm text-gray-400">
-                            {booking.updated_at ? `Completed: ${new Date(booking.updated_at).toLocaleDateString()}` : ""}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Tag className="w-5 h-5 text-teal-500" />
-                          <span className="font-bold text-lg text-black truncate">{booking.event_type}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Calendar className="w-5 h-5 text-blue-500" />
-                          <span className="text-gray-700 font-medium">{booking.event_date}</span>
-                          <Clock className="w-5 h-5 text-purple-500 ml-4" />
-                          <span className="text-gray-700 font-medium">{booking.event_time}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <MapPin className="w-5 h-5 text-pink-500" />
-                          <span className="text-gray-700">{booking.address}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="w-5 h-5 text-orange-500" />
-                          <span className="text-gray-700">{booking.guest_count}</span>
-                        </div>
-                        {/* Customer Info */}
-                        <div className="mt-4">
-                          <div className="font-semibold text-gray-700 mb-1">Customer Information</div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-black">{booking.customer_name}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Mail className="w-5 h-5 text-indigo-500" />
-                            <span className="text-gray-700">{booking.customer_email}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Phone className="w-5 h-5 text-green-500" />
-                            <span className="text-gray-700">{booking.customer_phone}</span>
-                          </div>
-                        </div>
-                        {booking.notes && (
-                          <div className="mt-2 text-gray-600 text-sm">
-                            <span className="font-medium">Notes:</span> {booking.notes}
-                          </div>
-                        )}
-                      </div>
-                      {/* Right: Meta */}
-                      <div className="flex flex-col gap-2 items-end min-w-[160px] absolute right-5 bottom-5">
-                        <div className="text-xs text-gray-500">
-                          <span className="block">
-                            <span className="font-medium">Created:</span>{" "}
-                            {booking.created_at ? new Date(booking.created_at).toLocaleString() : "--"}
-                          </span>
-                          <span className="block">
-                            <span className="font-medium">Updated:</span>{" "}
-                            {booking.updated_at ? new Date(booking.updated_at).toLocaleString() : "--"}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          <span className="block">
-                            <span className="font-medium">Booking ID:</span> {booking.id}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <CardWrapper key={booking.id} booking={booking}>
+                      <>
+                        <TopRow booking={booking} />
+                        <CustomerInfo booking={booking} />
+                      </>
+                    </CardWrapper>
                   ))}
                 </div>
               )}
@@ -510,5 +399,5 @@ export default function SellerBookingRequestsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -8,7 +8,7 @@ import Image from "next/image";
 import { signOut } from '@/features/auth/actions'
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard/customer", icon: LayoutDashboard },
+  //{ name: "Dashboard", href: "/dashboard/customer", icon: LayoutDashboard },
   { name: "Profile", href: "/dashboard/customer/profile", icon: User },
   { name: "Bookings", href: "/dashboard/customer/bookings", icon: Calendar },
   { name: "Support", href: "/dashboard/customer/support", icon: LifeBuoy },
