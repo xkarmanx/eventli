@@ -529,3 +529,52 @@ CREATE POLICY "Customers can delete own booking requests" ON public.booking_requ
 -- Allow sellers to delete their own booking requests
 CREATE POLICY "Sellers can delete own booking requests" ON public.booking_requests
   FOR DELETE USING (auth.uid() = seller_id);
+
+
+-- =============================================================================
+-- [PG_CRON JOB] Update public.booking_requests "status" every minute
+-- Added by: [Cody Tran], 2024-08-10
+-- Purpose: 
+-- - To automatically update booking requests status based on event date
+--
+-- - If current date is past event_date...
+-- - and status is 'pending', change status to 'declined'
+-- - and if status is 'accepted', change status to 'completed'
+--
+-- - Otherwise status is either 'pending', accepted', or declined
+-- =============================================================================
+-- Create an index for faster lookups (run once)
+CREATE INDEX IF NOT EXISTS idx_booking_requests_status_eventdate
+ON booking_requests (status, event_date);
+
+-- Function to update statuses
+CREATE OR REPLACE FUNCTION update_booking_statuses() RETURNS void AS $$
+BEGIN
+  -- 1. Decline expired pending requests
+  UPDATE booking_requests
+  SET status = 'declined',
+      updated_at = NOW()
+  WHERE status = 'pending'
+    AND (
+      TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM')
+      <= NOW()
+    );
+
+  -- 2. Complete expired accepted requests
+  UPDATE booking_requests
+  SET status = 'completed',
+      updated_at = NOW()
+  WHERE status = 'accepted'
+    AND (
+      TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM')
+      <= NOW()
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Schedule it to run every minute
+SELECT cron.schedule(
+  'booking_status_update',          -- job name
+  '* * * * *',                      -- every minute
+  $$CALL update_booking_statuses();$$
+);

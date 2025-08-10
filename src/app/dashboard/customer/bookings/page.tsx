@@ -25,7 +25,6 @@ interface Booking {
   customer_phone: string;
   created_at?: string | null;
   updated_at?: string | null;
-  // Optionally add more fields if needed
 }
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -38,15 +37,15 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-700",
-  confirmed: "bg-green-100 text-green-700",
-  cancelled: "bg-red-100 text-red-700",
+  accepted: "bg-green-100 text-green-700",
+  declined: "bg-red-200 text-red-700",
   completed: "bg-blue-100 text-blue-700",
 };
 
 const STATUS_ICONS: Record<string, JSX.Element> = {
   pending: <Hourglass className="w-4 h-4 mr-1 inline" />,
-  confirmed: <CheckCircle2 className="w-4 h-4 mr-1 inline" />,
-  cancelled: <XCircle className="w-4 h-4 mr-1 inline" />,
+  accepted: <CheckCircle2 className="w-4 h-4 mr-1 inline" />,
+  declined: <XCircle className="w-4 h-4 mr-1 inline" />,
   completed: <CheckCircle2 className="w-4 h-4 mr-1 inline" />,
 };
 
@@ -77,12 +76,18 @@ export default function CustomerBookingsPage() {
       .catch(() => setLoading(false));
   }, [userId]);
 
-  // Filter bookings by status
+  // Filter bookings by status, order by created_at descending
   useEffect(() => {
+    let sorted = [...bookings].sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+
     if (status === "all") {
-      setFiltered(bookings);
+      setFiltered(sorted);
     } else {
-      setFiltered(bookings.filter((b) => b.status === status));
+      setFiltered(sorted.filter((b) => b.status === status));
     }
   }, [bookings, status]);
 
@@ -131,7 +136,15 @@ export default function CustomerBookingsPage() {
                     {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                   </span>
                   <span className="ml-2 text-sm text-gray-400">
-                    {booking.created_at ? `Requested: ${new Date(booking.created_at).toLocaleDateString()}` : ""}
+                    {booking.status === "pending" && booking.created_at
+                      ? `Requested: ${new Date(booking.created_at).toLocaleDateString()}`
+                      : booking.status === "accepted" && booking.updated_at
+                      ? `Accepted: ${new Date(booking.updated_at).toLocaleDateString()}`
+                      : booking.status === "declined" && booking.updated_at
+                      ? `Declined: ${new Date(booking.updated_at).toLocaleDateString()}`
+                      : booking.status === "completed" && booking.updated_at
+                      ? `Completed: ${new Date(booking.updated_at).toLocaleDateString()}`
+                      : ""}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
