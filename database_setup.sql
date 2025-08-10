@@ -542,12 +542,15 @@ CREATE POLICY "Sellers can delete own booking requests" ON public.booking_reques
 -- - and if status is 'accepted', change status to 'completed'
 --
 -- - Otherwise status is either 'pending', accepted', or declined
+
+-- - The timezone is set to 'America/Denver' for event_date and event_time
+--      IF customers are from other timezones, we must hold that data in the profiles table and set the timezone accordingly
 -- =============================================================================
 -- Create an index for faster lookups (run once)
 CREATE INDEX IF NOT EXISTS idx_booking_requests_status_eventdate
 ON booking_requests (status, event_date);
 
--- Function to update statuses
+-- Function to update statuses with timezone handling
 CREATE OR REPLACE FUNCTION update_booking_statuses() RETURNS void AS $$
 BEGIN
   -- 1. Decline expired pending requests
@@ -556,7 +559,7 @@ BEGIN
       updated_at = NOW()
   WHERE status = 'pending'
     AND (
-      TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM')
+      (TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM') AT TIME ZONE 'America/Denver')
       <= NOW()
     );
 
@@ -566,7 +569,7 @@ BEGIN
       updated_at = NOW()
   WHERE status = 'accepted'
     AND (
-      TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM')
+      (TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM') AT TIME ZONE 'America/Denver')
       <= NOW()
     );
 END;
