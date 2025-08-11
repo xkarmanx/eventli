@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { cn } from '@/shared/lib/utils';
-// CHANGED: fix import path (components → actions is up one level)
 import { signInWithGoogle, signup } from '../actions';
 import { PasswordStrength } from './PasswordStrength';
 
@@ -57,14 +56,16 @@ export function SignupForm() {
   const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   function handleCaptchaChange(token: string | null) {
+    console.log('reCAPTCHA token:', token);
     setRecaptchaToken(token);
-    setIsCaptchaVerified(!!token);
+    setIsCaptchaVerified(!!token); // true if token exists, false otherwise
   }
 
   function handleCaptchaExpired() {
+    console.warn('reCAPTCHA token expired. Please re-verify.');
     setRecaptchaToken(null);
     setIsCaptchaVerified(false);
-    recaptchaRef.current?.reset();
+    recaptchaRef.current?.reset(); // Reset the reCAPTCHA widget
   }
 
   // Hydration-safe way to get the role parameter
@@ -72,8 +73,41 @@ export function SignupForm() {
     setIsClient(true);
     const roleParam = searchParams.get('role');
     setRole(roleParam);
+
+    // If no role is in the URL, redirect back to the homepage to force a selection.
+    // This is a security measure to ensure no one lands on this page directly.
     if (!roleParam) router.push('/');
   }, [searchParams, router]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    toast.info('Creating your account...');
+    try {
+      const formData = new FormData(e.currentTarget);
+      formData.append('recaptchaToken', recaptchaToken as string | Blob);
+
+      await signup(formData);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
+        // ✅ Handle success case - show success message and redirect to login
+        toast.success('Account created! Please check your email to confirm your account.');
+        setTimeout(() => router.push('/login'), 2000);
+      } else {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'An unknown error occurred during signup.'
+        );
+        // In case of failure, reset reCAPTCHA and form
+        setRecaptchaToken(null);
+        setIsCaptchaVerified(false);
+        recaptchaRef.current?.reset();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
@@ -81,33 +115,12 @@ export function SignupForm() {
     try {
       await signInWithGoogle();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to sign in with Google');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to sign in with Google'
+      );
       setGoogleLoading(false);
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    toast.info('Creating your account...');
-
-    const formData = new FormData(e.currentTarget);
-    formData.append('recaptchaToken', recaptchaToken as string);
-
-    // CHANGED: use returned result object from server action (no throw-catching)
-    const result = await signup(formData);
-
-    setLoading(false);
-
-    if (result.status === 'success') {
-      toast.success('Account created! Please check your email to confirm your account.');
-      setTimeout(() => router.push('/login'), 2000);
-    } else {
-      toast.error(result.message);
-      // Reset reCAPTCHA on failed attempts
-      setRecaptchaToken(null);
-      setIsCaptchaVerified(false);
-      recaptchaRef.current?.reset();
     }
   }
 
@@ -205,6 +218,7 @@ export function SignupForm() {
           {/* reCAPTCHA component */}
           {RECAPTCHA_SITE_KEY ? (
             <ReCaptchaComponent
+              // 'my-auto mx-10' is the tailwind CSS equivalent of `margin: auto 2.5rem`
               className='inline-block my-auto mx-10 mb-2'
               id='recaptcha'
               ref={recaptchaRef}

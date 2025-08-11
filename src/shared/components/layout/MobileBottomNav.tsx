@@ -3,11 +3,10 @@
 import { Filter, User, Home } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import SearchSlideSheet, { FilterValues } from "@/shared/components/ui/SearchSlideSheet"
 import AuthModal from "@/shared/components/ui/AuthModal"
 import { useAuth } from "@/shared/hooks/useAuth"
-import { createClient } from '@/shared/lib/supabase/client'
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
@@ -16,54 +15,9 @@ export default function MobileBottomNav() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authModalType, setAuthModalType] = useState<'login' | 'signup'>('login')
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [roleLoading, setRoleLoading] = useState(false)
-
-  // Fetch user profile to get role
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      // Don't fetch profile if no user is authenticated
-      if (!user?.id) {
-        setUserRole(null)
-        setRoleLoading(false)
-        return
-      }
-
-      setRoleLoading(true)
-      try {
-        const supabase = createClient()
-        if (!supabase) {
-          throw new Error('Supabase client not available')
-        }
-
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-        
-        if (error) {
-          setUserRole(null) // Don't default to customer on error
-        } else {
-          setUserRole(profile?.role || 'customer')
-        }
-      } catch (error) {
-        setUserRole(null) // Don't default to customer on error
-      } finally {
-        setRoleLoading(false)
-      }
-    }
-
-    fetchUserProfile()
-  }, [user?.id]) // Only depend on user.id to avoid unnecessary re-runs
 
   // Hide mobile bottom nav on listing detail pages
-  if (pathname?.startsWith('/listing/')) {
-    return null
-  }
-
-  // Don't render if router is not ready
-  if (!router) {
+  if (pathname.startsWith('/listing/')) {
     return null
   }
 
@@ -76,39 +30,13 @@ export default function MobileBottomNav() {
   }
 
   const handleProfileClick = () => {
-    try {
-      // If we're still in initial loading state, don't do anything
-      if (loading) {
-        return
-      }
-      
-      // If user is definitely not authenticated, show auth modal immediately
-      if (!user) {
-        setAuthModalType('login')
-        setIsAuthModalOpen(true)
-        return
-      }
-      
-      // At this point we have a user, but let's check if role loading is complete
-      if (roleLoading) {
-        return
-      }
-      
-      // User is authenticated and we have role data
-      if (user && userRole) {
-        // Navigate based on user role
-        if (userRole === 'seller') {
-          router.push('/dashboard/seller/profile')
-        } else {
-          router.push('/customer-profile')
-        }
-      } else if (user && userRole === null) {
-        // User is authenticated but role fetch failed or no role found
-        setAuthModalType('login')
-        setIsAuthModalOpen(true)
-      }
-    } catch (error) {
-      // Fallback: show login modal
+    if (loading) return // Wait for auth check to complete
+    
+    if (user) {
+      // User is logged in, navigate to profile
+      router.push('/dashboard/customer/profile')
+    } else {
+      // User is not logged in, show login modal
       setAuthModalType('login')
       setIsAuthModalOpen(true)
     }
@@ -123,14 +51,18 @@ export default function MobileBottomNav() {
   }
 
   const handleSearchApply = (query: string, filters: FilterValues) => {
+    console.log('📱 MobileBottomNav: handleSearchApply called with:', { query, filters })
+    
     // If everything is empty, just go to homepage to show all listings
     if (!query.trim() && 
         (!filters.priceRange || filters.priceRange.length === 0) && 
         (!filters.guestNumber || filters.guestNumber.length === 0) && 
         !filters.eventType) {
+      console.log('📱 MobileBottomNav: Empty search detected, redirecting to homepage')
       setIsSearchModalOpen(false)
       
       // Always navigate to clear any existing search params
+      console.log('📱 MobileBottomNav: Navigating to / to clear search')
       router.push('/')
       return
     }
@@ -158,6 +90,7 @@ export default function MobileBottomNav() {
     const searchParamsString = searchParams.toString()
     const targetUrl = searchParamsString ? `/?${searchParamsString}` : '/'
     
+    console.log('📱 MobileBottomNav: Navigating to:', targetUrl)
     setIsSearchModalOpen(false)
     
     router.push(targetUrl)
@@ -192,7 +125,11 @@ export default function MobileBottomNav() {
           {/* Profile */}
           <button
             onClick={handleProfileClick}
-            className="flex flex-col items-center justify-center px-3 py-2 rounded-lg transition-colors text-gray-600 hover:text-teal-600 hover:bg-gray-50"
+            className={`flex flex-col items-center justify-center px-3 py-2 rounded-lg transition-colors ${
+              pathname.startsWith('/dashboard/customer/profile')
+                ? 'text-teal-600 bg-teal-50'
+                : 'text-gray-600 hover:text-teal-600 hover:bg-gray-50'
+            }`}
           >
             <User className="w-5 h-5 mb-1" />
             <span className="text-xs font-medium">Profile</span>

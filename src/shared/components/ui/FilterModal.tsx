@@ -106,7 +106,7 @@ export default function FilterModal({ isOpen, onClose }: FilterModalProps) {
         {/* Close Button */}
         <button
           onClick={handleModalClose} // JC: Use our custom close handler
-          className="cursor-pointer absolute top-3 sm:top-4 right-3 sm:right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10"
+          className="absolute top-3 sm:top-4 right-3 sm:right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10"
           aria-label="Close modal"
         >
           <X className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -144,7 +144,7 @@ export default function FilterModal({ isOpen, onClose }: FilterModalProps) {
                           : [...currentPriceRanges, range.value]
                       }
                     })}
-                    className={`cursor-pointer p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    className={`p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
                       selectedFilters.priceRange?.includes(range.value)
                         ? 'border-teal-600 bg-teal-600 text-white shadow-md transform scale-105'
                         : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -176,7 +176,7 @@ export default function FilterModal({ isOpen, onClose }: FilterModalProps) {
                           : [...currentGuestNumbers, guest.value]
                       }
                     })}
-                    className={`cursor-pointer p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    className={`p-2 sm:p-3 border rounded-lg text-xs sm:text-sm font-medium transition-all ${
                       selectedFilters.guestNumber?.includes(guest.value)
                         ? 'border-teal-600 bg-teal-600 text-white shadow-md transform scale-105'
                         : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -194,13 +194,13 @@ export default function FilterModal({ isOpen, onClose }: FilterModalProps) {
             <Button
               variant="outline"
               onClick={handleClearAll}
-              className="cursor-pointer w-full sm:w-auto px-4 sm:px-6 py-2 text-gray-600 border-gray-300 hover:bg-gray-50 text-sm"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 text-gray-600 border-gray-300 hover:bg-gray-50 text-sm"
             >
               Clear All
             </Button>
             <Button
               onClick={handleShowResults}
-              className="cursor-pointer w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 text-sm"
+              className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 text-sm"
             >
               Show Results
             </Button>

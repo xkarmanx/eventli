@@ -1,8 +1,0 @@
-.dockerignore
-.env*
-.git
-.next
-.vscode
-node_modules
-npm-debug.log*
-README.md

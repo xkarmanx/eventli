@@ -259,65 +259,63 @@ export function LoginForm() {
    */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    
+    // Security: Prevent double submission
     if (loading) return;
-
-    setTouched({ email: true, password: true });
-
+    
+    // Mark all fields as touched to show validation errors
+    setTouched({
+      email: true,
+      password: true
+    });
+    
+    // Validate form before submission
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
       return;
     }
-
+    
+    // Check reCAPTCHA verification
     if (!isCaptchaVerified) {
       toast.error('Please complete the reCAPTCHA verification');
       return;
     }
-
+    
     setLoading(true);
-
     toast.info('Signing you in...');
-
-
+    
     try {
+      // Security: Create FormData with sanitized and validated inputs
       const submitData = new FormData();
-      submitData.append('email', formData.email.trim().toLowerCase());
+      submitData.append('email', formData.email.trim().toLowerCase()); // Normalize email
       submitData.append('password', formData.password);
       submitData.append('recaptchaToken', recaptchaToken as string);
 
-
-      // ✅ FIX: Check status instead of success property
-      const result = await login(submitData);
-
-      if (result.status === 'success') { // FIXED: Use status property
+      await login(submitData);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('SUCCESS:')) {
+        // ✅ Handle success case - show success message and redirect
         toast.success('Login successful!');
+        // Clear sensitive form data on success
         setFormData({ email: '', password: '' });
         resetValidation();
         setTimeout(() => router.push('/dashboard'), 1000);
       } else {
-        // Show the specific error message from the server
-        toast.error(result.message || 'Failed to sign in');
+        // Handle authentication errors
+        const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
+        toast.error(errorMessage);
         
-        // Reset reCAPTCHA on failed login
+        // Security: Reset reCAPTCHA on failed attempts to prevent brute force
         setRecaptchaToken(null);
         setIsCaptchaVerified(false);
         recaptchaRef.current?.reset();
         
         // Clear password on failed login for security
         setFormData(prev => ({ ...prev, password: '' }));
+        
+        // Reset validation for retry
         resetValidation();
       }
-    } catch (error) {
-      // Handle unexpected errors
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      toast.error(errorMessage);
-      
-      // Reset form state
-      setRecaptchaToken(null);
-      setIsCaptchaVerified(false);
-      recaptchaRef.current?.reset();
-      setFormData(prev => ({ ...prev, password: '' }));
-
-      resetValidation();
     } finally {
       setLoading(false);
     }

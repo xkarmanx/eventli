@@ -1,5 +1,5 @@
 import Image from "next/image"
-import { MapPin, Users, Clock, Building2, Zap, Heart, Cross, Cake, Briefcase, Calendar, Tags, Church, GraduationCap } from "lucide-react"
+import { MapPin, Users, Clock, Building2, Zap } from "lucide-react"
 import { Service } from "@/shared/types/service"
 
 
@@ -15,26 +15,6 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
 
   const handleCardClick = () => {
     onViewClick?.(service);
-  };
-
-  // Function to get the appropriate icon based on event type
-  const getEventTypeIcon = () => {
-    const eventType = service.eventType?.toLowerCase();
-    
-    switch (eventType) {
-      case 'wedding':
-        return <Church className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />;
-      case 'funeral':
-        return <Cross className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />;
-      case 'birthday':
-        return <Cake className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />;
-      case 'corporate':
-        return <Briefcase className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />;
-      case 'ceremony':
-        return <GraduationCap className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />;
-      default:
-        return <Tags className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />;
-    }
   };
 
   return (
@@ -74,7 +54,7 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
               </p>
             </div>
             <button 
-              className="cursor-pointer text-black hover:text-white hover:bg-teal-600 transition-colors z-10 bg-white border border-gray-300 shadow px-1 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium flex-shrink-0"
+              className="border border-black text-black px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium flex-shrink-0 hover:bg-gray-50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent card click when button is clicked
                 handleViewClick();
@@ -99,7 +79,7 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
               <span className="truncate text-xs sm:text-sm">{service.provider}</span>
             </div>
             <div className="flex items-center">
-              {getEventTypeIcon()}
+              <Clock className="w-3 h-3 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />
               <span className="text-xs sm:text-sm">{service.eventType}</span>
             </div>
           </div>

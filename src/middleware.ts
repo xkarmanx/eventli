@@ -16,12 +16,12 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
-        // CHANGED: only set cookies on the **response**, and spread options properly
         set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({ name, value, ...options })
           response.cookies.set({ name, value, ...options })
         },
-        // CHANGED: remove via response cookie w/ empty value + options (no request mutation)
         remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: '', ...options })
           response.cookies.set({ name, value: '', ...options })
         },
       },
@@ -36,6 +36,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }
