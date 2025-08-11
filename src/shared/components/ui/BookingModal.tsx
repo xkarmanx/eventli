@@ -352,7 +352,7 @@ const handleSubmitBooking = async () => {
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10 bg-white shadow-md"
+          className="cursor-pointer absolute top-4 right-4 p-2 mr-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-300 shadow-md"
           aria-label="Close modal"
         >
           <X className="w-6 h-6" />
@@ -532,7 +532,7 @@ const handleSubmitBooking = async () => {
                     <select
                       value={formData.startTime}
                       onChange={(e) => handleInputChange('startTime', e.target.value)}
-                      className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                      className={`cursor-pointer flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
                         formErrors.timeRange 
                           ? 'border-red-500 focus:ring-red-500' 
                           : 'border-gray-300 focus:ring-blue-500'
@@ -567,7 +567,7 @@ const handleSubmitBooking = async () => {
                     <select
                       value={formData.endTime}
                       onChange={(e) => handleInputChange('endTime', e.target.value)}
-                      className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                      className={`cursor-pointer flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
                         formErrors.timeRange 
                           ? 'border-red-500 focus:ring-red-500' 
                           : 'border-gray-300 focus:ring-blue-500'
@@ -613,7 +613,7 @@ const handleSubmitBooking = async () => {
                   )}
                   <Button
                     onClick={handleSubmitBooking}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-medium transition-colors"
+                    className="cursor-pointer w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-medium transition-colors"
                     disabled={!selectedDate || isSubmitting}
                   >
                     {isSubmitting ? (

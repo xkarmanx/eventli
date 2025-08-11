@@ -1,13 +1,19 @@
+'use client'
+
 import { Heart, Mail, Phone, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 
 export function Footer() {
+  const pathname = usePathname()
+  const isDashboardPage = pathname.startsWith('/dashboard')
+
   return (
     <footer className="bg-white border-t border-gray-200">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={`${isDashboardPage ? 'lg:ml-64 xl:ml-72 px-4 sm:px-6 lg:px-8' : 'container mx-auto px-4 sm:px-6 lg:px-8'}`}>
         {/* Main Footer Content */}
-        <div className="py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className={`py-12 grid grid-cols-1 md:grid-cols-2 gap-8 ${isDashboardPage ? 'lg:grid-cols-4 lg:gap-4' : 'lg:grid-cols-4'}`}>
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center">
@@ -24,62 +30,126 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Quick Links */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Quick Links</h4>
-            <div className="space-y-2">
-              <Link href="/" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
-                Browse Services
-              </Link>
-              <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
-                How It Works
-              </Link>
-              <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
-                About Us
-              </Link>
-            </div>
-          </div>
+          {/* Compact layout for Dashboard */}
+          {isDashboardPage ? (
+            <>
+              {/* Quick Links - Compact */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900">Quick Links</h4>
+                <div className="grid grid-cols-1 gap-y-1">
+                  <Link href="/" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Browse Services
+                  </Link>
+                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    How It Works
+                  </Link>
+                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    About Us
+                  </Link>
+                </div>
+              </div>
 
-          {/* For Vendors */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">For Vendors</h4>
-            <div className="space-y-2">
-              <Link href="/signup" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
-                Join as Vendor
-              </Link>
-              <Link href="/dashboard" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
-                Dashboard
-              </Link>
-              <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
-                Support
-              </Link>
-            </div>
-          </div>
+              {/* For Vendors - Compact */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900">For Vendors</h4>
+                <div className="grid grid-cols-1 gap-y-1">
+                  <Link href="/signup" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Join as Vendor
+                  </Link>
+                  <Link href="/dashboard" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Dashboard
+                  </Link>
+                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Support
+                  </Link>
+                </div>
+              </div>
 
-          {/* Contact Info */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Get in Touch</h4>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
-                  <Mail className="w-3 h-3 text-white" />
+              {/* Contact Info - Compact */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900">Get in Touch</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
+                      <Mail className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-600">hello@eventli.com</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
+                      <Phone className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-600">(555) 123-4567</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
+                      <MapPin className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-600">Calgary, AB, Canada</span>
+                  </div>
                 </div>
-                <span className="text-sm text-gray-600">hello@eventli.com</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
-                  <Phone className="w-3 h-3 text-white" />
+            </>
+          ) : (
+            <>
+              {/* Quick Links */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">Quick Links</h4>
+                <div className="space-y-2">
+                  <Link href="/" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Browse Services
+                  </Link>
+                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    How It Works
+                  </Link>
+                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    About Us
+                  </Link>
                 </div>
-                <span className="text-sm text-gray-600">(555) 123-4567</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
-                  <MapPin className="w-3 h-3 text-white" />
+
+              {/* For Vendors */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">For Vendors</h4>
+                <div className="space-y-2">
+                  <Link href="/signup" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Join as Vendor
+                  </Link>
+                  <Link href="/dashboard" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Dashboard
+                  </Link>
+                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                    Support
+                  </Link>
                 </div>
-                <span className="text-sm text-gray-600">Calgary, AB, Canada</span>
               </div>
-            </div>
-          </div>
+
+              {/* Contact Info */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">Get in Touch</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
+                      <Mail className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-600">hello@eventli.com</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
+                      <Phone className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-600">(555) 123-4567</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-teal-700 rounded-full flex items-center justify-center">
+                      <MapPin className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-600">Calgary, AB, Canada</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Bottom Section */}
