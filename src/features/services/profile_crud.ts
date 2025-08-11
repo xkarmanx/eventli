@@ -57,7 +57,7 @@ export async function updateProfileComplete(userId: string) {
 
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("full_name, phone, location, bio, website, avatar_url, pending_email, pending_email_requested_at")
+    .select("full_name, phone, location, bio, website, avatar_url, pending_email, pending_email_requested_at, role")
     .eq("id", userId)
     .single();
 
@@ -66,21 +66,25 @@ export async function updateProfileComplete(userId: string) {
     return null;
   }
 
+  // Email verification logic
   const isPending = profileData.pending_email && profileData.pending_email !== verifiedEmail;
   const isWithin30Days =
     isPending &&
-    new Date().getTime() - new Date(profileData.pending_email_requested_at).getTime() < 30 * 24 * 60 * 60 * 1000;
-
+    new Date().getTime() - new Date(profileData.pending_email_requested_at).getTime() <
+      30 * 24 * 60 * 60 * 1000;
   const emailIsVerified = !isPending || !isWithin30Days;
+
+  // RELAXED WEBSITE REQUIREMENT: only enforce website for sellers
+  const isSeller = profileData.role === "seller";
 
   const isProfileComplete =
     !!profileData.full_name &&
     !!profileData.phone &&
     !!profileData.location &&
     !!profileData.bio &&
-    !!profileData.website &&
     !!profileData.avatar_url &&
-    emailIsVerified;
+    emailIsVerified &&
+    (isSeller ? !!profileData.website : true); // <-- website only required for sellers
 
   const { data, error } = await supabase
     .from("profiles")

@@ -7,6 +7,9 @@ import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Service } from '@/shared/types/service'
+import { createBooking } from "@/features/services/bookings_crud";
+import { createClient } from "@/shared/lib/supabase/client";
+import { set } from 'zod'
 
 interface BookingModalProps {
   isOpen: boolean
@@ -14,11 +17,16 @@ interface BookingModalProps {
   service: Service | null
 }
 
+const supabase = createClient();
+
 export default function BookingModal({ isOpen, onClose, service }: BookingModalProps) {
   const [selectedDate, setSelectedDate] = useState<number | null>(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [isMobile, setIsMobile] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+
+  // CT: Error state for phone validation
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: '',
@@ -109,15 +117,29 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
     return ''
   }
 
-  const validatePhoneNumber = (phone: string): string => {
-    if (!phone) return 'Phone number is required'
+  // CT: Format phone number to XXX-XXX-XXXX
+  function formatPhoneNumber(value: string) {
     // Remove all non-digit characters
-    const digitsOnly = phone.replace(/\D/g, '')
-    // Check for valid US/International phone number (10-15 digits)
-    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
-      return 'Please enter a valid phone number (10-15 digits)'
-    }
-    return ''
+    const digits = value.replace(/\D/g, '');
+
+    // Format as XXX-XXX-XXXX
+    const part1 = digits.slice(0, 3);
+    const part2 = digits.slice(3, 6);
+    const part3 = digits.slice(6, 10);
+
+    let formatted = part1;
+    if (part2) formatted += `-${part2}`;
+    if (part3) formatted += `-${part3}`;
+
+    return formatted;
+  }
+
+  //CT: Validate phone number format
+  function validatePhoneNumber(value: string) {
+    if (!value) return "Phone number is required";
+    const phoneRegex = /^\d{3}-\d{3}-\d{4}$/;
+    if (!phoneRegex.test(value)) return "Enter a valid phone number (123-456-7890)";
+    return "";
   }
 
   const validateName = (name: string, fieldName: string): string => {
@@ -182,41 +204,61 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
     return Object.values(errors).every(error => error === '')
   }
 
-  const handleSubmitBooking = async () => {
-    if (!selectedDate) {
-      // You could add a visual indicator for date selection
-      return
-    }
+const handleSubmitBooking = async () => {
 
-    if (!validateForm()) {
-      return
-    }
-
-    setIsSubmitting(true)
-    
-    try {
-      // TODO: Implement actual booking submission
-      console.log('Submit booking:', { 
-        service, 
-        selectedDate, 
-        formData: {
-          ...formData,
-          // Clean up phone number
-          phoneNumber: formData.phoneNumber.replace(/\D/g, '')
-        }
-      })
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      onClose()
-    } catch (error) {
-      console.error('Booking submission error:', error)
-      // You could add toast notification here
-    } finally {
-      setIsSubmitting(false)
-    }
+  console.log("service:", service);
+  if (!selectedDate) {
+    console.log("No date selected");
+    return;
   }
+  if (!validateForm()) {
+    console.log("Form validation failed", formErrors);
+    return;
+  }
+  setIsSubmitting(true);
+
+  try {
+    //Get the current session
+    const { data: { session } } = await supabase.auth.getSession();
+    const customer_id = session?.user?.id || "";
+
+    // Compose booking input
+    const eventDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate)
+      .toISOString().slice(0, 10); // YYYY-MM-DD Format
+
+    // You may need to get the seller_id from the service object
+    const bookingInput = {
+      listing_id: service.id,
+      customer_id, // from auth
+      seller_id: service.seller_id, //sellers id thats connected to the listing
+      event_date: eventDate,
+      event_time: `${formData.startTime} - ${formData.endTime}`,
+      guest_count: service.guests,
+      address: formData.address,
+      event_type: service.eventType || "", // camelCase
+      customer_name: `${formData.firstName} ${formData.lastName}`,
+      customer_email: formData.email,
+      customer_phone: formData.phoneNumber.replace(/\D/g, ''),
+    };
+
+    console.log("Booking input:", bookingInput);
+    await createBooking(bookingInput);
+
+    // Show toast notifications
+    import("sonner").then(({ toast }) => {
+      toast.success("Booking requested, please check your profile for more information.");
+    });
+
+    onClose();
+  } catch (error) {
+    import("sonner").then(({ toast }) => {
+      toast.error("There was an error submitting your booking. Please try again.");
+    });
+    console.error("Booking error:", error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Calendar logic
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()
@@ -442,7 +484,19 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
                     id="phoneNumber"
                     type="tel"
                     value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value)
+                      setFormData(prev => ({ ...prev, phoneNumber: formatted }))
+                      if (formErrors.phoneNumber) { //live clear while typing
+                        setFormErrors(prev => ({ ...prev, phoneNumber: '' }))
+                      }
+                    }}
+                    onBlur={() => {
+                      const err = validatePhoneNumber(formData.phoneNumber);
+                      if (err) {
+                        setFormErrors(prev => ({ ...prev, phoneNumber: err }));
+                      }
+                    }}
                     className={`mt-1 ${formErrors.phoneNumber ? 'border-red-500 focus:ring-red-500' : ''}`}
                     placeholder="(555) 123-4567"
                   />

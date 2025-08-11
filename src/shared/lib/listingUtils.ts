@@ -21,6 +21,7 @@ export function transformListingToService(listing: Listing & { profiles: { full_
   
   return {
     id: listing.id,
+    seller_id: listing.seller_id,
     title: listing.title,
     price: formattedPrice,
     location: listing.location || "Location not specified",

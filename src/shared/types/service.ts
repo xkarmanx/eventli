@@ -1,6 +1,7 @@
 // Type definitions for service/listing data
 export interface Service {
   id: string;
+  seller_id: string;
   title: string;
   price: string;
   location: string;
