@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 "use client";
 
 import { useEffect, useState, JSX } from "react";
@@ -209,4 +207,3 @@ export default function CustomerBookingsPage() {
     </div>
   );
 }
->>>>>>> origin/booking-backend
