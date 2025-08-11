@@ -191,8 +191,29 @@ export async function login(
     return { status: 'error', message: 'Invalid login credentials. Please try again.' };
   }
 
+  // Get user profile to determine redirect path
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    revalidatePath('/', 'layout');
+    
+    // Redirect based on user role
+    if (profile?.role === 'seller') {
+      redirect('/dashboard/seller');
+    } else {
+      redirect('/');
+    }
+  }
+
   revalidatePath('/', 'layout');
+
   return { status: 'success', message: 'Login successful' };
+
 }
 
 /* -------------------------------------------------------------------------- */
@@ -246,7 +267,7 @@ export async function updateSellerProfile(formData: FormData) {
   }
 
   revalidatePath('/dashboard');
-  redirect('/dashboard');
+  redirect('/dashboard/seller');
 }
 
 /* -------------------------------------------------------------------------- */
