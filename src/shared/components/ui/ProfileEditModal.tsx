@@ -60,9 +60,9 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
 
   const [previousEmail, setPreviousEmail] = useState(userData?.email || "");
 
+
   // CT: Error state for phone validation
   const [phoneError, setPhoneError] = useState<string | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // JC: Handle profile picture upload

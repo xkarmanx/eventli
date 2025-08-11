@@ -9,6 +9,7 @@ import { Label } from '@/shared/components/ui/label'
 import { Service } from '@/shared/types/service'
 import { createBooking } from "@/features/services/bookings_crud";
 import { createClient } from "@/shared/lib/supabase/client";
+import { set } from 'zod'
 
 interface BookingModalProps {
   isOpen: boolean
@@ -23,6 +24,9 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [isMobile, setIsMobile] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+
+  // CT: Error state for phone validation
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: '',
@@ -113,15 +117,29 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
     return ''
   }
 
-  const validatePhoneNumber = (phone: string): string => {
-    if (!phone) return 'Phone number is required'
+  // CT: Format phone number to XXX-XXX-XXXX
+  function formatPhoneNumber(value: string) {
     // Remove all non-digit characters
-    const digitsOnly = phone.replace(/\D/g, '')
-    // Check for valid US/International phone number (10-15 digits)
-    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
-      return 'Please enter a valid phone number (10-15 digits)'
-    }
-    return ''
+    const digits = value.replace(/\D/g, '');
+
+    // Format as XXX-XXX-XXXX
+    const part1 = digits.slice(0, 3);
+    const part2 = digits.slice(3, 6);
+    const part3 = digits.slice(6, 10);
+
+    let formatted = part1;
+    if (part2) formatted += `-${part2}`;
+    if (part3) formatted += `-${part3}`;
+
+    return formatted;
+  }
+
+  //CT: Validate phone number format
+  function validatePhoneNumber(value: string) {
+    if (!value) return "Phone number is required";
+    const phoneRegex = /^\d{3}-\d{3}-\d{4}$/;
+    if (!phoneRegex.test(value)) return "Enter a valid phone number (123-456-7890)";
+    return "";
   }
 
   const validateName = (name: string, fieldName: string): string => {
@@ -466,7 +484,19 @@ const handleSubmitBooking = async () => {
                     id="phoneNumber"
                     type="tel"
                     value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value)
+                      setFormData(prev => ({ ...prev, phoneNumber: formatted }))
+                      if (formErrors.phoneNumber) { //live clear while typing
+                        setFormErrors(prev => ({ ...prev, phoneNumber: '' }))
+                      }
+                    }}
+                    onBlur={() => {
+                      const err = validatePhoneNumber(formData.phoneNumber);
+                      if (err) {
+                        setFormErrors(prev => ({ ...prev, phoneNumber: err }));
+                      }
+                    }}
                     className={`mt-1 ${formErrors.phoneNumber ? 'border-red-500 focus:ring-red-500' : ''}`}
                     placeholder="(555) 123-4567"
                   />
