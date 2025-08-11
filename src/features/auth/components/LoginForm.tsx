@@ -259,71 +259,64 @@ export function LoginForm() {
    */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    
-    // Security: Prevent double submission
     if (loading) return;
-    
-    // Mark all fields as touched to show validation errors
-    setTouched({
-      email: true,
-      password: true
-    });
-    
-    // Validate form before submission
+
+    setTouched({ email: true, password: true });
+
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
       return;
     }
-    
-    // Check reCAPTCHA verification
+
     if (!isCaptchaVerified) {
       toast.error('Please complete the reCAPTCHA verification');
       return;
     }
-    
+
     setLoading(true);
-    const loadingToast = toast.info('Signing you in...');
-    
+
+    toast.info('Signing you in...');
+
+
     try {
-      // Security: Create FormData with sanitized and validated inputs
       const submitData = new FormData();
-      submitData.append('email', formData.email.trim().toLowerCase()); // Normalize email
+      submitData.append('email', formData.email.trim().toLowerCase());
       submitData.append('password', formData.password);
       submitData.append('recaptchaToken', recaptchaToken as string);
 
-      await login(submitData);
-      // This line should never be reached due to server redirect
-      toast.dismiss(loadingToast);
-      toast.success('Login successful!');
-      setFormData({ email: '', password: '' });
-      resetValidation();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
-      
-      // Dismiss the loading toast first
-      toast.dismiss(loadingToast);
-      
-      // Handle server redirects (successful login)
-      if (errorMessage.includes('NEXT_REDIRECT')) {
-        // Success case - clear form and show success (though redirect may happen first)
+
+      // ✅ FIX: Check status instead of success property
+      const result = await login(submitData);
+
+      if (result.status === 'success') { // FIXED: Use status property
         toast.success('Login successful!');
         setFormData({ email: '', password: '' });
         resetValidation();
-        return;
+        setTimeout(() => router.push('/dashboard'), 1000);
+      } else {
+        // Show the specific error message from the server
+        toast.error(result.message || 'Failed to sign in');
+        
+        // Reset reCAPTCHA on failed login
+        setRecaptchaToken(null);
+        setIsCaptchaVerified(false);
+        recaptchaRef.current?.reset();
+        
+        // Clear password on failed login for security
+        setFormData(prev => ({ ...prev, password: '' }));
+        resetValidation();
       }
-      
-      // Handle actual errors
+    } catch (error) {
+      // Handle unexpected errors
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       toast.error(errorMessage);
       
-      // Security: Reset reCAPTCHA on failed attempts to prevent brute force
+      // Reset form state
       setRecaptchaToken(null);
       setIsCaptchaVerified(false);
       recaptchaRef.current?.reset();
-      
-      // Clear password on failed login for security
       setFormData(prev => ({ ...prev, password: '' }));
-      
-      // Reset validation for retry
+
       resetValidation();
     } finally {
       setLoading(false);

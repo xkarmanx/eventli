@@ -37,7 +37,7 @@ export default function SupportSection() {
               Support Center
             </h1>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Get comprehensive help with your account, payments, technical issues, and business operations. We're here to support your success.
+              Get comprehensive help with your account, payments, technical issues, and business operations. We are here to support your success.
             </p>
             <div className="mt-6 flex items-center justify-center gap-2">
               <div className="w-12 h-1 bg-teal-600 rounded-full"></div>
