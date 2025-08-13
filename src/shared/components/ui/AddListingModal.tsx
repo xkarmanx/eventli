@@ -17,7 +17,7 @@ import { cn } from '@/shared/lib/utils';
 import Image from 'next/image';
 
 // JC: Define what props this modal needs to work
-type Props = {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
@@ -65,8 +65,7 @@ export default function AddListingModal({ isOpen, onClose }: Props) {
     const supabase = createClient();
 
     // Get initial session
-    (async () => {
-      // KSch: Use an anonymous function instead of defining one and calling it
+    (async () => { // KSch: Use an anonymous function instead of defining one and calling it
       try {
         const {
           data: { session },
