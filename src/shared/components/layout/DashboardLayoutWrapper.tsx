@@ -39,6 +39,7 @@ export default function DashboardLayoutWrapper({ children }: Props) {
         {mobileOpen && (
           <div
             className='lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300'
+            data-testid='mobile-overlay'
             onClick={() => setMobileOpen(false)}
           />
         )}
