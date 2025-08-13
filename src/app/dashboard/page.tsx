@@ -20,6 +20,6 @@ export default async function DashboardPage() {
   if (profile?.role === 'seller') {
     return redirect('/dashboard/seller')
   } else {
-    return redirect('/')
+    return redirect('/dashboard/customer/profile')
   }
 }
