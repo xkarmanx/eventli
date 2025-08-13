@@ -1,11 +1,11 @@
 'use client';
 
 import { ChevronDown, Home, LayoutDashboard, LogOut, User } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { signOut } from '@/features/auth/actions';
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get user data from database
-import Image from 'next/image';
 import { cn } from '@/shared/lib/utils';
 
 // JC: Define what props the header needs
