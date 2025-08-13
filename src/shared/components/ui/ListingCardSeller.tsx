@@ -6,6 +6,7 @@ import { Button } from '@/shared/components/ui/button'
 import EditListingModal from './EditListingModal'
 import DeleteListingModal from './DeleteListingModal'
 import { Zap } from 'lucide-react'; // Add Zap icon for boost button
+import Image from "next/image";
 
 // JC: Define what data each listing card expects
 interface ListingCardSellerProps {
@@ -23,6 +24,7 @@ interface ListingCardSellerProps {
     created_at?: string
     is_published: boolean | null; // Add is_published
     boost_priority: number | null; // Add boost_priority
+    listing_tags?: { tag: string }[]; // Add tags support
   }
   onUpdate?: (updatedListing: any) => void
   onDelete?: (listingId: string) => void
@@ -67,9 +69,11 @@ export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit,
       <div className="group relative bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-teal-700 hover:shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-1">
         {/* JC: Listing image section */}
         <div className="relative overflow-hidden rounded-lg mb-4">
-          <img 
+          <Image 
             src={listing.image_url} 
             alt={listing.title} 
+            width={300}
+            height={192}
             className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" 
           />
             
@@ -179,6 +183,28 @@ export default function ListingCardSeller({ listing, onUpdate, onDelete, onEdit,
               <span className="font-medium">Staff:</span> {listing.num_staff}
             </div>
           </div>
+
+          {/* Tags Section */}
+          {listing.listing_tags && listing.listing_tags.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700">Tags:</div>
+              <div className="flex flex-wrap gap-1">
+                {listing.listing_tags.slice(0, 4).map((tagObj, index) => (
+                  <span 
+                    key={index}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200"
+                  >
+                    {tagObj.tag}
+                  </span>
+                ))}
+                {listing.listing_tags.length > 4 && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200">
+                    +{listing.listing_tags.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Creation Date */}
           {listing.created_at && (

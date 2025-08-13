@@ -9,6 +9,7 @@ import { createListing, uploadListingMedia, insertListingMedia, addListingTags }
 // kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client'
+import Image from "next/image";
 
 // JC: Define what props this modal needs to work
 interface AddListingModalProps {
@@ -312,6 +313,12 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     }
   }
 
+  const handleCancelClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    handleConfirmClose()
+  }
+
 async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
 
@@ -378,15 +385,18 @@ async function handleSubmit(e: React.FormEvent) {
       aria-modal="true"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
+      <div className="bg-white shadow-2xl w-full max-w-lg max-h-[90vh] relative transform transition-all duration-300 scale-100 flex flex-col rounded-2xl overflow-hidden">
         {/* Close Button */}
         <button
-          onClick={handleConfirmClose}
+          onClick={handleCancelClick}
           className="cursor-pointer absolute top-4 right-4 p-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-300 shadow"
           aria-label="Close modal"
         >
           <X className="w-6 h-6" />
         </button>
+        
+        {/* Scrollable Content */}
+        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
         {/* Modal Content */}
         <div className="p-8">
           <h2 className="text-2xl font-bold mb-6">Add a Listing</h2>
@@ -572,9 +582,11 @@ async function handleSubmit(e: React.FormEvent) {
                     {files.map((file, index) => (
                       <div key={index} className="relative group">
                         {file.type.startsWith('image/') ? (
-                          <img 
+                          <Image 
                             src={previews[index]} 
                             alt={`Preview ${index + 1}`} 
+                            width={80}
+                            height={80}
                             className="w-full h-20 object-cover rounded border"
                           />
                         ) : (
@@ -719,6 +731,7 @@ async function handleSubmit(e: React.FormEvent) {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

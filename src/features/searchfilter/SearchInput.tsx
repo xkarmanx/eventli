@@ -79,17 +79,18 @@ export default function SearchInput({
     currentCallback(filtered)
   }, [type]) // JC: Only depend on type, which doesn't change
 
-  // JC: Debounced search function - now stable
-  const debouncedSearch = useCallback(
-    debounce((searchQuery: string) => {
+  // JC: Debounced search function - now stable  
+  const debouncedSearch = useCallback(() => {
+    const debounced = debounce((searchQuery: string) => {
       filterListings(searchQuery)
-    }, 300),
-    [filterListings]
-  )
+    }, 300)
+    return debounced
+  }, [filterListings])
 
   // JC: Only run effect when query changes, not when props change
   useEffect(() => {
-    debouncedSearch(query)
+    const debounced = debouncedSearch()
+    debounced(query)
   }, [query, debouncedSearch])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

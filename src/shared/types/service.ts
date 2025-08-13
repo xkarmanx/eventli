@@ -13,4 +13,6 @@ export interface Service {
   image: string;
   description: string; // JC: Added so it renders the right description in ListingModal
   serving_style: string; // JC: Added to handle serving style in ListingModal
+  tags?: string[]; // Added to display tags on listings
+  organization?: string; // Added to display organization info on listing details
 }

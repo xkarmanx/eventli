@@ -19,6 +19,7 @@ import {
   Phone,
   User
 } from "lucide-react";
+import Image from "next/image";
 
 type IncomingFilter = "all" | "booking_requests" | "declined" | "completed";
 
@@ -107,11 +108,12 @@ export default function SellerBookingRequestsPage() {
   const BookingImage = ({ booking }: { booking: Booking }) =>
     booking.image ? (
       <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-        <img
+        <Image
           src={booking.image}
           alt={booking.event_type || "Listing image"}
+          width={128}
+          height={128}
           className="object-cover w-full h-full"
-          loading="lazy"
         />
       </div>
     ) : (

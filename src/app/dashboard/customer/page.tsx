@@ -20,36 +20,54 @@ export default function CustomerDashboardPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchUserAndData = async () => {
       try {
         const supabase = createClient();
-        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // Add timeout to session fetch
+        const sessionPromise = supabase.auth.getSession();
+        const sessionResult = await Promise.race([
+          sessionPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Session timeout')), 8000)
+          )
+        ]) as Awaited<typeof sessionPromise>;
+        
+        const { data: { session }, error } = sessionResult;
         
         if (error || !session?.user) {
           console.error('Auth error:', error);
-          setLoading(false);
+          if (isMounted) setLoading(false);
           return;
         }
 
-        setUser(session.user);
+        if (isMounted) setUser(session.user);
 
         // For now, we'll use placeholder metrics since customer-specific CRUD functions 
         // would need to be implemented for customer bookings
-        setMetrics({
-          totalBookings: 0,
-          upcomingEvents: 0,
-          savedListings: 0,
-          completedEvents: 0
-        });
+        if (isMounted) {
+          setMetrics({
+            totalBookings: 0,
+            upcomingEvents: 0,
+            savedListings: 0,
+            completedEvents: 0
+          });
+        }
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchUserAndData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (

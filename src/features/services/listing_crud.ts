@@ -8,6 +8,9 @@ import { Database } from "../../shared/types/database";
 import { revalidatePath } from "next/cache";
 // kvs: Added redirect for potential navigation after operations
 import { redirect } from "next/navigation";
+// kvs: Added transformer function to convert database listings to Service interface format
+import { Service } from "@/shared/types/service";
+import { transformListingToService } from "@/shared/lib/listingUtils";
 
 // Types
 type Listing = Database["public"]["Tables"]["listings"]["Row"];
@@ -60,12 +63,23 @@ export async function getListingById(id: string) {
   
   const { data, error } = await supabase
     .from("listings")
-    .select("*")
+    .select(`
+      *,
+      profiles!listings_seller_id_fkey (
+        full_name
+      ),
+      listing_tags (
+        tag
+      )
+    `)
     .eq("id", id)
     .single();
   
   if (error) throw error;
-  return data as Listing;
+  return data as Listing & { 
+    profiles: { full_name: string | null },
+    listing_tags: { tag: string }[]
+  };
 }
 
 // kvs: Converted to Server Action with optional authentication for public/private access
@@ -86,12 +100,17 @@ export async function getListings(sellerId?: string) {
     }
   }
   
-  let query = supabase.from("listings").select("*");
+  let query = supabase.from("listings").select(`
+    *,
+    listing_tags (
+      tag
+    )
+  `);
   if (sellerId) query = query.eq("seller_id", sellerId);
   
   const { data, error } = await query.order("created_at", { ascending: false });
   if (error) throw error;
-  return data as Listing[];
+  return data as (Listing & { listing_tags: { tag: string }[] })[];
 }
 
 // kvs: Converted to Server Action with proper authentication and authorization
@@ -410,15 +429,18 @@ export async function addListingTags(listingId: string, tags: string[]) {
 export async function getPublicListings(limit?: number) {
   const supabase = await createClient();
   
-  // Query published listings with seller profile information
+  // Query published listings with seller profile information and tags
   let query = supabase
     .from("listings")
     .select(`
       *,
       profiles!listings_seller_id_fkey (
         full_name
+      ),
+      listing_tags (
+        tag
       )
-    `)                                   // << keep the JOIN
+    `)                                   // << keep the JOIN and add tags
     .eq("is_published", true)            // << keep the filter
     .order("boost_priority", { ascending: false })  // << from HEAD
     .order("created_at",      { ascending: false }); // << from incoming
@@ -434,12 +456,11 @@ export async function getPublicListings(limit?: number) {
     return [];
   }
   
-  return data as (Listing & { profiles: { full_name: string | null } })[];
+  return data as (Listing & { 
+    profiles: { full_name: string | null },
+    listing_tags: { tag: string }[]
+  })[];
 }
-
-// kvs: Added transformer function to convert database listings to Service interface format
-import { Service } from "@/shared/types/service";
-import { transformListingToService } from "@/shared/lib/listingUtils";
 
 // kvs: Enhanced getPublicListings to return Service interface format
 export async function getPublicListingsAsServices(limit?: number): Promise<Service[]> {
@@ -482,7 +503,8 @@ export async function searchAndFilterListings(
     // If no search criteria, return all public listings
     if (!hasSearchQuery && !hasFilters) {
       console.log('🔍 No search criteria, returning all public listings')
-      return await getPublicListingsAsServices();
+      const listings = await getPublicListings();
+      return listings.map(transformListingToService);
     }
     
     // Start with base query for published listings
@@ -492,6 +514,9 @@ export async function searchAndFilterListings(
         *,
         profiles!listings_seller_id_fkey (
           full_name
+        ),
+        listing_tags (
+          tag
         )
       `)
       .eq("is_published", true);
@@ -578,7 +603,10 @@ export async function searchAndFilterListings(
     }
 
     // Transform to Service format
-    const listings = data as (Listing & { profiles: { full_name: string | null } })[];
+    const listings = data as (Listing & { 
+      profiles: { full_name: string | null },
+      listing_tags: { tag: string }[]
+    })[];
     const result = listings.map(transformListingToService);
     console.log('🔍 searchAndFilterListings returning', result.length, 'results')
     return result;

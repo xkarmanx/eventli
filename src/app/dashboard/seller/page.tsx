@@ -45,117 +45,191 @@ export default function SellerDashboardPage() {
   const [listings, setListings] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchUserAndData = async () => {
       try {
         const supabase = createClient();
         const { data: { session }, error } = await supabase.auth.getSession();
         
+        if (!isMounted) return;
+
         if (error || !session?.user) {
           console.error('Auth error:', error);
+          setError('Authentication failed');
           setLoading(false);
           return;
         }
 
         setUser(session.user);
 
-        // Fetch all dashboard data in parallel
-        const [listingsData, bookingsData] = await Promise.all([
-          getListings(session.user.id),
-          getSellerBookings(session.user.id)
-        ]);
+        // Fetch all dashboard data in parallel with timeout
+        const fetchWithTimeout = (promise: Promise<any>, timeout = 10000) => {
+          return Promise.race([
+            promise,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Request timeout')), timeout)
+            )
+          ]);
+        };
 
-        // Calculate metrics
-        const totalListings = listingsData?.length || 0;
-        const totalViews = listingsData?.reduce((sum, l) => sum + (l.views_count || 0), 0) || 0;
-        
-        // Count upcoming bookings (accepted status, future event dates)
-        const now = new Date();
-        const upcomingBookings = bookingsData?.filter(b => 
-          b.status === 'accepted' && 
-          new Date(b.event_date) > now
-        )?.length || 0;
+        try {
+          const [listingsData, bookingsData] = await Promise.all([
+            fetchWithTimeout(getListings(session.user.id)),
+            fetchWithTimeout(getSellerBookings(session.user.id))
+          ]);
 
-        // Count upcoming events (same as upcoming bookings for now)
-        const upcomingEvents = upcomingBookings;
+          if (!isMounted) return;
 
-        // Get recent listings (last 3)
-        const recentListings = listingsData
-          ?.filter(l => l.created_at) // Filter out items without created_at
-          ?.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
-          ?.slice(0, 3) || [];
+          // Calculate metrics safely
+          const totalListings = Array.isArray(listingsData) ? listingsData.length : 0;
+          const totalViews = Array.isArray(listingsData) 
+            ? listingsData.reduce((sum, l) => sum + (l.views_count || 0), 0) 
+            : 0;
+          
+          // Count upcoming bookings (accepted status, future event dates)
+          const now = new Date();
+          const upcomingBookings = Array.isArray(bookingsData)
+            ? bookingsData.filter(b => 
+                b.status === 'accepted' && 
+                b.event_date &&
+                new Date(b.event_date) > now
+              ).length
+            : 0;
 
-        // Get recent bookings (last 3)
-        const recentBookings = bookingsData
-          ?.filter(b => b.created_at) // Filter out items without created_at
-          ?.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
-          ?.slice(0, 3) || [];
+          // Count upcoming events (same as upcoming bookings for now)
+          const upcomingEvents = upcomingBookings;
 
-        setMetrics({
-          totalListings,
-          upcomingBookings,
-          upcomingEvents,
-          totalViews,
-          recentListings,
-          recentBookings
-        });
-        
-        setListings(listingsData?.slice(0, 3) || []); // Show only top 3 in preview
+          // Get recent listings (last 3)
+          const recentListings = Array.isArray(listingsData)
+            ? listingsData
+                .filter(l => l.created_at) // Filter out items without created_at
+                .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
+                .slice(0, 3)
+            : [];
 
-        // Generate recent activity
-        const activities: RecentActivity[] = [];
+          // Get recent bookings (last 3)
+          const recentBookings = Array.isArray(bookingsData)
+            ? bookingsData
+                .filter(b => b.created_at) // Filter out items without created_at
+                .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
+                .slice(0, 3)
+            : [];
 
-        // Add listing activities
-        recentListings.forEach(listing => {
-          if (listing.created_at) {
-            activities.push({
-              id: `listing-${listing.id}`,
-              type: 'listing_created',
-              title: 'New Listing Created',
-              description: `Created "${listing.title}" ${listing.is_published ? '(Published)' : '(Draft)'}`,
-              timestamp: listing.created_at,
-              icon: 'plus-circle'
-            });
-          }
-        });
+          setMetrics({
+            totalListings,
+            upcomingBookings,
+            upcomingEvents,
+            totalViews,
+            recentListings,
+            recentBookings
+          });
+          
+          setListings(Array.isArray(listingsData) ? listingsData.slice(0, 3) : []); // Show only top 3 in preview
 
-        // Add booking activities
-        recentBookings.forEach(booking => {
-          if (booking.created_at) {
-            const activityType = booking.status === 'pending' ? 'booking_request' :
-                                booking.status === 'accepted' ? 'booking_accepted' :
-                                booking.status === 'declined' ? 'booking_declined' : 'booking_request';
-            
-            activities.push({
-              id: `booking-${booking.id}`,
-              type: activityType,
-              title: `Booking ${booking.status === 'pending' ? 'Request' : booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}`,
-              description: `${booking.event_type} event request from ${booking.customer_name}`,
-              timestamp: booking.updated_at || booking.created_at,
-              icon: booking.status === 'accepted' ? 'check-circle' : 
-                    booking.status === 'declined' ? 'x-circle' : 'clock'
-            });
-          }
-        });
+          // Generate recent activity
+          const activities: RecentActivity[] = [];
 
-        // Sort all activities by timestamp and limit
-        const sortedActivities = activities
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 5);
+          // Add listing activities
+          recentListings.forEach(listing => {
+            if (listing.created_at) {
+              activities.push({
+                id: `listing-${listing.id}`,
+                type: 'listing_created',
+                title: 'New Listing Created',
+                description: `Created "${listing.title}" ${listing.is_published ? '(Published)' : '(Draft)'}`,
+                timestamp: listing.created_at,
+                icon: 'plus-circle'
+              });
+            }
+          });
 
-        setRecentActivity(sortedActivities);
+          // Add booking activities
+          recentBookings.forEach(booking => {
+            if (booking.created_at) {
+              const activityType = booking.status === 'pending' ? 'booking_request' :
+                                  booking.status === 'accepted' ? 'booking_accepted' :
+                                  booking.status === 'declined' ? 'booking_declined' : 'booking_request';
+              
+              activities.push({
+                id: `booking-${booking.id}`,
+                type: activityType,
+                title: `Booking ${booking.status === 'pending' ? 'Request' : booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}`,
+                description: `${booking.event_type} event request from ${booking.customer_name}`,
+                timestamp: booking.updated_at || booking.created_at,
+                icon: booking.status === 'accepted' ? 'check-circle' : 
+                      booking.status === 'declined' ? 'x-circle' : 'clock'
+              });
+            }
+          });
+
+          // Sort all activities by timestamp and limit
+          const sortedActivities = activities
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 5);
+
+          setRecentActivity(sortedActivities);
+
+        } catch (dataError) {
+          console.error('Error fetching dashboard data:', dataError);
+          setError('Failed to load dashboard data');
+        }
 
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Error in dashboard initialization:', error);
+        setError('Failed to initialize dashboard');
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchUserAndData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.982 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dashboard Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col gap-6 lg:gap-8">

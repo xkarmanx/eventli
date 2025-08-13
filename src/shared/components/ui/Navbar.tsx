@@ -11,6 +11,7 @@ import SearchInput from '@/features/searchfilter/SearchInput'
 import { Service } from '@/shared/types/service'
 import { createClient } from '@/shared/lib/supabase/client'
 import { signOut } from '@/features/auth/actions'
+import { useAuth } from '@/shared/hooks/useAuth'
 
 
 interface NavbarProps {
@@ -27,60 +28,49 @@ export default function Navbar({
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Session + live auth updates
+  // Use the shared auth hook
+  const { user, loading } = useAuth()
+
+  // Fetch profile data when user changes
   useEffect(() => {
-    const supabase = createClient()
+    if (!user?.id) {
+      setProfile(null)
+      return
+    }
 
-    const load = async () => {
+    const fetchProfile = async () => {
+      setProfileLoading(true)
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        if (error) {
-          console.error('Error getting session:', error)
-          return
-        }
-        setUser(session?.user || null)
+        const supabase = createClient()
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
 
-        if (session?.user?.id) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-
-          if (!profileError && profileData) setProfile(profileData)
+        if (profileError) {
+          console.error('Error fetching profile:', profileError)
+          setProfile(null)
+        } else if (profileData) {
+          console.log('Profile loaded in Navbar:', profileData)
+          setProfile(profileData)
         } else {
           setProfile(null)
         }
       } catch (e) {
-        console.error('Error fetching user data:', e)
+        console.error('Error fetching profile data:', e)
+        setProfile(null)
       } finally {
-        setLoading(false)
+        setProfileLoading(false)
       }
     }
 
-    load()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_evt, session) => {
-      setUser(session?.user || null)
-      if (!session?.user) setProfile(null)
-      // Optionally re-fetch profile on sign-in
-      if (session?.user?.id) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        setProfile(profileData || null)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+    fetchProfile()
+  }, [user?.id])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -115,7 +105,22 @@ export default function Navbar({
       .slice(0, 2)
       .join('')
 
-  const role = (profile?.role as 'seller' | 'customer' | undefined) || 'customer'
+  const getUserRole = (): 'seller' | 'customer' => {
+    if (loading || profileLoading) return 'customer'
+    
+    if (profile?.role) {
+      return profile.role as 'seller' | 'customer'
+    }
+    
+    if (user?.user_metadata?.role) {
+      return user.user_metadata.role as 'seller' | 'customer'
+    }
+    
+    return 'customer'
+  }
+
+  const role = getUserRole()
+  const isLoading = loading || profileLoading
 
   // Search handlers
   const handleLocationFilter = (filtered: Service[]) => onLocationSearchResults?.(filtered)
@@ -206,7 +211,23 @@ export default function Navbar({
 
           {/* Right section */}
           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-            {user ? (
+            {isLoading ? (
+              // Loading state - show login/signup as fallback
+              <>
+                <Link
+                  href="/login"
+                  className="hidden sm:flex text-gray-700 hover:text-gray-900 px-2 sm:px-4 py-2 text-sm font-medium"
+                >
+                  Login
+                </Link>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="hidden sm:flex bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium"
+                >
+                  Sign up
+                </button>
+              </>
+            ) : user ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -216,9 +237,11 @@ export default function Navbar({
                   {/* Avatar */}
                   <div className="cursor-pointer relative">
                     {getAvatarUrl() ? (
-                      <img
+                      <Image
                         src={getAvatarUrl()!}
                         alt={getDisplayName()}
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 group-hover:border-teal-700 transition-colors duration-200"
                       />
                     ) : (
@@ -249,7 +272,13 @@ export default function Navbar({
                     <div className="px-4 py-3 border-b border-gray-100">
                       <div className="flex items-center gap-3">
                         {getAvatarUrl() ? (
-                          <img src={getAvatarUrl()!} alt={getDisplayName()} className="w-8 h-8 rounded-full object-cover" />
+                          <Image
+                            src={getAvatarUrl()!}
+                            alt={getDisplayName()}
+                            width={32}
+                            height={32}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center">
                             <span className="text-white font-semibold text-xs">{getInitials()}</span>
@@ -258,6 +287,7 @@ export default function Navbar({
                         <div>
                           <div className="text-sm font-medium text-gray-900">{getDisplayName()}</div>
                           <div className="text-xs text-gray-500">{user?.email}</div>
+                          <div className="text-xs text-teal-600 font-medium capitalize">{role}</div>
                         </div>
                       </div>
                     </div>

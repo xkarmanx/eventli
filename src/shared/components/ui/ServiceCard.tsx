@@ -103,6 +103,25 @@ export default function ServiceCard({ service, onViewClick }: ServiceCardProps) 
               <span className="text-xs sm:text-sm">{service.eventType}</span>
             </div>
           </div>
+          
+          {/* Tags Section */}
+          {service.tags && service.tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {service.tags.slice(0, 3).map((tag, index) => (
+                <span 
+                  key={index}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700"
+                >
+                  {tag}
+                </span>
+              ))}
+              {service.tags.length > 3 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500">
+                  +{service.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

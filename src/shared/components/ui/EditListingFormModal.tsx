@@ -9,6 +9,7 @@ import { updateListing, uploadListingMedia, insertListingMedia, addListingTags }
 import { toast } from 'sonner';
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client'
+import Image from "next/image";
 
 // JC: Define what props this edit modal needs
 interface EditListingFormModalProps {
@@ -523,7 +524,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
                 {existingImageUrl && (
                   <div className="space-y-2">
                     <div className="text-sm text-gray-600">Current Image:</div>
-                    <img src={existingImageUrl} alt="Current listing image" className="w-20 h-20 object-cover rounded border" />
+                    <Image src={existingImageUrl} alt="Current listing image" width={80} height={80} className="w-20 h-20 object-cover rounded border" />
                   </div>
                 )}
                 
@@ -560,9 +561,11 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
                       {files.map((file, index) => (
                         <div key={index} className="relative group">
                           {file.type.startsWith('image/') ? (
-                            <img 
+                            <Image 
                               src={previews[index]} 
                               alt={`Preview ${index + 1}`} 
+                              width={80}
+                              height={80}
                               className="w-full h-20 object-cover rounded border"
                             />
                           ) : (

@@ -109,7 +109,7 @@ export default function CustomerProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.user_metadata?.full_name]);
 
   useEffect(() => {
     if (user && !authLoading) fetchProfile();

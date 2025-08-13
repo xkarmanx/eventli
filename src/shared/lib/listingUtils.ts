@@ -5,7 +5,10 @@ import { Database } from "@/shared/types/database";
 type Listing = Database["public"]["Tables"]["listings"]["Row"];
 
 // Transform database listing to Service interface format
-export function transformListingToService(listing: Listing & { profiles: { full_name: string | null } }): Service {
+export function transformListingToService(listing: Listing & { 
+  profiles: { full_name: string | null },
+  listing_tags?: { tag: string }[]
+}): Service {
   // Format price with proper currency
   let formattedPrice = "Price on request";
   if (listing.price && listing.price > 0) {
@@ -18,6 +21,9 @@ export function transformListingToService(listing: Listing & { profiles: { full_
     // Capitalize first letter and handle common cases
     return eventType.charAt(0).toUpperCase() + eventType.slice(1).toLowerCase();
   };
+  
+  // Extract tags from listing_tags array
+  const tags = listing.listing_tags?.map(tagObj => tagObj.tag) || [];
   
   return {
     id: listing.id,
@@ -34,5 +40,7 @@ export function transformListingToService(listing: Listing & { profiles: { full_
     // JC: Fixed missing fields - Added serving_style and description mapping
     serving_style: listing.serving_style || "Not specified",
     description: listing.description || "No description available",
+    tags: tags.length > 0 ? tags : undefined, // Only include tags if they exist
+    organization: listing.profiles?.full_name || "Service Provider", // Add organization name
   };
 }

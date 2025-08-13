@@ -25,7 +25,7 @@ export default function SellerSidebar() {
   // Close mobile menu when route changes
   useEffect(() => {
     setMobileOpen(false);
-  }, [pathname]);
+  }, [pathname, setMobileOpen]);
 
   // Handle mobile menu backdrop click and body scroll
   useEffect(() => {
