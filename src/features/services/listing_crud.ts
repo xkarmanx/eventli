@@ -69,7 +69,10 @@ export async function getListingById(id: string) {
         full_name
       ),
       listing_tags (
-        tag
+        tag,
+        kind,
+        service_type,
+        is_custom
       )
     `)
     .eq("id", id)
@@ -78,7 +81,7 @@ export async function getListingById(id: string) {
   if (error) throw error;
   return data as Listing & { 
     profiles: { full_name: string | null },
-    listing_tags: { tag: string }[]
+    listing_tags: { tag: string, kind: string, service_type: string | null, is_custom: boolean | null }[]
   };
 }
 
@@ -103,14 +106,17 @@ export async function getListings(sellerId?: string) {
   let query = supabase.from("listings").select(`
     *,
     listing_tags (
-      tag
+      tag,
+      kind,
+      service_type,
+      is_custom
     )
   `);
   if (sellerId) query = query.eq("seller_id", sellerId);
   
   const { data, error } = await query.order("created_at", { ascending: false });
   if (error) throw error;
-  return data as (Listing & { listing_tags: { tag: string }[] })[];
+  return data as (Listing & { listing_tags: { tag: string, kind: string, service_type: string | null, is_custom: boolean | null }[] })[];
 }
 
 // kvs: Converted to Server Action with proper authentication and authorization
@@ -438,7 +444,10 @@ export async function getPublicListings(limit?: number) {
         full_name
       ),
       listing_tags (
-        tag
+        tag,
+        kind,
+        service_type,
+        is_custom
       )
     `)                                   // << keep the JOIN and add tags
     .eq("is_published", true)            // << keep the filter
@@ -458,7 +467,7 @@ export async function getPublicListings(limit?: number) {
   
   return data as (Listing & { 
     profiles: { full_name: string | null },
-    listing_tags: { tag: string }[]
+    listing_tags: { tag: string, kind: string, service_type: string | null, is_custom: boolean | null }[]
   })[];
 }
 
@@ -516,7 +525,10 @@ export async function searchAndFilterListings(
           full_name
         ),
         listing_tags (
-          tag
+          tag,
+          kind,
+          service_type,
+          is_custom
         )
       `)
       .eq("is_published", true);
@@ -587,9 +599,33 @@ export async function searchAndFilterListings(
       }
     }
 
-    // Apply event type filter
+    // Apply event type filter - check both listing_tags with kind='type' and event_type field
     if (filters?.eventType && filters.eventType.trim()) {
-      query = query.eq('event_type', filters.eventType);
+      const eventTypeFilter = filters.eventType.trim();
+      
+      // Create a more complex query that checks:
+      // 1. listing_tags with kind='type' and service_type matching
+      // 2. listing_tags with kind='type' and is_custom=true and tag matching (for custom types)
+      // 3. event_type field matching (fallback)
+      
+      // Use a subquery approach to check listing_tags
+      const { data: listingsWithServiceType } = await supabase
+        .from('listing_tags')
+        .select('listing_id')
+        .eq('kind', 'type')
+        .or(`service_type.eq.${eventTypeFilter},and(is_custom.eq.true,tag.ilike.%${eventTypeFilter}%)`);
+      
+      const listingIdsWithServiceType = listingsWithServiceType?.map(lt => lt.listing_id) || [];
+      
+      if (listingIdsWithServiceType.length > 0) {
+        // Filter by listings that have matching service type tags OR matching event_type
+        query = query.or(
+          `id.in.(${listingIdsWithServiceType.join(',')}),event_type.ilike.%${eventTypeFilter}%`
+        );
+      } else {
+        // Fallback to just event_type field matching
+        query = query.ilike('event_type', `%${eventTypeFilter}%`);
+      }
     }
 
     // Order by relevance (recently created first)
@@ -605,7 +641,7 @@ export async function searchAndFilterListings(
     // Transform to Service format
     const listings = data as (Listing & { 
       profiles: { full_name: string | null },
-      listing_tags: { tag: string }[]
+      listing_tags: { tag: string, kind: string, service_type: string | null, is_custom: boolean | null }[]
     })[];
     const result = listings.map(transformListingToService);
     console.log('🔍 searchAndFilterListings returning', result.length, 'results')
