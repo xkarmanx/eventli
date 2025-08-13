@@ -14,6 +14,13 @@ type Listing = Database["public"]["Tables"]["listings"]["Row"];
 type InsertListing = Database["public"]["Tables"]["listings"]["Insert"];
 type UpdateListing = Database["public"]["Tables"]["listings"]["Update"];
 
+// Define MediaRecord interface for media handling functions
+interface MediaRecord {
+  url: string;
+  media_type: 'image' | 'video';
+  position: number;
+}
+
 // kvs: Converted to Server Action with proper authentication and error handling
 // CREATE
 export async function createListing(listing: InsertListing) {
@@ -207,7 +214,7 @@ export async function uploadListingImage(file: File, listingId: string) {
   const safeFileName = `${base}_${Date.now()}.${ext}`;
   
   // kvs: Updated file path to match RLS policy - userId must be first folder
-  const filePath = `${user.id}/${listingId}/${safeFileName}`;
+  const filePath = await buildMediaPath(user.id, listingId, safeFileName);
 
   const { data, error } = await supabase.storage
     .from("listing-images")
@@ -225,6 +232,177 @@ export async function uploadListingImage(file: File, listingId: string) {
   revalidatePath(`/listings/${listingId}`);
 
   return publicUrlData?.publicUrl;
+}
+
+// Helper: build a consistent storage path for user media
+// Keeps ${user.id}/${listingId}/${file} pattern centralized
+export async function buildMediaPath(userId: string, listingId: string, filename: string): Promise<string> {
+  return `${userId}/${listingId}/${filename}`;
+}
+
+// NEW: Upload multiple media files (images/videos) with comprehensive validation
+export async function uploadListingMedia(files: File[], listingId: string): Promise<MediaRecord[]> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Authentication required");
+  }
+
+  // Ensure listing belongs to the authenticated user.
+  const { data: existingListing, error: fetchError } = await supabase
+    .from("listings")
+    .select("seller_id")
+    .eq("id", listingId)
+    .single();
+  if (fetchError) {
+    throw new Error("Listing not found");
+  }
+  if (existingListing.seller_id !== user.id) {
+    throw new Error("Unauthorized: You can only upload media for your own listings");
+  }
+
+  // Count existing media for limit enforcement
+  const { data: existingMedia, error: existingErr } = await supabase
+    .from("listing_media")
+    .select("media_type")
+    .eq("listing_id", listingId);
+  if (existingErr) throw existingErr;
+  const existingImagesCount = (existingMedia ?? []).filter((m: any) => m.media_type === 'image').length;
+  const existingVideosCount = (existingMedia ?? []).filter((m: any) => m.media_type === 'video').length;
+
+  // Classify incoming files and ensure we don't exceed the limits (15 images and 5 videos per listing)
+  let newImagesCount = 0;
+  let newVideosCount = 0;
+  files.forEach(f => {
+    if (f.type.startsWith('image/')) newImagesCount++;
+    else if (f.type.startsWith('video/')) newVideosCount++;
+  });
+  if (existingImagesCount + newImagesCount > 15) {
+    throw new Error('Maximum of 15 images per listing allowed');
+  }
+  if (existingVideosCount + newVideosCount > 5) {
+    throw new Error('Maximum of 5 videos per listing allowed');
+  }
+
+  const allowedImageTypes = ['image/jpeg','image/png','image/webp','image/gif'];
+  const allowedVideoTypes = ['video/mp4','video/quicktime','video/webm'];
+  const maxImageSize = 10 * 1024 * 1024; // 10MB per image
+  const maxVideoSize = 50 * 1024 * 1024; // 50MB per video
+
+  const uploaded: MediaRecord[] = [];
+  let position = existingMedia?.length ?? 0;
+  for (const file of files) {
+    let mediaType: 'image' | 'video';
+    if (allowedImageTypes.includes(file.type)) {
+      if (file.size > maxImageSize) {
+        throw new Error("Each image must be less than 10MB");
+      }
+      mediaType = 'image';
+    } else if (allowedVideoTypes.includes(file.type)) {
+      if (file.size > maxVideoSize) {
+        throw new Error("Video must be less than 50MB");
+      }
+      mediaType = 'video';
+    } else {
+      throw new Error("Unsupported file type");
+    }
+
+    // sanitize filename to avoid injection and invalid characters
+    const ext = file.name.split('.').pop();
+    const base = file.name
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeFileName = `${base}_${Date.now()}.${ext}`;
+    const filePath = await buildMediaPath(user.id, listingId, safeFileName);
+
+    const { error: uploadErr } = await supabase.storage
+      .from('listing-images')
+      .upload(filePath, file, { upsert: true });
+    if (uploadErr) {
+      throw uploadErr;
+    }
+    const { data: publicUrlData } = supabase.storage
+      .from('listing-images')
+      .getPublicUrl(filePath);
+    uploaded.push({ url: publicUrlData?.publicUrl, media_type: mediaType, position: position++ });
+  }
+  return uploaded;
+}
+
+// NEW: Insert media records into the database after successful upload
+export async function insertListingMedia(listingId: string, mediaRecords: MediaRecord[]) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Authentication required");
+  }
+
+  if (!mediaRecords || mediaRecords.length === 0) {
+    return [];
+  }
+
+  const inserts = mediaRecords.map(media => ({
+    listing_id: listingId,
+    url: media.url,
+    media_type: media.media_type,
+    position: media.position
+  }));
+
+  const { data, error } = await supabase
+    .from('listing_media')
+    .insert(inserts)
+    .select();
+  
+  if (error) throw error;
+
+  // Revalidate relevant paths after media insertion
+  revalidatePath(`/listing/${listingId}`);
+  revalidatePath('/dashboard/seller/listings');
+  
+  return data;
+}
+
+// NEW: Add tags to a listing with validation and deduplication
+export async function addListingTags(listingId: string, tags: string[]) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Authentication required");
+  }
+
+  // Ensure listing belongs to the authenticated user.
+  const { data: existingListing, error: fetchError } = await supabase
+    .from("listings")
+    .select("seller_id")
+    .eq("id", listingId)
+    .single();
+  if (fetchError) {
+    throw new Error("Listing not found");
+  }
+  if (existingListing.seller_id !== user.id) {
+    throw new Error("Unauthorized: You can only modify tags for your own listings");
+  }
+
+  if (!tags || tags.length === 0) {
+    return [];
+  }
+
+  // Normalize: trim, lowercase, deduplicate
+  const normalized = Array.from(new Set(tags.map(t => t.trim().toLowerCase())));
+  const inserts = normalized.map(tag => ({ listing_id: listingId, tag }));
+  try {
+    const { data } = await supabase.from('listing_tags').insert(inserts).select();
+    // revalidate listing page and dashboard to reflect new tags
+    revalidatePath(`/listing/${listingId}`);
+    revalidatePath('/dashboard/seller/listings');
+    return data;
+  } catch (error: any) {
+    // ignore duplicate constraint errors (23505)
+    if (error?.code === '23505') {
+      return [];
+    }
+    throw error;
+  }
 }
 
 // kvs: Added new Server Action for getting public listings (no authentication required)

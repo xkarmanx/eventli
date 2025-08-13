@@ -1,37 +1,37 @@
-import { createClient } from "@/shared/lib/supabase/server";
-import { redirect } from "next/navigation";
-import DashboardLayoutWrapper from "@/shared/components/layout/DashboardLayoutWrapper";
+'use client'
 
+import { useAuth } from '@/shared/hooks/useAuth'
+import { useRouter } from 'next/navigation'
+import { useEffect, ReactNode } from 'react'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const supabase = await createClient();
+interface DashboardLayoutProps {
+  children: ReactNode
+}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!user) {
-    redirect('/login');
+    return null
   }
 
-  // Fetch user profile to verify seller role
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || profile.role !== "seller") {
-    redirect('/login'); // Only sellers can access dashboard
-  }
-
-  return (
-    <DashboardLayoutWrapper>
-      {children}
-    </DashboardLayoutWrapper>
-  );
+  return <>{children}</>
 }

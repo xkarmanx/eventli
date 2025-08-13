@@ -206,10 +206,7 @@ export default function Navbar({
 
           {/* Right section */}
           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-
-            {loading ? (
-              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-            ) : user ? (
+            {user ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -332,23 +329,34 @@ export default function Navbar({
                         </button>
 
                       </form>
-n/booking-backend
                     </div>
                   </div>
                 )}
               </div>
             ) : (
               <>
+                {/* Mobile Login/Signup */}
                 <Link
                   href="/login"
-
+                  className="flex sm:hidden text-gray-700 hover:text-gray-900 px-2 py-2 text-sm font-medium"
+                >
+                  Login
+                </Link>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="flex sm:hidden bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded-full text-xs font-medium"
+                >
+                  Sign up
+                </button>
+                
+                {/* Desktop Login/Signup */}
+                <Link
+                  href="/login"
                   className="hidden sm:flex text-gray-700 hover:text-gray-900 px-2 sm:px-4 py-2 text-sm font-medium"
                 >
                   Login
                 </Link>
-
                 <button
-
                   onClick={() => setIsAuthModalOpen(true)}
                   className="hidden sm:flex bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium"
                 >

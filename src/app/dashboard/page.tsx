@@ -19,7 +19,10 @@ export default async function DashboardPage() {
 
   if (profile?.role === 'seller') {
     return redirect('/dashboard/seller')
+  } else if (profile?.role === 'customer') {
+    return redirect('/dashboard/customer')
   } else {
-    return redirect('/dashboard/customer/profile')
+    // No profile or role found - redirect to home page where they can set up their profile
+    return redirect('/')
   }
 }

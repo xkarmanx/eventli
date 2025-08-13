@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Trash2, Tag } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { updateListing, uploadListingImage } from "@/features/services/listing_crud";
+import { updateListing, uploadListingMedia, insertListingMedia, addListingTags } from "@/features/services/listing_crud";
 // kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
 // kvs: Replaced react-toastify with sonner for consistent toast implementation across the app
 import { toast } from 'sonner';
@@ -51,15 +51,19 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
   const [servingStyle, setServingStyle] = useState(listing.serving_style || "");
   const [numStaff, setNumStaff] = useState(listing.num_staff?.toString() || "");
   const [numGuests, setNumGuests] = useState(listing.num_guests?.toString() || "");
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(listing.image_url || null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(listing.image_url || null);
+  const [tagInput, setTagInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [description, setDescription] = useState(listing.description || "");
 
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const [cancelConfirmation, setCancelConfirmation] = useState(false)
+  const [cancelConfirmation, setCancelConfirmation] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // kvs: Replaced useSession() with proper Supabase auth state management
@@ -114,8 +118,11 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     setServingStyle(listing.serving_style || "");
     setNumStaff(listing.num_staff?.toString() || "");
     setNumGuests(listing.num_guests?.toString() || "");
-    setImage(null);
-    setImagePreview(listing.image_url || null);
+    setFiles([]);
+    setPreviews([]);
+    setExistingImageUrl(listing.image_url || null);
+    setTagInput('');
+    setTags([]);
     setDescription(listing.description || "");
     setErrors({});
   }, [isOpen, listing]);
@@ -146,13 +153,104 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     );
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      setImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    } 
-  };
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || [])
+    
+    if (selectedFiles.length === 0) return
+    
+    // Validate file types and sizes
+    const maxImageSize = 10 * 1024 * 1024; // 10MB
+    const maxVideoSize = 50 * 1024 * 1024; // 50MB
+    const allowedImageTypes = ['image/jpeg','image/png','image/webp','image/gif'];
+    const allowedVideoTypes = ['video/mp4','video/quicktime','video/webm'];
+    
+    let imageCount = files.filter(f => f.type.startsWith('image/')).length;
+    let videoCount = files.filter(f => f.type.startsWith('video/')).length;
+    
+    for (const file of selectedFiles) {
+      if (file.type.startsWith('image/')) {
+        if (!allowedImageTypes.includes(file.type)) {
+          toast.error(`Unsupported image type: ${file.type}`);
+          return;
+        }
+        if (file.size > maxImageSize) {
+          toast.error(`Image ${file.name} must be less than 10MB`);
+          return;
+        }
+        imageCount++;
+        if (imageCount > 15) {
+          toast.error("Maximum 15 images allowed per listing");
+          return;
+        }
+      } else if (file.type.startsWith('video/')) {
+        if (!allowedVideoTypes.includes(file.type)) {
+          toast.error(`Unsupported video type: ${file.type}`);
+          return;
+        }
+        if (file.size > maxVideoSize) {
+          toast.error(`Video ${file.name} must be less than 50MB`);
+          return;
+        }
+        videoCount++;
+        if (videoCount > 5) {
+          toast.error("Maximum 5 videos allowed per listing");
+          return;
+        }
+      } else {
+        toast.error(`Unsupported file type: ${file.type}`);
+        return;
+      }
+    }
+    
+    // Add files and create previews
+    const newFiles = [...files, ...selectedFiles];
+    setFiles(newFiles);
+    
+    // Create previews for new files
+    const newPreviews = [...previews];
+    selectedFiles.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        newPreviews.push(URL.createObjectURL(file));
+      } else {
+        newPreviews.push(''); // No preview for videos, we'll show a video icon
+      }
+    });
+    setPreviews(newPreviews);
+  }
+
+  const removeFile = (index: number) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    const newPreviews = previews.filter((_, i) => i !== index);
+    
+    // Clean up preview URL to prevent memory leaks
+    if (previews[index]) {
+      URL.revokeObjectURL(previews[index]);
+    }
+    
+    setFiles(newFiles);
+    setPreviews(newPreviews);
+  }
+
+  const addTag = () => {
+    const trimmedTag = tagInput.trim().toLowerCase();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    } else if (tags.length >= 10) {
+      toast.error("Maximum 10 tags allowed");
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  }
+
+  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag();
+    }
+  }
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -185,7 +283,8 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
         numStaff !== (listing.num_staff?.toString() || "") ||
         numGuests !== (listing.num_guests?.toString() || "") ||
         description !== (listing.description || "") ||
-        image !== null;
+        files.length > 0 ||
+        tags.length > 0;
 
     if (hasChanged) {
       setCancelConfirmation(true);
@@ -209,6 +308,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
 
     if (!validate()) return;
     setLoading(true);
+    setSubmitting(true);
 
     try {
       const updates: any = {
@@ -221,11 +321,21 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
         num_staff: Number(numStaff),
         num_guests: Number(numGuests),
       };
-      if (image) {
-        const imageUrl = await uploadListingImage(image, listing.id);
-        updates.image_url = imageUrl;
-      }
+
+      // Update the basic listing info first
       const updated = await updateListing(listing.id, updates);
+
+      // Upload new media files if any
+      if (files.length > 0) {
+        const mediaRecords = await uploadListingMedia(files, listing.id);
+        await insertListingMedia(listing.id, mediaRecords);
+      }
+
+      // Add new tags if any
+      if (tags.length > 0) {
+        await addListingTags(listing.id, tags);
+      }
+
       // kvs: Replaced react-toastify with sonner toast for consistent success messaging
       toast.success("Listing updated successfully!");
       onUpdated(updated);
@@ -236,6 +346,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
       toast.error(err.message || "Failed to update listing");
     } finally {
       setLoading(false);
+      setSubmitting(false);
     }
   }
 
@@ -404,32 +515,133 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
               </div>
             </div>
             <div>
-              <label className="block font-medium mb-1" htmlFor="listing-image">
-                Image
+              <label className="block font-medium mb-1" htmlFor="listing-files">
+                Media Files
               </label>
-              <div className="flex gap-4 items-center">
-                <input
-                  id="listing-image"
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  {image ? "Change Image" : "Upload Image"}
-                </Button>
-                {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-16 h-16 object-cover rounded" />
+              <div className="space-y-3">
+                {/* Show existing image if available */}
+                {existingImageUrl && (
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-600">Current Image:</div>
+                    <img src={existingImageUrl} alt="Current listing image" className="w-20 h-20 object-cover rounded border" />
+                  </div>
+                )}
+                
+                <div className="flex gap-4 items-center">
+                  <input
+                    id="listing-files"
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    ref={fileInputRef}
+                    onChange={handleFilesChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2"
+                    disabled={submitting}
+                  >
+                    <Upload className="w-4 h-4" />
+                    {files.length > 0 ? "Add More Files" : "Add Files"}
+                  </Button>
+                  <span className="text-sm text-gray-500">
+                    Max 15 images & 5 videos (10MB per image, 50MB per video)
+                  </span>
+                </div>
+                
+                {/* New file previews */}
+                {files.length > 0 && (
+                  <div>
+                    <div className="text-sm text-gray-600 mb-2">New Files to Upload:</div>
+                    <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                      {files.map((file, index) => (
+                        <div key={index} className="relative group">
+                          {file.type.startsWith('image/') ? (
+                            <img 
+                              src={previews[index]} 
+                              alt={`Preview ${index + 1}`} 
+                              className="w-full h-20 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center">
+                              <span className="text-xs text-gray-600 text-center">
+                                📹 {file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
+                              </span>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            disabled={submitting}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-              {errors.image && <div className="text-sm text-red-600 mt-1">{errors.image}</div>}
+            </div>
+
+            {/* Tags Section */}
+            <div>
+              <label className="block font-medium mb-1" htmlFor="listing-tags">
+                Tags (Optional)
+              </label>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    id="listing-tags"
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyPress={handleTagInputKeyPress}
+                    placeholder="Add tags (press Enter or comma to add)"
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500"
+                    disabled={submitting}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addTag}
+                    className="flex items-center gap-2"
+                    disabled={submitting || !tagInput.trim() || tags.length >= 10}
+                  >
+                    <Tag className="w-4 h-4" />
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Tag chips */}
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="text-teal-500 hover:text-teal-700"
+                          disabled={submitting}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="text-xs text-gray-500">
+                  {tags.length}/10 tags
+                </div>
+              </div>
             </div>
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-description">
@@ -460,9 +672,9 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
                 type="submit"
                 variant="default"
                 className="cursor-pointer bg-teal-50 text-teal-700 border-teal-700 hover:bg-teal-700 hover:border-teal-700 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-                disabled={loading}
+                disabled={loading || submitting}
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {submitting ? "Saving..." : "Save Changes"}
               </Button>
             </div>
             {submitError && <div className="text-sm text-red-600 mt-2">{submitError}</div>}
