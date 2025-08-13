@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut, Menu, X, TrendingUp } from "lucide-react";
+import { LayoutDashboard, User, List, LifeBuoy, ChevronLeft, ChevronRight, LogOut, Menu, X, TrendingUp, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { signOut } from '@/features/auth/actions'
+import { useSidebar } from './DashboardLayoutWrapper';
 
 // JC: Added TrendingUp icon for boosting feature 
 const navItems = [
   { name: "Dashboard", href: "/dashboard/seller", icon: LayoutDashboard },
+  { name: "Upcoming Bookings", href: "/dashboard/seller/bookingrequests", icon: Calendar },
   { name: "Listings", href: "/dashboard/seller/listings", icon: List },
   { name: "Boosting", href: "/dashboard/seller/boosting", icon: TrendingUp },
   { name: "Profile", href: "/dashboard/seller/profile", icon: User },
@@ -17,8 +19,7 @@ const navItems = [
 ];
 
 export default function SellerSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useSidebar();
   const pathname = usePathname();
 
   // Close mobile menu when route changes
@@ -41,15 +42,6 @@ export default function SellerSidebar() {
 
   return (
     <>
-      {/* Mobile backdrop */}
-      {mobileOpen && (
-        <div 
-          id="sidebar-backdrop"
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden transition-opacity duration-300"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
       {/* Mobile Menu Button */}
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200 hover:bg-gray-50"
@@ -66,10 +58,10 @@ export default function SellerSidebar() {
           ${collapsed ? "w-16 sm:w-20" : "w-64 sm:w-72"}
           
           /* Mobile styles */
-          fixed lg:sticky top-0 left-0 h-screen z-40
+          fixed lg:fixed top-0 left-0 h-screen z-40
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           
-          /* Desktop styles */
+          /* Desktop styles - use fixed positioning to ensure full viewport coverage */
           lg:block lg:h-screen lg:overflow-y-auto
         `}
       >
@@ -92,7 +84,7 @@ export default function SellerSidebar() {
             {/* Collapse Button - Hidden on mobile */}
             <button
               className="hidden lg:block cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 ease-in-out group flex-shrink-0"
-              onClick={() => setCollapsed((prev) => !prev)}
+              onClick={() => setCollapsed(!collapsed)}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               type="button"
             >

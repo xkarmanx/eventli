@@ -274,13 +274,16 @@ export function LoginForm() {
     }
 
     setLoading(true);
+
     toast.info('Signing you in...');
+
 
     try {
       const submitData = new FormData();
       submitData.append('email', formData.email.trim().toLowerCase());
       submitData.append('password', formData.password);
       submitData.append('recaptchaToken', recaptchaToken as string);
+
 
       // ✅ FIX: Check status instead of success property
       const result = await login(submitData);
@@ -313,6 +316,7 @@ export function LoginForm() {
       setIsCaptchaVerified(false);
       recaptchaRef.current?.reset();
       setFormData(prev => ({ ...prev, password: '' }));
+
       resetValidation();
     } finally {
       setLoading(false);
