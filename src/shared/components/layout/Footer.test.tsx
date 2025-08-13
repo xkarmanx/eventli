@@ -4,7 +4,7 @@ import { Footer } from './Footer';
 
 // Mock next/navigation to control the pathname for testing conditional rendering
 jest.mock('next/navigation', () => ({
-  usePathname: jest.fn(),
+  usePathname: jest.fn()
 }));
 
 describe('Footer', () => {
@@ -22,10 +22,18 @@ describe('Footer', () => {
 
     // Check for main sections
     expect(screen.getByAltText('Eventli Logo')).toBeInTheDocument();
-    expect(screen.getByText(/Connect with the best event service providers/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Quick Links/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /For Vendors/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Get in Touch/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Connect with the best event service providers/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Quick Links/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /For Vendors/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Get in Touch/i })
+    ).toBeInTheDocument();
 
     // Check for specific links/content
     expect(screen.getByText('Browse Services')).toHaveAttribute('href', '/');
@@ -35,7 +43,10 @@ describe('Footer', () => {
     expect(screen.getByText('Calgary, AB, Canada')).toBeInTheDocument();
 
     // Check copyright section
-    expect(screen.getByText(new RegExp(`© ${new Date().getFullYear()} Eventli, Inc. Made with`))).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`©${new Date().getFullYear()}Eventli, Inc. Made with`))
+    ).toBeInTheDocument();
+
     expect(screen.getByText('Privacy Policy')).toHaveAttribute('href', '#');
     expect(screen.getByText('Terms of Service')).toHaveAttribute('href', '#');
     expect(screen.getByText('Cookie Policy')).toHaveAttribute('href', '#');
@@ -48,10 +59,21 @@ describe('Footer', () => {
 
     // Check for main sections, they should still be present
     expect(screen.getByAltText('Eventli Logo')).toBeInTheDocument();
-    expect(screen.getByText(/Connect with the best event service providers/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Quick Links/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /For Vendors/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Get in Touch/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Connect with the best event service providers/i)
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('heading', { name: /Quick Links/i })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('heading', { name: /For Vendors/i })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('heading', { name: /Get in Touch/i })
+    ).toBeInTheDocument();
 
     // The layout changes, but the content should be consistent
     expect(screen.getByText('Browse Services')).toBeInTheDocument();
@@ -63,6 +85,8 @@ describe('Footer', () => {
     mockUsePathname.mockReturnValue('/');
     render(<Footer />);
     const currentYear = new Date().getFullYear();
-    expect(screen.getByText(new RegExp(`© ${currentYear} Eventli, Inc.`))).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`© ${currentYear} Eventli, Inc.`))
+    ).toBeInTheDocument();
   });
 });
