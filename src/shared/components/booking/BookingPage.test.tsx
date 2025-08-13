@@ -18,7 +18,7 @@ const mockService: Service = {
   description: 'Test Description',
   eventType: 'wedding',
   serving_style: 'Buffet',
-  seller_id: '963b5ae2-0ccf-4ff9-9583-dab594c5cf84'
+  seller_id: '063b5ae2-0ccf-4ff9-9343-fab554c5cf94'
 };
 
 describe('BookingPage Component', () => {

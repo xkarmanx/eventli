@@ -44,7 +44,7 @@ const mockServices: Service[] = [
     image: '/img1.jpg',
     description: 'desc1',
     serving_style: 'Buffet',
-    seller_id: '963b5ae2-0ccf-4ff9-9583-dab594c5cf84'
+    seller_id: '063b5ae2-0ccf-4ff9-9343-fab554c5cf94'
   },
   {
     id: '2',
@@ -59,7 +59,7 @@ const mockServices: Service[] = [
     image: '/img2.jpg',
     description: 'desc2',
     serving_style: 'Plated',
-    seller_id: '963b5ae2-0ccf-4ff9-9583-dab594c5cf84'
+    seller_id: '063b5ae2-0ccf-4ff9-9343-fab554c5cf94'
   },
   {
     id: '3',
@@ -74,7 +74,7 @@ const mockServices: Service[] = [
     image: '/img3.jpg',
     description: 'desc3',
     serving_style: 'NA',
-    seller_id: '963b5ae2-0ccf-4ff9-9583-dab594c5cf84'
+    seller_id: '063b5ae2-0ccf-4ff9-9343-fab554c5cf94'
   }
 ];
 
