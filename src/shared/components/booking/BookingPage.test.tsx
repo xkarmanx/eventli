@@ -1,10 +1,11 @@
 // src/shared/components/booking/BookingPage.test.tsx
 import { render, screen } from '@testing-library/react';
 import React from 'react';
+import { Service } from '@/shared/types/service';
 import BookingPage from './BookingPage';
 
 // Mock the service prop
-const mockService = {
+const mockService: Service = {
   id: '123',
   title: 'Test Service',
   image: '/assets/test-image.jpg',
@@ -15,10 +16,9 @@ const mockService = {
   staff: '2',
   status: 'available',
   description: 'Test Description',
-  amenities: ['Wifi', 'Parking'],
-  category: 'Test Category',
   eventType: 'wedding',
-  serving_style: 'buffet'
+  serving_style: 'Buffet',
+  seller_id: '963b5ae2-0ccf-4ff9-9583-dab594c5cf84'
 };
 
 describe('BookingPage Component', () => {
