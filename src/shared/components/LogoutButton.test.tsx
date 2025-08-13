@@ -6,16 +6,16 @@ import LogoutButton from './LogoutButton';
 
 // Mock useRouter
 jest.mock('next/navigation', () => ({
-  useRouter: jest.fn(),
+  useRouter: jest.fn()
 }));
 
 // Mock createClient and its signOut method
 jest.mock('@/shared/lib/supabase/client', () => ({
   createClient: jest.fn(() => ({
     auth: {
-      signOut: jest.fn(),
-    },
-  })),
+      signOut: jest.fn()
+    }
+  }))
 }));
 
 describe('LogoutButton', () => {
@@ -25,12 +25,12 @@ describe('LogoutButton', () => {
   beforeEach(() => {
     // Reset mocks before each test
     (useRouter as jest.Mock).mockReturnValue({
-      refresh: mockRefresh,
+      refresh: mockRefresh
     });
     (createClient as jest.Mock).mockReturnValue({
       auth: {
-        signOut: mockSignOut,
-      },
+        signOut: mockSignOut
+      }
     });
   });
 
