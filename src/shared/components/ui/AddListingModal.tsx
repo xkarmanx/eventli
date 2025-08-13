@@ -1,6 +1,7 @@
 'use client';
 
 import { Upload, X } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 // kvs: Removed react-toastify imports and replaced with sonner for consistent toast implementation
 import { toast } from 'sonner';
@@ -14,7 +15,6 @@ import { Button } from '@/shared/components/ui/button';
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client';
 import { cn } from '@/shared/lib/utils';
-import Image from 'next/image';
 
 // JC: Define what props this modal needs to work
 interface Props {
