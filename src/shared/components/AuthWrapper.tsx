@@ -14,7 +14,7 @@ export default function AuthWrapper({ children, redirectTo = '/login' }: Props) 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    (async () => { // KSch: Use an anonymous function instead of defining and calling one
+    (async () => { // KSch: Use an anonymous function instead of defining one and calling it
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user)
