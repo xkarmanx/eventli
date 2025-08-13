@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { Footer } from './Footer';
 import { usePathname } from 'next/navigation';
+import { Footer } from './Footer';
 
 // Mock next/navigation to control the pathname for testing conditional rendering
 jest.mock('next/navigation', () => ({
