@@ -36,21 +36,6 @@ export default function CategoryNavigation() {
       name: "Funeral",
       icon: "/funeral.svg",
       eventType: SERVICE_TYPES.FUNERAL
-    },
-    {
-      name: "Venue",
-      icon: "/ceremony.svg",
-      eventType: SERVICE_TYPES.VENUE
-    },
-    {
-      name: "Music",
-      icon: "/ceremony.svg",
-      eventType: SERVICE_TYPES.MUSIC
-    },
-    {
-      name: "Catering",
-      icon: "/ceremony.svg",
-      eventType: SERVICE_TYPES.CATERING
     }
   ]
 

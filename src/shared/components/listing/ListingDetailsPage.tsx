@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, MapPin, Users, Clock, Building2, CheckCircle, Utensils, HandPlatter, Share2, Heart, Calendar } from 'lucide-react'
+import { ArrowLeft, MapPin, Users, Clock, Building2, CheckCircle, Utensils, HandPlatter, Calendar } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/shared/components/ui/button'
@@ -103,14 +103,6 @@ export default function ListingDetailsPage({ service }: ListingDetailsPageProps)
           <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">
             {service.title}
           </h1>
-          <div className="flex items-center space-x-2">
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <Share2 className="w-5 h-5 text-gray-600" />
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <Heart className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
         </div>
 
         {/* Main Content */}
@@ -156,16 +148,6 @@ export default function ListingDetailsPage({ service }: ListingDetailsPageProps)
                       {currentImageIndex + 1} / {images.length}
                     </div>
                   )}
-                  
-                  {/* Desktop Actions */}
-                  <div className="hidden md:flex absolute top-4 right-4 space-x-2">
-                    <button className="bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md transition-all backdrop-blur-sm">
-                      <Share2 className="w-5 h-5" />
-                    </button>
-                    <button className="bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md transition-all backdrop-blur-sm">
-                      <Heart className="w-5 h-5" />
-                    </button>
-                  </div>
                 </div>
                 
                 {/* Thumbnail Gallery */}
