@@ -44,7 +44,7 @@ describe('Footer', () => {
 
     // Check copyright section
     expect(
-      screen.getByText(new RegExp(`©${new Date().getFullYear()}Eventli, Inc. Made with`))
+      screen.getByText(new RegExp(`©\\s*${new Date().getFullYear()}\\s*Eventli, Inc\\.\\s*Made with`, 'i'))
     ).toBeInTheDocument();
 
     expect(screen.getByText('Privacy Policy')).toHaveAttribute('href', '#');
