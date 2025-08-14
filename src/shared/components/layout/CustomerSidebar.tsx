@@ -63,9 +63,11 @@ export default function CustomerSidebar() {
         className={cn( // KSch: Use cn() instead of backticks (`) for better CSS class organization
           'bg-white flex flex-col py-4 sm:py-6 px-3 sm:px-4 border-r border-gray-200',
           'shadow-lg transition-all duration-300 ease-in-out',
+
           // Mobile styles
           'fixed lg:relative top-0 left-0 h-full z-40',
           `${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`,
+
           // Desktop styles
           'lg:block'
         )}
