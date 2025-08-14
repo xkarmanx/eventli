@@ -54,7 +54,17 @@ export default function ListingDetailsPage({ service }: ListingDetailsPageProps)
     })()
   }, [service.id, service.image])
 
-  const handleRequestBooking = () => {
+  const handleRequestBooking = async () => {
+    // Check if user is authenticated
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.user) {
+      // User not logged in, redirect to login
+      router.push('/login')
+      return
+    }
+    
     if (isMobile) {
       // On mobile, navigate to booking page
       router.push(`/listing/${service.id}/booking`)

@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, Calendar, Clock, Users, MapPin, Phone, Mail, User } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/shared/components/ui/button'
 import { Service } from '@/shared/types/service'
 import { createBooking } from '@/features/services/bookings_crud'
+import { createClient } from '@/shared/lib/supabase/client'
 import { ModerationError, RateLimitError } from '@/shared/lib/moderation-errors'
 import { toast } from 'sonner'
 
@@ -23,6 +25,7 @@ export default function BookingPage({ service }: BookingPageProps) {
     eventTime: '',
     guestCount: '',
     eventType: '',
+    address: '',
     additionalNotes: ''
   })
 
@@ -33,10 +36,31 @@ export default function BookingPage({ service }: BookingPageProps) {
     eventDate: '',
     eventTime: '',
     guestCount: '',
-    eventType: ''
+    eventType: '',
+    address: ''
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAuthenticating, setIsAuthenticating] = useState(true)
+  const router = useRouter()
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.user) {
+        toast.error('You must be logged in to make a booking request')
+        router.push('/login')
+        return
+      }
+      
+      setIsAuthenticating(false)
+    }
+    
+    checkAuth()
+  }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -111,6 +135,13 @@ export default function BookingPage({ service }: BookingPageProps) {
     return ''
   }
 
+  const validateAddress = (address: string): string => {
+    if (!address.trim()) return 'Event address is required'
+    if (address.trim().length < 5) return 'Address must be at least 5 characters'
+    if (address.trim().length > 200) return 'Address must be less than 200 characters'
+    return ''
+  }
+
   const validateForm = (): boolean => {
     const errors = {
       name: validateName(formData.name),
@@ -119,7 +150,8 @@ export default function BookingPage({ service }: BookingPageProps) {
       eventDate: validateEventDate(formData.eventDate),
       eventTime: validateEventTime(formData.eventTime),
       guestCount: validateGuestCount(formData.guestCount),
-      eventType: validateEventType(formData.eventType)
+      eventType: validateEventType(formData.eventType),
+      address: validateAddress(formData.address)
     }
 
     setFormErrors(errors)
@@ -136,19 +168,37 @@ export default function BookingPage({ service }: BookingPageProps) {
     setIsSubmitting(true)
 
     try {
-      // TODO: Implement actual booking submission logic
-      console.log('Booking request:', {
-        service: service.id,
-        ...formData,
-        // Clean up phone number
-        phone: formData.phone.replace(/\D/g, '')
+      // Get current user session
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.user) {
+        toast.error('You must be logged in to make a booking request')
+        return
+      }
+
+      // Create booking input matching the API structure
+      const bookingInput = {
+        listing_id: service.id,
+        customer_id: session.user.id,
+        seller_id: service.seller_id || '', // Get from service
+        event_date: formData.eventDate,
+        event_time: formData.eventTime,
+        guest_count: formData.guestCount,
+        address: formData.address,
+        event_type: formData.eventType,
+        notes: formData.additionalNotes,
+        customer_name: formData.name,
+        customer_email: formData.email,
+        customer_phone: formData.phone.replace(/\D/g, ''),
+      }
+
+      await createBooking(bookingInput)
+      
+      toast.success('Booking request submitted successfully!', {
+        description: 'Your request has been sent to the service provider for review.',
+        duration: 5000,
       })
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Show success message or redirect
-      alert('Booking request submitted successfully!')
       
     } catch (error: any) {
       console.error('Error submitting booking:', error)
@@ -191,6 +241,18 @@ export default function BookingPage({ service }: BookingPageProps) {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Show loading while checking authentication
+  if (isAuthenticating) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -398,6 +460,28 @@ export default function BookingPage({ service }: BookingPageProps) {
               </select>
               {formErrors.eventType && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.eventType}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Event Address *
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
+                  formErrors.address 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-teal-500'
+                }`}
+                placeholder="Enter the event address"
+              />
+              {formErrors.address && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.address}</p>
               )}
             </div>
           </div>
