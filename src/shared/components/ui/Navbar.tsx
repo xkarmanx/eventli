@@ -1,14 +1,18 @@
 'use client'
 
-import { useState } from "react"
-import { Search, Filter } from "lucide-react"
-import { Button } from "@/shared/components/ui/button" 
-import Image from "next/image"
-import Link from "next/link"
-import FilterModal from "./FilterModal"
-import AuthModal from "./AuthModal"
-import SearchInput from "@/features/searchfilter/SearchInput"
-import { Service } from "@/shared/types/service"
+import { useState, useEffect, useRef } from 'react'
+import { Search, Filter, User, LogOut, ChevronDown, Home, Calendar, LayoutDashboard } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Button } from '@/shared/components/ui/button'
+import FilterModal from './FilterModal'
+import AuthModal from './AuthModal'
+import SearchInput from '@/features/searchfilter/SearchInput'
+import { Service } from '@/shared/types/service'
+import { createClient } from '@/shared/lib/supabase/client'
+import { signOut } from '@/features/auth/actions'
+import { useAuth } from '@/shared/hooks/useAuth'
+
 
 interface NavbarProps {
   listings?: Service[]
@@ -16,46 +20,127 @@ interface NavbarProps {
   onEventSearchResults?: (results: Service[]) => void
 }
 
-export default function Navbar({ 
-  listings = [], 
-  onLocationSearchResults, 
-  onEventSearchResults 
+export default function Navbar({
+  listings = [],
+  onLocationSearchResults,
+  onEventSearchResults,
 }: NavbarProps) {
-
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // JC: Handler for when location search input filters the listings
-  const handleLocationFilter = (filteredListings: Service[]) => {
-    onLocationSearchResults?.(filteredListings)
+  // Use the shared auth hook
+  const { user, loading } = useAuth()
+
+  // Fetch profile data when user changes
+  useEffect(() => {
+    if (!user?.id) {
+      setProfile(null)
+      return
+    }
+
+    const fetchProfile = async () => {
+      setProfileLoading(true)
+      try {
+        const supabase = createClient()
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError)
+          setProfile(null)
+        } else if (profileData) {
+          console.log('Profile loaded in Navbar:', profileData)
+          setProfile(profileData)
+        } else {
+          setProfile(null)
+        }
+      } catch (e) {
+        console.error('Error fetching profile data:', e)
+        setProfile(null)
+      } finally {
+        setProfileLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [user?.id])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  // Helpers
+  const getDisplayName = () => {
+    if (profile?.full_name) return profile.full_name
+    if (user?.user_metadata?.full_name) return user.user_metadata.full_name
+    if (user?.email) return user.email.split('@')[0]
+    return 'User'
+
   }
 
-  // JC: Handler for when event search input filters the listings
-  const handleEventFilter = (filteredListings: Service[]) => {
-    onEventSearchResults?.(filteredListings)
+  const getAvatarUrl = () => {
+    if (profile?.avatar_url) return profile.avatar_url
+    if (user?.user_metadata?.avatar_url) return user.user_metadata.avatar_url
+    return null
   }
+
+  const getInitials = () =>
+    getDisplayName()
+      .split(' ')
+      .map((p: string) => p.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('')
+
+  const getUserRole = (): 'seller' | 'customer' => {
+    if (loading || profileLoading) return 'customer'
+    
+    if (profile?.role) {
+      return profile.role as 'seller' | 'customer'
+    }
+    
+    if (user?.user_metadata?.role) {
+      return user.user_metadata.role as 'seller' | 'customer'
+    }
+    
+    return 'customer'
+  }
+
+  const role = getUserRole()
+  const isLoading = loading || profileLoading
+
+  // Search handlers
+  const handleLocationFilter = (filtered: Service[]) => onLocationSearchResults?.(filtered)
+  const handleEventFilter = (filtered: Service[]) => onEventSearchResults?.(filtered)
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
       <div className="px-3 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo - Hidden on mobile, visible on desktop */}
+          {/* Logo (desktop) */}
           <div className="hidden md:flex items-center flex-shrink-0">
             <Link href="/">
-              <Image
-                src="/logo.svg"
-                alt="Eventli Logo"
-                width={120}
-                height={40}
-                className="h-6 sm:h-8 w-auto"
-              />
+              <Image src="/logo.svg" alt="Eventli Logo" width={120} height={40} className="h-6 sm:h-8 w-auto" />
             </Link>
           </div>
 
-          {/* Search Section - Mobile Style */}
+          {/* Mobile search */}
           <div className="md:hidden flex items-center flex-1 mx-2">
             <div className="flex items-center w-full bg-gray-100 border border-gray-200 rounded-lg overflow-hidden focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-transparent">
-              {/* Location Input */}
+              {/* Location */}
               <div className="relative flex items-center w-32">
                 <svg className="absolute left-3 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -72,11 +157,10 @@ export default function Navbar({
                   inputClassName="w-full pl-10 pr-2 py-2.5 bg-transparent border-none outline-none text-sm placeholder-gray-500"
                 />
               </div>
-              
-              {/* Divider Line */}
-              <div className="w-px h-8 bg-gray-300"></div>
-              
-              {/* Search Input */}
+
+              <div className="w-px h-8 bg-gray-300" />
+
+              {/* Event */}
               <div className="relative flex items-center flex-1">
                 <Search className="absolute left-3 w-4 h-4 text-gray-400" />
                 <SearchInput
@@ -93,9 +177,8 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* Search Section - Desktop Style */}
+          {/* Desktop search */}
           <div className="hidden md:flex items-center space-x-0 bg-white border border-gray-300 rounded-full shadow-sm overflow-hidden max-w-2xl flex-1 mx-4 lg:mx-8">
-            {/* JC: Location search input component - filters listings by location field */}
             <SearchInput
               label="Where?"
               placeholder="Search Location"
@@ -105,7 +188,6 @@ export default function Navbar({
               onFilteredResults={handleLocationFilter}
               className="border-r border-gray-300"
             />
-            {/* JC: Event search input component - filters listings by title/description */}
             <SearchInput
               label="Search"
               placeholder="What are you looking for?"
@@ -118,8 +200,8 @@ export default function Navbar({
               <button className="bg-teal-600 hover:bg-teal-700 rounded-full p-2 w-8 h-8 flex items-center justify-center">
                 <Search className="w-4 h-4 text-white" />
               </button>
-              <button 
-                className="bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 rounded-full p-2 w-8 h-8 flex items-center justify-center"
+              <button
+                className="cursor-pointer bg-white border border-teal-600 text-teal-600 hover:bg-teal-700 hover:text-white rounded-full p-2 w-8 h-8 flex items-center justify-center"
                 onClick={() => setIsFilterModalOpen(true)}
               >
                 <Filter className="w-4 h-4" />
@@ -127,40 +209,204 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* Right Section */}
+          {/* Right section */}
           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-            {/* Login and Signup buttons - Hidden on mobile */}
-            <Link 
-              href="/login" 
-              className="hidden sm:flex text-gray-700 hover:text-gray-900 px-2 sm:px-4 py-2 text-sm font-medium"
-            >
-              Login
-            </Link>
-            <button 
-              onClick={() => setIsAuthModalOpen(true)}
-              className="hidden sm:flex bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium"
-            >
-              Sign up
-            </button>
+            {isLoading ? (
+              // Loading state - show login/signup as fallback
+              <>
+                <Link
+                  href="/login"
+                  className="hidden sm:flex text-gray-700 hover:text-gray-900 px-2 sm:px-4 py-2 text-sm font-medium"
+                >
+                  Login
+                </Link>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="hidden sm:flex bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium"
+                >
+                  Sign up
+                </button>
+              </>
+            ) : user ? (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors duration-200 group"
+                  aria-label="User menu"
+                >
+                  {/* Avatar */}
+                  <div className="cursor-pointer relative">
+                    {getAvatarUrl() ? (
+                      <Image
+                        src={getAvatarUrl()!}
+                        alt={getDisplayName()}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 group-hover:border-teal-700 transition-colors duration-200"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center border-2 border-gray-200 group-hover:border-teal-700 transition-colors duration-200">
+                        <span className="text-white font-semibold text-sm">{getInitials()}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* User info (desktop) */}
+                  <div className="cursor-pointer hidden sm:block text-left">
+                    <div className="text-sm font-medium text-gray-900 group-hover:text-teal-700 transition-colors duration-200">
+                      {getDisplayName()}
+                    </div>
+                    <div className="text-xs text-gray-500 capitalize">{role}</div>
+                  </div>
+
+                  <ChevronDown
+                    className={`cursor-pointer w-4 h-4 text-gray-500 group-hover:text-teal-700 transition-all duration-200 ${
+                      isDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        {getAvatarUrl() ? (
+                          <Image
+                            src={getAvatarUrl()!}
+                            alt={getDisplayName()}
+                            width={32}
+                            height={32}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center">
+                            <span className="text-white font-semibold text-xs">{getInitials()}</span>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{getDisplayName()}</div>
+                          <div className="text-xs text-gray-500">{user?.email}</div>
+                          <div className="text-xs text-teal-600 font-medium capitalize">{role}</div>
+                        </div>
+                      </div>
+                    </div>
+
+
+                    <div className="py-1">
+                      <Link
+                        href="/"
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+
+                        <Home className="w-4 h-4" />
+                        Browse Listings
+                      </Link>
+
+                      {role === 'customer' ? (
+                        <>
+                          {/* If your app uses dashboard paths, prefer these */}
+                          <Link
+                            href="/dashboard/customer/bookings"
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <Calendar className="w-4 h-4" />
+                            My Bookings
+                          </Link>
+                          <Link
+                            href="/dashboard/customer/profile"
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <User className="w-4 h-4" />
+                            Profile
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            href="/dashboard/seller"
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                            Dashboard
+                          </Link>
+                          <Link
+                            href="/dashboard/seller/profile"
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <User className="w-4 h-4" />
+                            Profile
+                          </Link>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="border-t border-gray-100 py-1">
+                      {/* Server action signout (correct usage) */}
+                      <form action={signOut}>
+                        <button
+
+                          type="submit"
+                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Mobile Login/Signup */}
+                <Link
+                  href="/login"
+                  className="flex sm:hidden text-gray-700 hover:text-gray-900 px-2 py-2 text-sm font-medium"
+                >
+                  Login
+                </Link>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="flex sm:hidden bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded-full text-xs font-medium"
+                >
+                  Sign up
+                </button>
+                
+                {/* Desktop Login/Signup */}
+                <Link
+                  href="/login"
+                  className="hidden sm:flex text-gray-700 hover:text-gray-900 px-2 sm:px-4 py-2 text-sm font-medium"
+                >
+                  Login
+                </Link>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="hidden sm:flex bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium"
+                >
+                  Sign up
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Filter Modal */}
-      <FilterModal
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-      />
+      <FilterModal isOpen={isFilterModalOpen} onClose={() => setIsFilterModalOpen(false)} />
 
       {/* Auth Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        type="signup"
-        onSwitchMode={() => {}}
-      />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} type="signup" onSwitchMode={() => {}} />
     </header>
   )
 }
 
+
 // cspell:words Eventli
+

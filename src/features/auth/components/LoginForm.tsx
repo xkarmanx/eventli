@@ -274,13 +274,16 @@ export function LoginForm() {
     }
 
     setLoading(true);
+
     toast.info('Signing you in...');
+
 
     try {
       const submitData = new FormData();
       submitData.append('email', formData.email.trim().toLowerCase());
       submitData.append('password', formData.password);
       submitData.append('recaptchaToken', recaptchaToken as string);
+
 
       // ✅ FIX: Check status instead of success property
       const result = await login(submitData);
@@ -289,7 +292,17 @@ export function LoginForm() {
         toast.success('Login successful!');
         setFormData({ email: '', password: '' });
         resetValidation();
-        setTimeout(() => router.push('/dashboard'), 1000);
+        
+        // Add error handling for navigation
+        try {
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 500); // Reduced timeout for better UX
+        } catch (navError) {
+          console.error('Navigation error:', navError);
+          // Fallback: try immediate navigation
+          router.push('/dashboard');
+        }
       } else {
         // Show the specific error message from the server
         toast.error(result.message || 'Failed to sign in');
@@ -313,6 +326,7 @@ export function LoginForm() {
       setIsCaptchaVerified(false);
       recaptchaRef.current?.reset();
       setFormData(prev => ({ ...prev, password: '' }));
+
       resetValidation();
     } finally {
       setLoading(false);

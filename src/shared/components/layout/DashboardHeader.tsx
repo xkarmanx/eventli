@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { User, LogOut, ChevronDown, Home } from 'lucide-react'
+import { User, LogOut, ChevronDown, Home, LayoutDashboard } from 'lucide-react'
 import { signOut } from '@/features/auth/actions'
 import { createClient } from '@/shared/lib/supabase/client' // JC: Get user data from database
 import Link from 'next/link'
+import Image from 'next/image'
 
 // JC: Define what props the header needs
 interface DashboardHeaderProps {
@@ -148,9 +149,11 @@ export default function DashboardHeader({ userType, title = 'Dashboard', subtitl
             {/* Avatar */}
             <div className="cursor-pointer relative">
               {getAvatarUrl() ? (
-                <img
-                  src={getAvatarUrl()}
+                <Image
+                  src={getAvatarUrl()!}
                   alt={getDisplayName()}
+                  width={40}
+                  height={40}
                   className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 group-hover:border-teal-700 transition-colors duration-200"
                 />
               ) : (
@@ -185,9 +188,11 @@ export default function DashboardHeader({ userType, title = 'Dashboard', subtitl
               <div className="px-4 py-3 border-b border-gray-100">
                 <div className="flex items-center gap-3">
                   {getAvatarUrl() ? (
-                    <img
-                      src={getAvatarUrl()}
+                    <Image
+                      src={getAvatarUrl()!}
                       alt={getDisplayName()}
+                      width={32}
+                      height={32}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
@@ -213,14 +218,36 @@ export default function DashboardHeader({ userType, title = 'Dashboard', subtitl
                   Browse Listings
                 </Link>
 
-                <Link
-                  href={profileRoute}
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
-                  onClick={() => setIsDropdownOpen(false)}
-                >
-                  <User className="w-4 h-4" />
-                  My Profile
-                </Link>
+                {userType === 'seller' ? (
+                  <>
+                    <Link
+                      href="/dashboard/seller"
+                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+
+                    <Link
+                      href="/dashboard/seller/profile"
+                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <User className="w-4 h-4" />
+                      Profile
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    href={profileRoute}
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors duration-200"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <User className="w-4 h-4" />
+                    My Profile
+                  </Link>
+                )}
               </div>
 
               <div className="border-t border-gray-100 py-1">

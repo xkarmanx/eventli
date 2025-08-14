@@ -401,7 +401,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================================================
 -- [SCHEMA CHANGE] Add event_type, serving_style, num_staff, num_guests to listings
--- Added by: [Cody Tran], 2024-06-27
+-- Added by: [Cody Tran], 2025-06-27
 -- Purpose: To support event type, serving style, staff, and guest count in listings
 -- =============================================================================
 
@@ -420,7 +420,7 @@ ADD COLUMN IF NOT EXISTS num_guests INTEGER;
 
 -- =============================================================================
 -- [SCHEMA CHANGE] Add pending_email & pending_email_requested_at column to profiles
--- Added by: [Cody Tran], 2024-07-10
+-- Added by: [Cody Tran], 2025-07-10
 -- Purpose: To store pending email for users that are updating their email
 -- =============================================================================
 
@@ -431,7 +431,7 @@ ADD COLUMN pending_email_requested_at TIMESTAMP;
 
 -- =============================================================================
 -- [SCHEMA CHANGE] Create RLS policies for profile-avatar-images bucket in storage.objects
--- Added by: [Cody Tran], 2024-07-12
+-- Added by: [Cody Tran], 2025-07-12
 -- Purpose: 
 --   To enforce row-level security for the new 'profile-avatar-images' bucket.
 --   - Allows authenticated users to upload, update, and delete images in their own folder.
@@ -464,3 +464,120 @@ CREATE POLICY "Users can delete own profile avatars" ON storage.objects
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Creates new table (public.booking_requests) 
+-- Added by: [Cody Tran], 2024-08-06
+-- Purpose: 
+--  - To manage booking requests for listings, allowing customers to request bookings
+--  - Holds details about the request, status, and timestamps
+--  - Holds data to determine customers and sellers for booking management
+-- =============================================================================
+create table public.booking_requests (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid references listings(id) on delete cascade,
+  customer_id uuid references profiles(id) on delete cascade,
+  seller_id uuid references profiles(id) on delete cascade,
+  status text not null default 'pending',
+  event_date date not null,
+  event_time text not null, -- changed from `time` to `text` so "11:00 AM - 04:00 PM" works
+  guest_count text not null,
+  notes text,
+  address text,
+  event_type text,
+  customer_name text,
+  customer_email text, 
+  customer_phone text,
+  created_at timestamp with time zone default timezone('utc', now()),
+  updated_at timestamp with time zone default timezone('utc', now())
+);
+
+
+-- =============================================================================
+-- [SCHEMA CHANGE] Create RLS policies for public.booking_requests table
+-- Added by: [Cody Tran], 2024-08-07
+-- Purpose: 
+--  - Customers can view their own booking requests
+--  - Sellers can view booking requests for their listings
+--  - Customers can create new booking requests
+--  - Sellers can update their own booking requests
+--  - Customers can delete their own booking requests
+--  - Sellers can delete their own booking requests
+-- =============================================================================
+ALTER TABLE public.booking_requests ENABLE ROW LEVEL SECURITY;
+
+-- Allow customers to view their own booking requests
+CREATE POLICY "Customers can view own booking requests" ON public.booking_requests
+  FOR SELECT USING (auth.uid() = customer_id);
+
+-- Allow sellers to view booking requests for their listings
+CREATE POLICY "Sellers can view own listing booking requests" ON public.booking_requests
+  FOR SELECT USING (auth.uid() = seller_id);
+
+-- Allow customers to create new booking requests
+CREATE POLICY "Customers can create booking requests" ON public.booking_requests
+  FOR INSERT WITH CHECK (auth.uid() = customer_id);
+
+-- Allow sellers to update their own booking requests
+CREATE POLICY "Sellers can update own booking requests" ON public.booking_requests
+  FOR UPDATE USING (auth.uid() = seller_id);
+
+-- Allow customers to delete their own booking requests
+CREATE POLICY "Customers can delete own booking requests" ON public.booking_requests
+  FOR DELETE USING (auth.uid() = customer_id);
+
+-- Allow sellers to delete their own booking requests
+CREATE POLICY "Sellers can delete own booking requests" ON public.booking_requests
+  FOR DELETE USING (auth.uid() = seller_id);
+
+
+-- =============================================================================
+-- [PG_CRON JOB] Update public.booking_requests "status" every minute
+-- Added by: [Cody Tran], 2024-08-10
+-- Purpose: 
+-- - To automatically update booking requests status based on event date
+--
+-- - If current date is past event_date...
+-- - and status is 'pending', change status to 'declined'
+-- - and if status is 'accepted', change status to 'completed'
+--
+-- - Otherwise status is either 'pending', accepted', or declined
+
+-- - The timezone is set to 'America/Denver' for event_date and event_time
+--      IF customers are from other timezones, we must hold that data in the profiles table and set the timezone accordingly
+-- =============================================================================
+-- Create an index for faster lookups (run once)
+CREATE INDEX IF NOT EXISTS idx_booking_requests_status_eventdate
+ON booking_requests (status, event_date);
+
+-- Function to update statuses with timezone handling
+CREATE OR REPLACE FUNCTION update_booking_statuses() RETURNS void AS $$
+BEGIN
+  -- 1. Decline expired pending requests
+  UPDATE booking_requests
+  SET status = 'declined',
+      updated_at = NOW()
+  WHERE status = 'pending'
+    AND (
+      (TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM') AT TIME ZONE 'America/Denver')
+      <= NOW()
+    );
+
+  -- 2. Complete expired accepted requests
+  UPDATE booking_requests
+  SET status = 'completed',
+      updated_at = NOW()
+  WHERE status = 'accepted'
+    AND (
+      (TO_TIMESTAMP(event_date || ' ' || split_part(event_time, '-', 2), 'YYYY-MM-DD HH12:MI AM') AT TIME ZONE 'America/Denver')
+      <= NOW()
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Schedule it to run every minute
+SELECT cron.schedule(
+  'booking_status_update',          -- job name
+  '* * * * *',                      -- every minute
+  $$CALL update_booking_statuses();$$
+);

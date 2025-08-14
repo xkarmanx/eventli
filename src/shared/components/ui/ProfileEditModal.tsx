@@ -6,6 +6,7 @@ import { updateProfile, updateProfileComplete } from "@/features/services/profil
 import { Button } from "@/shared/components/ui/button";
 import { createClient } from "@/shared/lib/supabase/client";
 import { toast } from "sonner";
+import { ModerationError, RateLimitError } from "@/shared/lib/moderation-errors";
 
 // JC: Define what data the modal expects to receive
 interface ProfileEditModalProps {
@@ -60,9 +61,9 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
 
   const [previousEmail, setPreviousEmail] = useState(userData?.email || "");
 
+
   // CT: Error state for phone validation
   const [phoneError, setPhoneError] = useState<string | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // JC: Handle profile picture upload
@@ -170,7 +171,30 @@ export default function ProfileEditModal({ isOpen, onCloseAction, userType, user
       onSave?.();
       onCloseAction();
     } catch (error: any) {
-      if (error.name === "AuthApiError") {
+      // Enhanced error handling for moderation and other issues
+      if (error instanceof ModerationError) {
+        const fieldContext = error.context?.split('_').pop() || 'content';
+        const fieldName = fieldContext === 'bio' ? 'professional bio' : 
+                         fieldContext === 'website' ? 'website field' : fieldContext;
+        
+        if (error.categories && error.categories.length > 0) {
+          const categories = error.categories.join(', ');
+          toast.error(`❌ ${fieldName} contains inappropriate content`, {
+            description: `Categories: ${categories}. Please revise your content and try again.`,
+            duration: 6000,
+          });
+        } else {
+          toast.error(`❌ ${fieldName} contains inappropriate content`, {
+            description: 'Please review and modify your content before submitting.',
+            duration: 5000,
+          });
+        }
+      } else if (error instanceof RateLimitError) {
+        toast.error("⏳ Moderation service busy", {
+          description: "Please wait a moment and try again.",
+          duration: 4000,
+        });
+      } else if (error.name === "AuthApiError") {
         toast.error("Please wait before requesting another email update.");
       } else {
         toast.error("Failed to update profile.");

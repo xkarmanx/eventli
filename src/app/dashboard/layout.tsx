@@ -1,66 +1,37 @@
-import SellerSidebar from "@/shared/components/layout/SellerSidebar";
-import DashboardHeader from "@/shared/components/layout/DashboardHeader"; // JC: Reusable header component for dashboard
-import { createClient } from "@/shared/lib/supabase/server";
-import { redirect } from "next/navigation";
-import CustomerSidebar from "@/shared/components/layout/CustomerSidebar";
+'use client'
 
+import { useAuth } from '@/shared/hooks/useAuth'
+import { useRouter } from 'next/navigation'
+import { useEffect, ReactNode } from 'react'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const supabase = await createClient();
+interface DashboardLayoutProps {
+  children: ReactNode
+}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!user) {
-    redirect('/login');
+    return null
   }
 
-  // Fetch user profile to determine role - JC: Check user role to show correct sidebar
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile) {
-    redirect('/login'); // fallback
-  }
-  // You could potentially fetch the profile here and redirect if not a seller,
-  // but for now, we'll let individual pages handle their content.
-
-
-  //JC: Show different sidebar based on user role - render customer or seller sidebar
-  const isCustomer = profile.role === "customer";
-
-  return (
-    <div className="flex min-h-screen bg-gray-50/50">
-      {/* Mobile backdrop overlay */}
-      <div className="lg:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity" id="sidebar-backdrop"></div>
-      
-      {/* Sidebar - responsive behavior */}
-      <div className="relative z-50">
-        {isCustomer ? <CustomerSidebar /> : <SellerSidebar />}
-      </div>
-      
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Dashboard Header */}
-        <DashboardHeader 
-          userType={isCustomer ? "customer" : "seller"}
-          title="Dashboard"
-          subtitle={`Welcome back! Manage your ${isCustomer ? "bookings" : "listings"} and profile.`}
-        />
-        
-        {/* Page Content */}
-        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  return <>{children}</>
 }

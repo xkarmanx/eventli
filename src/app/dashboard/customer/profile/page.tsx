@@ -1,10 +1,441 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { createClient } from "@/shared/lib/supabase/client";
+import { Button } from "@/shared/components/ui/button";
+import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
+import DeleteProfileModal from "@/shared/components/ui/DeleteProfileModal";
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Edit,
+  CheckCircle2,
+  XCircle,
+  Settings,
+  Calendar,
+  Trash2
+} from "lucide-react";
+import { updateProfileComplete } from "@/features/services/profile_crud";
+
+const supabase = createClient();
+
+interface ProfileData {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  location: string | null;
+  bio: string | null;
+  website?: string | null;
+  avatar_url: string | null;
+  pending_email: string | null;
+  pending_email_requested_at?: string | null;
+  is_setup_complete: boolean | null;
+  role?: string | null;
+  created_at?: string | null;
+}
+
 export default function CustomerProfilePage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>
-      <div className="p-4 bg-muted rounded-md text-center">
-        <p>Profile management coming soon!</p>
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Columns: keep only those that truly exist
+  const PROFILE_COLUMNS =
+    "id, full_name, phone, location, bio, website, avatar_url, pending_email, pending_email_requested_at, is_setup_complete, role, created_at";
+
+  // Session + auth listener
+  useEffect(() => {
+    (async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (!error && session?.user) setUser(session.user);
+      setAuthLoading(false);
+    })();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_evt, session) => {
+        setUser(session?.user || null);
+        setAuthLoading(false);
+      }
+    );
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchProfile = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      let { data, error, status } = await supabase
+        .from("profiles")
+        .select(PROFILE_COLUMNS)
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Customer profile fetch error:", {
+          status,
+          message: error.message,
+          details: (error as any)?.details
+        });
+      }
+
+      if (!data) {
+        // Attempt auto-create (RLS must allow)
+        const { error: insertErr } = await supabase.from("profiles").insert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || "",
+          role: "customer"
+        });
+        if (insertErr) {
+          console.error("Auto-create failed:", insertErr.message);
+          setProfile(null);
+        } else {
+          const { data: created } = await supabase
+            .from("profiles")
+            .select(PROFILE_COLUMNS)
+            .eq("id", user.id)
+            .maybeSingle();
+          setProfile(created as any);
+        }
+      } else {
+        setProfile(data as any);
+        await updateProfileComplete(user.id);
+      }
+    } catch (e) {
+      console.error("Unhandled profile fetch error:", e);
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.user_metadata?.full_name]);
+
+  useEffect(() => {
+    if (user && !authLoading) fetchProfile();
+  }, [user, authLoading, fetchProfile]);
+
+  // Resend cooldown countdown
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const t = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [resendCooldown]);
+
+  // Derived email display (same logic style as seller)
+  const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
+  const now = new Date();
+  const pendingDate = new Date(profile?.pending_email_requested_at || 0);
+  const isPendingStillValid =
+    profile?.pending_email &&
+    now.getTime() - pendingDate.getTime() < SEVEN_DAYS;
+  const displayEmail = isPendingStillValid
+    ? profile?.pending_email
+    : user?.email;
+
+  async function handleResendVerificationEmail() {
+    if (!profile?.pending_email) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ pending_email_requested_at: new Date().toISOString() })
+      .eq("id", profile.id);
+    if (!error) setResendCooldown(60);
+  }
+
+  function handleProfileUpdate() {
+    fetchProfile();
+  }
+
+  // Loading
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
       </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Unable to load profile data</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen w-full flex flex-col bg-gray-50">
+      {/* Header (mirrors seller styling) */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+              Manage Your Profile
+            </h1>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              Update your personal information to keep your account up to date.
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <div className="w-12 h-1 bg-teal-600 rounded-full"></div>
+              <div className="w-3 h-1 bg-teal-300 rounded-full"></div>
+              <div className="w-3 h-1 bg-teal-300 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main */}
+      <div className="flex-1 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+
+          {/* Personal Information Card */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal-100 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                        Personal Information
+                      </h2>
+                      <p className="text-xs sm:text-sm text-gray-600">
+                        Your profile details and contact information
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="bg-teal-600 text-white hover:bg-teal-700 transition-all duration-200 transform hover:scale-105 w-full sm:w-auto"
+                  >
+                    <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col items-center text-center md:flex-row md:items-start md:text-left gap-6 sm:gap-8 mb-6 sm:mb-8">
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={
+                        profile.avatar_url ||
+                        "https://ui-avatars.com/api/?name=" +
+                          encodeURIComponent(profile.full_name || "User") +
+                          "&background=0D8ABC&color=fff&size=120"
+                      }
+                      alt="Profile"
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-teal-700 shadow-lg"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                      {profile.full_name || "No name provided"}
+                    </h1>
+                    <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
+                      {profile.bio || "No bio provided"}
+                    </p>
+                    <div className="text-xs sm:text-sm text-gray-500">
+                      Member since{" "}
+                      {profile.created_at
+                        ? new Date(profile.created_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long"
+                          })
+                        : "Unknown"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs sm:text-sm font-semibold text-gray-700">
+                        Email Address
+                      </div>
+                      <div className="text-sm sm:text-base text-gray-900 flex items-center gap-2 relative">
+                        <span className="truncate">
+                          {displayEmail || "No email"}
+                        </span>
+                        {isPendingStillValid && (
+                          <div className="group inline-block relative">
+                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded cursor-default whitespace-nowrap">
+                              Unverified
+                            </span>
+                            <div
+                              className="absolute left-0 top-full mt-1 w-max max-w-xs whitespace-normal
+                              bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg
+                              opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10
+                              border border-gray-700"
+                            >
+                              <p className="mb-2">
+                                A confirmation link was sent. Confirm in both
+                                inboxes.
+                              </p>
+                              <p className="mb-2">Link valid for 7 days.</p>
+                              {resendCooldown > 0 ? (
+                                <p className="text-yellow-300">
+                                  Resend in {resendCooldown}s
+                                </p>
+                              ) : (
+                                <button
+                                  onClick={handleResendVerificationEmail}
+                                  className="text-blue-300 hover:text-blue-200 underline mt-1"
+                                >
+                                  Resend
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs sm:text-sm font-semibold text-gray-700">
+                        Phone Number
+                      </div>
+                      <div className="text-sm sm:text-base text-gray-900 truncate">
+                        {profile.phone || "No phone provided"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs sm:text-sm font-semibold text-gray-700">
+                        Location
+                      </div>
+                      <div className="text-sm sm:text-base text-gray-900 truncate">
+                        {profile.location || "No location provided"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs sm:text-sm font-semibold text-gray-700">
+                        Role
+                      </div>
+                      <div className="text-sm sm:text-base text-gray-900 capitalize">
+                        {profile.role || "customer"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          {/* Account Settings (simplified) */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                    Account Settings
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Your account type and profile completion
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="text-center sm:text-left">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                      Account Role
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      Your current account type
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center sm:justify-end">
+                    <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-teal-100 text-teal-700 capitalize">
+                      {profile.role || "customer"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-red-50 rounded-xl border border-red-200">
+                  <div className="text-center sm:text-left">
+                    <h3 className="text-sm sm:text-base font-semibold text-red-900">
+                      Delete Profile
+                    </h3>
+                    <p className="text-xs sm:text-sm text-red-600">
+                      Permanently delete your account and all data
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center sm:justify-end">
+                    <Button
+                      onClick={() => setIsDeleteModalOpen(true)}
+                      className="bg-red-600 text-white hover:bg-red-700 text-xs sm:text-sm px-3 py-2"
+                    >
+                      <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <ProfileEditModal
+        isOpen={isEditModalOpen}
+        onCloseAction={() => setIsEditModalOpen(false)}
+        userType="customer"
+        userId={profile.id}
+        userData={{
+          name: profile.full_name || "",
+            email: displayEmail || "",
+          phone: profile.phone || "",
+          location: profile.location || "",
+          bio: profile.bio || "",
+          website: profile.website || "",
+          profilePic: profile.avatar_url || ""
+        }}
+        onSave={handleProfileUpdate}
+      />
+
+      <DeleteProfileModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        userId={profile.id}
+        userRole={profile.role || "customer"}
+      />
     </div>
-  )
+  );
 }

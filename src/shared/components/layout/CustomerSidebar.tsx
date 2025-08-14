@@ -6,39 +6,30 @@ import { LayoutDashboard, User, Calendar, LifeBuoy, ChevronLeft, ChevronRight, L
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { signOut } from '@/features/auth/actions'
+import { useSidebar } from './DashboardLayoutWrapper';
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard/customer", icon: LayoutDashboard },
+  //{ name: "Dashboard", href: "/dashboard/customer", icon: LayoutDashboard },
   { name: "Profile", href: "/dashboard/customer/profile", icon: User },
   { name: "Bookings", href: "/dashboard/customer/bookings", icon: Calendar },
   { name: "Support", href: "/dashboard/customer/support", icon: LifeBuoy },
 ];
 
 export default function CustomerSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useSidebar();
   const pathname = usePathname();
 
   // Close mobile menu when route changes
   useEffect(() => {
     setMobileOpen(false);
-  }, [pathname]);
+  }, [pathname, setMobileOpen]);
 
-  // Handle mobile menu backdrop click
+  // Handle mobile menu backdrop click and body scroll
   useEffect(() => {
-    const backdrop = document.getElementById('sidebar-backdrop');
-    if (backdrop) {
-      if (mobileOpen) {
-        backdrop.classList.remove('opacity-0', 'pointer-events-none');
-        backdrop.classList.add('opacity-100');
-        backdrop.onclick = () => setMobileOpen(false);
-        document.body.style.overflow = 'hidden';
-      } else {
-        backdrop.classList.add('opacity-0', 'pointer-events-none');
-        backdrop.classList.remove('opacity-100');
-        backdrop.onclick = null;
-        document.body.style.overflow = 'unset';
-      }
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
     
     return () => {
@@ -90,7 +81,7 @@ export default function CustomerSidebar() {
             {/* Collapse Button - Hidden on mobile */}
             <button
               className="hidden lg:block cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 ease-in-out group flex-shrink-0"
-              onClick={() => setCollapsed((prev) => !prev)}
+              onClick={() => setCollapsed(!collapsed)}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               type="button"
             >

@@ -1,10 +1,11 @@
 "use client";
 
-import { Award, Building, Calendar, Edit, Globe, Mail, MapPin, Phone, Settings, Star, User } from "lucide-react";
+import { Award, Building, Calendar, Edit, Globe, Mail, MapPin, Phone, Settings, Star, User, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { updateProfile, updateProfileComplete } from "@/features/services/profile_crud";
 import { Button } from "@/shared/components/ui/button";
 import ProfileEditModal from "@/shared/components/ui/ProfileEditModal";
+import DeleteProfileModal from "@/shared/components/ui/DeleteProfileModal";
 import { createClient } from '@/shared/lib/supabase/client'; // JC: Get real user data from database
 import { toast } from "sonner";
 
@@ -13,6 +14,7 @@ const supabase = createClient();
 export default function SellerProfilePage() {
   // JC: State to control edit modal open/close
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // JC: State to store real user data from database instead of mock data
   const [user, setUser] = useState<any>(null);
@@ -423,21 +425,20 @@ export default function SellerProfilePage() {
                     </div>
                   </div>
 
-                  {/* JC: Show if profile setup is complete */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  {/* Delete Profile Section */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-red-50 rounded-xl border border-red-200">
                     <div className="text-center sm:text-left">
-                      <h3 className="text-sm sm:text-base font-semibold text-gray-900">Profile Setup</h3>
-                      <p className="text-xs sm:text-sm text-gray-600">Whether your profile setup is complete</p>
+                      <h3 className="text-sm sm:text-base font-semibold text-red-900">Delete Profile</h3>
+                      <p className="text-xs sm:text-sm text-red-600">Permanently delete your account and all data</p>
                     </div>
                     <div className="flex items-center justify-center sm:justify-end">
-                      <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
-                        profile.is_setup_complete 
-                          ? 'bg-green-100 text-green-700' 
-
-                          : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {profile.is_setup_complete ? 'Complete' : 'Incomplete'}
-                      </span>
+                      <Button
+                        onClick={() => setIsDeleteModalOpen(true)}
+                        className="bg-red-600 text-white hover:bg-red-700 text-xs sm:text-sm px-3 py-2"
+                      >
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -463,6 +464,13 @@ export default function SellerProfilePage() {
           profilePic: profile.avatar_url || ""
         }}
         onSave={handleProfileUpdate}
+      />
+
+      <DeleteProfileModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        userId={profile.id}
+        userRole={profile.role || "seller"}
       />
     </div>
   );

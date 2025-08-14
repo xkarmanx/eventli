@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: 'Eventli - Plan Your Perfect Event',
   description: 'Connect with the best event service providers.',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({

@@ -1,14 +1,20 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react";
-import { X, Upload } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { X, Upload, Trash2, Tag } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { updateListing, uploadListingImage } from "@/features/services/listing_crud";
+import { updateListing, uploadListingMedia, insertListingMedia, addListingTags, setListingType, addKeywordTags, getListingMeta } from "@/features/services/listing_crud";
 // kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
 // kvs: Replaced react-toastify with sonner for consistent toast implementation across the app
 import { toast } from 'sonner';
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client'
+import { ModerationError, RateLimitError } from '@/shared/lib/moderation-errors';
+import Image from "next/image";
+import { validateFilesClientSide, getMediaLimitsText, MEDIA_LIMITS } from '@/shared/lib/mediaValidation';
+
+// Service type definitions to match server action
+type ServiceType = 'venue' | 'music' | 'catering' | 'funeral' | 'birthday' | 'wedding' | 'baby_shower' | 'other';
 
 // JC: Define what props this edit modal needs
 interface EditListingFormModalProps {
@@ -41,6 +47,13 @@ function sanitizeText(text: string) {
 }
 
 export default function EditListingFormModal({ isOpen, onClose, listing, onUpdated }: EditListingFormModalProps) {
+  // Service type state
+  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType | null>(null);
+  const [customServiceLabel, setCustomServiceLabel] = useState("");
+  const [keywordTags, setKeywordTags] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState("");
+  const [loadingMeta, setLoadingMeta] = useState(false);
+  
   // JC: Pre-populate form fields with existing listing data
   const [title, setTitle] = useState(listing.title || "");
   const [city, setCity] = useState(listing.location?.split(", ")[0] || "");
@@ -51,15 +64,19 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
   const [servingStyle, setServingStyle] = useState(listing.serving_style || "");
   const [numStaff, setNumStaff] = useState(listing.num_staff?.toString() || "");
   const [numGuests, setNumGuests] = useState(listing.num_guests?.toString() || "");
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(listing.image_url || null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(listing.image_url || null);
+  const [tagInput, setTagInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [description, setDescription] = useState(listing.description || "");
 
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const [cancelConfirmation, setCancelConfirmation] = useState(false)
+  const [cancelConfirmation, setCancelConfirmation] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // kvs: Replaced useSession() with proper Supabase auth state management
@@ -103,6 +120,35 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     };
   }, []);
 
+  const loadListingMeta = useCallback(async () => {
+    if (!listing?.id) return;
+    
+    setLoadingMeta(true);
+    try {
+      const meta = await getListingMeta(listing.id);
+      
+      // Load service type from typeTag
+      if (meta.typeTag) {
+        const serviceType = meta.typeTag.service_type as ServiceType;
+        setSelectedServiceType(serviceType);
+        if (serviceType === 'other' && meta.typeTag.is_custom) {
+          setCustomServiceLabel(meta.typeTag.tag);
+        }
+      }
+      
+      // Load keywords from keywordTags
+      if (meta.keywordTags && meta.keywordTags.length > 0) {
+        const keywords = meta.keywordTags.map(tag => tag.tag);
+        setKeywordTags(keywords);
+      }
+    } catch (error) {
+      console.error('Error loading listing metadata:', error);
+      toast.error('Failed to load listing details');
+    } finally {
+      setLoadingMeta(false);
+    }
+  }, [listing?.id]);
+
   useEffect(() => {
     if (!isOpen) return;
     setTitle(listing.title || "");
@@ -114,11 +160,17 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     setServingStyle(listing.serving_style || "");
     setNumStaff(listing.num_staff?.toString() || "");
     setNumGuests(listing.num_guests?.toString() || "");
-    setImage(null);
-    setImagePreview(listing.image_url || null);
+    setFiles([]);
+    setPreviews([]);
+    setExistingImageUrl(listing.image_url || null);
+    setTagInput('');
+    setTags([]);
     setDescription(listing.description || "");
     setErrors({});
-  }, [isOpen, listing]);
+    
+    // Load listing metadata (service type and keywords)
+    loadListingMeta();
+  }, [isOpen, listing, loadListingMeta]);
 
   if (!isOpen) return null;
 
@@ -146,13 +198,104 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     );
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      setImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    } 
-  };
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || [])
+    
+    if (selectedFiles.length === 0) return
+    
+    // Use centralized validation for immediate feedback
+    const validationResults = validateFilesClientSide(selectedFiles);
+    
+    // Check for validation errors
+    for (const result of validationResults) {
+      if (!result.isValid) {
+        toast.error(result.error);
+        return;
+      }
+    }
+    
+    // Count current files by type
+    let currentImageCount = files.filter(f => f.type.startsWith('image/')).length;
+    let currentVideoCount = files.filter(f => f.type.startsWith('video/')).length;
+    
+    // Count new files by type
+    let newImageCount = selectedFiles.filter(f => f.type.startsWith('image/')).length;
+    let newVideoCount = selectedFiles.filter(f => f.type.startsWith('video/')).length;
+    
+    // Check total limits
+    if (currentImageCount + newImageCount > MEDIA_LIMITS.MAX_IMAGES_PER_LISTING) {
+      toast.error(`Maximum ${MEDIA_LIMITS.MAX_IMAGES_PER_LISTING} images allowed per listing`);
+      return;
+    }
+    
+    if (currentVideoCount + newVideoCount > MEDIA_LIMITS.MAX_VIDEOS_PER_LISTING) {
+      toast.error(`Maximum ${MEDIA_LIMITS.MAX_VIDEOS_PER_LISTING} videos allowed per listing`);
+      return;
+    }
+    
+    // Add files and create previews
+    const newFiles = [...files, ...selectedFiles];
+    setFiles(newFiles);
+    
+    // Create previews for new files
+    const newPreviews = [...previews];
+    selectedFiles.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        newPreviews.push(URL.createObjectURL(file));
+      } else {
+        newPreviews.push(''); // No preview for videos, we'll show a video icon
+      }
+    });
+    setPreviews(newPreviews);
+  }
+
+  const removeFile = (index: number) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    const newPreviews = previews.filter((_, i) => i !== index);
+    
+    // Clean up preview URL to prevent memory leaks
+    if (previews[index]) {
+      URL.revokeObjectURL(previews[index]);
+    }
+    
+    setFiles(newFiles);
+    setPreviews(newPreviews);
+  }
+
+  const addTag = () => {
+    const trimmedTag = tagInput.trim().toLowerCase();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    } else if (tags.length >= 10) {
+      toast.error("Maximum 10 tags allowed");
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  }
+
+  const addKeywordTag = () => {
+    const trimmed = keywordInput.trim().toLowerCase();
+    if (trimmed && !keywordTags.includes(trimmed) && keywordTags.length < 20) {
+      setKeywordTags([...keywordTags, trimmed]);
+      setKeywordInput('');
+    } else if (keywordTags.length >= 20) {
+      toast.error("Maximum 20 keywords allowed");
+    }
+  }
+
+  const removeKeywordTag = (tagToRemove: string) => {
+    setKeywordTags(keywordTags.filter(tag => tag !== tagToRemove));
+  }
+
+  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag();
+    }
+  }
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -185,7 +328,8 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
         numStaff !== (listing.num_staff?.toString() || "") ||
         numGuests !== (listing.num_guests?.toString() || "") ||
         description !== (listing.description || "") ||
-        image !== null;
+        files.length > 0 ||
+        tags.length > 0;
 
     if (hasChanged) {
       setCancelConfirmation(true);
@@ -209,6 +353,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
 
     if (!validate()) return;
     setLoading(true);
+    setSubmitting(true);
 
     try {
       const updates: any = {
@@ -221,21 +366,85 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
         num_staff: Number(numStaff),
         num_guests: Number(numGuests),
       };
-      if (image) {
-        const imageUrl = await uploadListingImage(image, listing.id);
-        updates.image_url = imageUrl;
-      }
+
+      // Update the basic listing info first
       const updated = await updateListing(listing.id, updates);
+
+      // Update service type if selected
+      if (selectedServiceType) {
+        const label = selectedServiceType === 'other' ? customServiceLabel : undefined;
+        await setListingType(listing.id, { service_type: selectedServiceType, custom_label: label });
+      }
+
+      // Update keyword tags if any
+      if (keywordTags.length > 0) {
+        await addKeywordTags(listing.id, keywordTags);
+      }
+
+      // Upload new media files if any
+      if (files.length > 0) {
+        const mediaRecords = await uploadListingMedia(files, listing.id);
+        await insertListingMedia(listing.id, mediaRecords);
+      }
+
+      // Add new tags if any
+      if (tags.length > 0) {
+        await addListingTags(listing.id, tags);
+      }
+
       // kvs: Replaced react-toastify with sonner toast for consistent success messaging
       toast.success("Listing updated successfully!");
       onUpdated(updated);
       onClose();
     } catch (err: any) {
-      setSubmitError(err.message || "Failed to update listing.");
-      // kvs: Added sonner toast for error messaging consistency
-      toast.error(err.message || "Failed to update listing");
+      // Enhanced error handling for moderation and other issues
+      if (err instanceof ModerationError) {
+        const fieldContext = err.context?.split('.').pop() || 'content';
+        const fieldName = fieldContext.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        
+        if (err.categories && err.categories.length > 0) {
+          const categories = err.categories.join(', ');
+          const isFallbackFilter = err.message?.includes('fallback filter');
+          
+          if (isFallbackFilter) {
+            setSubmitError(`${fieldName} contains inappropriate language. Please use professional language only.`);
+            toast.error(`🛡️ ${fieldName} blocked by content filter`, {
+              description: `Inappropriate language detected. Please use professional language and try again.`,
+              duration: 6000,
+            });
+          } else {
+            setSubmitError(`${fieldName} contains inappropriate content (${categories}). Please review and modify your content.`);
+            toast.error(`❌ ${fieldName} flagged for inappropriate content`, {
+              description: `Categories: ${categories}. Please revise your content and try again.`,
+              duration: 6000,
+            });
+          }
+        } else {
+          setSubmitError(`${fieldName} contains inappropriate content. Please review and modify your content.`);
+          toast.error(`❌ ${fieldName} contains inappropriate content`, {
+            description: 'Please review and modify your content before submitting.',
+            duration: 5000,
+          });
+        }
+      } else if (err instanceof RateLimitError) {
+        setSubmitError("Content moderation is temporarily busy. Please try again in a moment.");
+        toast.error("⏳ Moderation service busy", {
+          description: "Please wait a moment and try again.",
+          duration: 4000,
+        });
+      } else if (err.message?.includes('Content moderation')) {
+        setSubmitError("Content moderation failed. Please review your content and try again.");
+        toast.error("🛡️ Content review failed", {
+          description: "Please review your content and try again.",
+          duration: 5000,
+        });
+      } else {
+        setSubmitError(err.message || "Failed to update listing.");
+        toast.error(err.message || "Failed to update listing");
+      }
     } finally {
       setLoading(false);
+      setSubmitting(false);
     }
   }
 
@@ -404,33 +613,239 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
               </div>
             </div>
             <div>
-              <label className="block font-medium mb-1" htmlFor="listing-image">
-                Image
+              <label className="block font-medium mb-1" htmlFor="listing-files">
+                Media Files
               </label>
-              <div className="flex gap-4 items-center">
+              <div className="space-y-3">
+                {/* Show existing image if available */}
+                {existingImageUrl && (
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-600">Current Image:</div>
+                    <Image src={existingImageUrl} alt="Current listing image" width={80} height={80} className="w-20 h-20 object-cover rounded border" />
+                  </div>
+                )}
+                
+                <div className="flex gap-4 items-center">
+                  <input
+                    id="listing-files"
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    ref={fileInputRef}
+                    onChange={handleFilesChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2"
+                    disabled={submitting}
+                  >
+                    <Upload className="w-4 h-4" />
+                    {files.length > 0 ? "Add More Files" : "Add Files"}
+                  </Button>
+                  <span className="text-sm text-gray-500">
+                    {getMediaLimitsText()}
+                  </span>
+                </div>
+                
+                {/* New file previews */}
+                {files.length > 0 && (
+                  <div>
+                    <div className="text-sm text-gray-600 mb-2">New Files to Upload:</div>
+                    <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                      {files.map((file, index) => (
+                        <div key={index} className="relative group">
+                          {file.type.startsWith('image/') ? (
+                            <Image 
+                              src={previews[index]} 
+                              alt={`Preview ${index + 1}`} 
+                              width={80}
+                              height={80}
+                              className="w-full h-20 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center">
+                              <span className="text-xs text-gray-600 text-center">
+                                📹 {file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
+                              </span>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            disabled={submitting}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tags Section */}
+            <div>
+              <label className="block font-medium mb-1" htmlFor="listing-tags">
+                Tags (Optional)
+              </label>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    id="listing-tags"
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyPress={handleTagInputKeyPress}
+                    placeholder="Add tags (press Enter or comma to add)"
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500"
+                    disabled={submitting}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addTag}
+                    className="flex items-center gap-2"
+                    disabled={submitting || !tagInput.trim() || tags.length >= 10}
+                  >
+                    <Tag className="w-4 h-4" />
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Tag chips */}
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="text-teal-500 hover:text-teal-700"
+                          disabled={submitting}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="text-xs text-gray-500">
+                  {tags.length}/10 tags
+                </div>
+              </div>
+            </div>
+            
+            {/* Service Type Selection */}
+            <div>
+              <label className="block font-medium mb-2">
+                Service Type<span className="text-red-500">*</span>
+              </label>
+              {loadingMeta ? (
+                <div className="text-gray-500 text-sm">Loading service type...</div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['wedding', 'birthday', 'funeral', 'venue', 'music', 'catering'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedServiceType(type)}
+                      className={`p-2 rounded-lg border text-center text-sm transition-all ${
+                        selectedServiceType === type
+                          ? 'border-teal-500 bg-teal-50 text-teal-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-medium capitalize">{type}</div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedServiceType('other')}
+                    className={`p-2 rounded-lg border text-center text-sm transition-all ${
+                      selectedServiceType === 'other'
+                        ? 'border-teal-500 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium">Other</div>
+                  </button>
+                </div>
+              )}
+              
+              {selectedServiceType === 'other' && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    placeholder="Enter custom service type"
+                    value={customServiceLabel}
+                    onChange={(e) => setCustomServiceLabel(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500"
+                    maxLength={50}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Keywords Section */}
+            <div>
+              <label className="block font-medium mb-2">
+                Keywords 
+                <span className="text-gray-500 text-sm ml-1">(Help customers find your listing)</span>
+              </label>
+              <div className="flex gap-2 mb-2">
                 <input
-                  id="listing-image"
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  className="hidden"
+                  type="text"
+                  placeholder="Enter keywords (e.g., outdoor, elegant, budget-friendly)"
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeywordTag())}
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500"
+                  maxLength={30}
                 />
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2"
+                  onClick={addKeywordTag}
+                  disabled={!keywordInput.trim() || keywordTags.length >= 20}
+                  className="px-3 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:bg-gray-300 text-sm"
                 >
-                  <Upload className="w-4 h-4" />
-                  {image ? "Change Image" : "Upload Image"}
+                  Add
                 </Button>
-                {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-16 h-16 object-cover rounded" />
-                )}
               </div>
-              {errors.image && <div className="text-sm text-red-600 mt-1">{errors.image}</div>}
+              
+              {keywordTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {keywordTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-800 rounded-full text-xs"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeKeywordTag(tag)}
+                        className="hover:text-teal-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              <div className="text-xs text-gray-500 mt-1">
+                {keywordTags.length}/20 keywords
+              </div>
             </div>
+            
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-description">
                 Description<span className="text-red-500">*</span>
@@ -460,9 +875,9 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
                 type="submit"
                 variant="default"
                 className="cursor-pointer bg-teal-50 text-teal-700 border-teal-700 hover:bg-teal-700 hover:border-teal-700 hover:text-white transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-                disabled={loading}
+                disabled={loading || submitting}
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {submitting ? "Saving..." : "Save Changes"}
               </Button>
             </div>
             {submitError && <div className="text-sm text-red-600 mt-2">{submitError}</div>}
