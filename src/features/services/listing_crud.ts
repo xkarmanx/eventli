@@ -11,6 +11,15 @@ import { redirect } from "next/navigation";
 // kvs: Added transformer function to convert database listings to Service interface format
 import { Service } from "@/shared/types/service";
 import { transformListingToService } from "@/shared/lib/listingUtils";
+// Import moderation functions for content safety
+import {
+  ensureTextIsSafe,
+  ensureTextsAreSafe,
+  ensureImageUrlIsSafe,
+  ensureListingFieldsSafe,
+  ModerationError,
+  RateLimitError,
+} from "@/shared/lib/moderation";
 
 // Types
 type Listing = Database["public"]["Tables"]["listings"]["Row"];
@@ -33,6 +42,28 @@ export async function createListing(listing: InsertListing) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     throw new Error("Authentication required");
+  }
+
+  // Moderate listing content before creating (batch multiple fields for efficiency)
+  const fieldsToModerate: Record<string, string> = {};
+  if (listing.title) fieldsToModerate.title = listing.title;
+  if (listing.description) fieldsToModerate.description = listing.description;
+  if (listing.location) fieldsToModerate.location = listing.location;
+  if (listing.serving_style && typeof listing.serving_style === "string") {
+    fieldsToModerate.serving_style = listing.serving_style;
+  }
+  if (listing.event_type && typeof listing.event_type === "string") {
+    fieldsToModerate.event_type = listing.event_type;
+  }
+
+  try {
+    await ensureListingFieldsSafe(fieldsToModerate, "create_listing");
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      console.warn("Rate limit hit during listing creation, proceeding with creation...");
+    } else {
+      throw error;
+    }
   }
 
   // kvs: Ensure the listing belongs to the authenticated user for security
@@ -128,6 +159,36 @@ export async function updateListing(id: string, updates: UpdateListing) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     throw new Error("Authentication required");
+  }
+
+  // Moderate any text fields being updated (batch for efficiency)
+  const fieldsToModerate: Record<string, string> = {};
+  if (typeof updates.title === "string") {
+    fieldsToModerate.title = updates.title;
+  }
+  if (typeof updates.description === "string") {
+    fieldsToModerate.description = updates.description;
+  }
+  if (typeof updates.location === "string") {
+    fieldsToModerate.location = updates.location;
+  }
+  if (typeof updates.serving_style === "string") {
+    fieldsToModerate.serving_style = updates.serving_style;
+  }
+  if (typeof updates.event_type === "string") {
+    fieldsToModerate.event_type = updates.event_type;
+  }
+
+  if (Object.keys(fieldsToModerate).length > 0) {
+    try {
+      await ensureListingFieldsSafe(fieldsToModerate, "update_listing");
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        console.warn("Rate limit hit during listing update, proceeding with update...");
+      } else {
+        throw error;
+      }
+    }
   }
 
   // kvs: Verify the listing belongs to the authenticated user before updating
@@ -252,6 +313,25 @@ export async function uploadListingImage(file: File, listingId: string) {
     .from("listing-images")
     .getPublicUrl(filePath);
 
+  // Create signed URL for moderation (more secure than public URL)
+  const { data: signed } = await supabase
+    .storage.from("listing-images")
+    .createSignedUrl(filePath, 60 * 5); // 5 minutes
+  const reviewUrl = signed?.signedUrl ?? publicUrlData?.publicUrl;
+
+  // Moderate the image before returning
+  try {
+    await ensureImageUrlIsSafe(reviewUrl, "listing_image");
+  } catch (err) {
+    if (err instanceof RateLimitError) {
+      console.warn("Rate limit hit during image moderation, proceeding with upload...");
+    } else {
+      // Delete the uploaded file to avoid leaving flagged content in storage
+      await supabase.storage.from("listing-images").remove([filePath]);
+      throw err; // Bubble up for UI to show a friendly message
+    }
+  }
+
   // kvs: Revalidate paths after image upload
   revalidatePath("/dashboard/seller/listings");
   revalidatePath(`/listings/${listingId}`);
@@ -346,9 +426,36 @@ export async function uploadListingMedia(files: File[], listingId: string): Prom
     if (uploadErr) {
       throw uploadErr;
     }
+
+    // Get public URL for moderation
     const { data: publicUrlData } = supabase.storage
       .from('listing-images')
       .getPublicUrl(filePath);
+
+    // Create signed URL for moderation (more secure than public URL)
+    const { data: signed } = await supabase
+      .storage.from('listing-images')
+      .createSignedUrl(filePath, 60 * 5); // 5 minutes
+    const reviewUrl = signed?.signedUrl ?? publicUrlData?.publicUrl;
+
+    // Moderate images only (videos are not supported by OpenAI moderation API yet)
+    if (mediaType === 'image') {
+      try {
+        await ensureImageUrlIsSafe(reviewUrl, "listing_media");
+      } catch (err) {
+        if (err instanceof RateLimitError) {
+          console.warn("Rate limit hit during media moderation, proceeding with upload...");
+        } else {
+          // Delete the uploaded file to avoid leaving flagged content in storage
+          await supabase.storage.from('listing-images').remove([filePath]);
+          throw err; // Bubble up for UI to show a friendly message
+        }
+      }
+    }
+    // Note: Videos are not moderated by OpenAI API yet. For videos, you could:
+    // 1. Block video uploads for now, or
+    // 2. Sample frames and moderate those as images
+
     uploaded.push({ url: publicUrlData?.publicUrl, media_type: mediaType, position: position++ });
   }
   return uploaded;
@@ -414,6 +521,24 @@ export async function addListingTags(listingId: string, tags: string[]) {
 
   // Normalize: trim, lowercase, deduplicate
   const normalized = Array.from(new Set(tags.map(t => t.trim().toLowerCase())));
+  
+  // Filter out emails just in case (no email moderation needed)
+  const emailLike = /\b\S+@\S+\.\S+\b/;
+  const toModerate = normalized.filter(t => !emailLike.test(t));
+
+  // Run moderation on the batch of tags
+  if (toModerate.length > 0) {
+    try {
+      await ensureTextsAreSafe(toModerate, "listing.tags");
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        console.warn("Rate limit hit during tag moderation, proceeding with tag creation...");
+      } else {
+        throw error;
+      }
+    }
+  }
+
   const inserts = normalized.map(tag => ({ listing_id: listingId, tag }));
   try {
     const { data } = await supabase.from('listing_tags').insert(inserts).select();

@@ -6,6 +6,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/shared/components/ui/button'
 import { Service } from '@/shared/types/service'
+import { createBooking } from '@/features/services/bookings_crud'
+import { ModerationError, RateLimitError } from '@/shared/lib/moderation-errors'
+import { toast } from 'sonner'
 
 interface BookingPageProps {
   service: Service
@@ -147,9 +150,44 @@ export default function BookingPage({ service }: BookingPageProps) {
       // Show success message or redirect
       alert('Booking request submitted successfully!')
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting booking:', error)
-      alert('Error submitting booking request. Please try again.')
+      
+      // Enhanced error handling for moderation and other issues
+      if (error instanceof ModerationError) {
+        const fieldContext = error.context?.split('_').pop() || 'content';
+        const fieldName = fieldContext === 'notes' ? 'special notes' : 
+                         fieldContext === 'address' ? 'event address' :
+                         fieldContext === 'eventtype' ? 'event type' : fieldContext;
+        
+        if (error.categories && error.categories.length > 0) {
+          const categories = error.categories.join(', ');
+          toast.error(`❌ ${fieldName} contains inappropriate content`, {
+            description: `Categories: ${categories}. Please revise your content and try again.`,
+            duration: 6000,
+          });
+        } else {
+          toast.error(`❌ ${fieldName} contains inappropriate content`, {
+            description: 'Please review and modify your content before submitting.',
+            duration: 5000,
+          });
+        }
+      } else if (error instanceof RateLimitError) {
+        toast.error("⏳ Moderation service busy", {
+          description: "Please wait a moment and try again.",
+          duration: 4000,
+        });
+      } else if (error.message?.includes('Content moderation')) {
+        toast.error("🛡️ Content review failed", {
+          description: "Please review your content and try again.",
+          duration: 5000,
+        });
+      } else {
+        toast.error('Error submitting booking request', {
+          description: 'Please try again.',
+          duration: 4000,
+        });
+      }
     } finally {
       setIsSubmitting(false)
     }

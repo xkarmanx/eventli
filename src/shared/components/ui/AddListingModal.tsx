@@ -9,6 +9,7 @@ import { createListing, uploadListingMedia, insertListingMedia, addListingTags }
 // kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client'
+import { ModerationError, RateLimitError } from '@/shared/lib/moderation-errors';
 import Image from "next/image";
 
 // JC: Define what props this modal needs to work
@@ -368,9 +369,51 @@ async function handleSubmit(e: React.FormEvent) {
     toast.success("Listing created successfully!");
   } 
   catch (err: any) {
-    setSubmitError(err.message || "Failed to create listing.");
-    // kvs: Added sonner toast for error messaging consistency
-    toast.error(err.message || "Failed to create listing");
+    // Enhanced error handling for moderation and other issues
+    if (err instanceof ModerationError) {
+      const fieldContext = err.context?.split('.').pop() || 'content';
+      const fieldName = fieldContext.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      
+      if (err.categories && err.categories.length > 0) {
+        const categories = err.categories.join(', ');
+        const isFallbackFilter = err.message?.includes('fallback filter');
+        
+        if (isFallbackFilter) {
+          setSubmitError(`${fieldName} contains inappropriate language. Please use professional language only.`);
+          toast.error(`🛡️ ${fieldName} blocked by content filter`, {
+            description: `Inappropriate language detected. Please use professional language and try again.`,
+            duration: 6000,
+          });
+        } else {
+          setSubmitError(`${fieldName} contains inappropriate content (${categories}). Please review and modify your content.`);
+          toast.error(`❌ ${fieldName} flagged for inappropriate content`, {
+            description: `Categories: ${categories}. Please revise your content and try again.`,
+            duration: 6000,
+          });
+        }
+      } else {
+        setSubmitError(`${fieldName} contains inappropriate content. Please review and modify your content.`);
+        toast.error(`❌ ${fieldName} contains inappropriate content`, {
+          description: 'Please review and modify your content before submitting.',
+          duration: 5000,
+        });
+      }
+    } else if (err instanceof RateLimitError) {
+      setSubmitError("Content moderation is temporarily busy. Please try again in a moment.");
+      toast.error("⏳ Moderation service busy", {
+        description: "Please wait a moment and try again.",
+        duration: 4000,
+      });
+    } else if (err.message?.includes('Content moderation')) {
+      setSubmitError("Content moderation failed. Please review your content and try again.");
+      toast.error("🛡️ Content review failed", {
+        description: "Please review your content and try again.",
+        duration: 5000,
+      });
+    } else {
+      setSubmitError(err.message || "Failed to create listing.");
+      toast.error(err.message || "Failed to create listing");
+    }
   } 
   finally {
     setLoading(false);

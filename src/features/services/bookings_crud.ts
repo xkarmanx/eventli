@@ -1,4 +1,5 @@
 import { createClient } from "@/shared/lib/supabase/client";
+import { ensureTextIsSafe } from "@/shared/lib/moderation";
 
 // Booking status types
 export type BookingStatus = "pending" | "accepted" | "declined" | "completed";
@@ -23,6 +24,24 @@ const supabase = createClient();
 
 // Create a new booking request
 export async function createBooking(input: CreateBookingInput) {
+  // Moderate booking notes if provided
+  if (input.notes && input.notes.trim()) {
+    console.log(`🔍 MODERATING BOOKING NOTES: "${input.notes.substring(0, 50)}${input.notes.length > 50 ? '...' : ''}"`);
+    await ensureTextIsSafe(input.notes, "booking_notes");
+  }
+
+  // Moderate event type if it's custom text
+  if (input.event_type && input.event_type.trim() && !['Birthday', 'Wedding', 'Corporate', 'Funeral'].includes(input.event_type)) {
+    console.log(`🔍 MODERATING CUSTOM EVENT TYPE: "${input.event_type}"`);
+    await ensureTextIsSafe(input.event_type, "booking_event_type");
+  }
+
+  // Moderate address (could contain inappropriate content)
+  if (input.address && input.address.trim()) {
+    console.log(`🔍 MODERATING EVENT ADDRESS: "${input.address}"`);
+    await ensureTextIsSafe(input.address, "booking_address");
+  }
+
   const { data, error } = await supabase
     .from("booking_requests")
     .insert([
