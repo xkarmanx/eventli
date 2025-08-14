@@ -171,6 +171,7 @@ describe('MobileBottomNav', () => {
         user: { id: 'user-id-1', email: 'a@b.com' },
         loading: false
       });
+
       mockSupabaseFrom.mockReturnValue({
         select: () => ({
           eq: () => ({
@@ -197,6 +198,7 @@ describe('MobileBottomNav', () => {
         user: { id: 'user-id-2', email: 'b@c.com' },
         loading: false
       });
+
       mockSupabaseFrom.mockReturnValue({
         select: () => ({
           eq: () => ({
@@ -222,6 +224,7 @@ describe('MobileBottomNav', () => {
         user: { id: 'user-id-3', email: 'c@d.com' },
         loading: false
       });
+
       mockSupabaseFrom.mockReturnValue({
         select: () => ({
           eq: () => ({
@@ -259,6 +262,7 @@ describe('MobileBottomNav', () => {
         user: { id: 'user-id-4', email: 'd@e.com' },
         loading: false
       });
+
       mockSupabaseFrom.mockReturnValue({
         select: () => ({
           eq: () => ({
