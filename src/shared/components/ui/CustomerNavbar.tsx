@@ -143,9 +143,11 @@ export default function CustomerNavbar() {
                   {/* Avatar */}
                   <div className="cursor-pointer relative">
                     {getAvatarUrl() ? (
-                      <img
-                        src={getAvatarUrl()}
+                      <Image
+                        src={getAvatarUrl()!}
                         alt={getDisplayName()}
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 group-hover:border-teal-700 transition-colors duration-200"
                       />
                     ) : (
@@ -180,9 +182,11 @@ export default function CustomerNavbar() {
                     <div className="px-4 py-3 border-b border-gray-100">
                       <div className="flex items-center gap-3">
                         {getAvatarUrl() ? (
-                          <img
-                            src={getAvatarUrl()}
+                          <Image
+                            src={getAvatarUrl()!}
                             alt={getDisplayName()}
+                            width={32}
+                            height={32}
                             className="w-8 h-8 rounded-full object-cover"
                           />
                         ) : (

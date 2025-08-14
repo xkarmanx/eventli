@@ -8,6 +8,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/shared/lib/supabase/server';
+import { ensureTextIsSafe, ModerationError, RateLimitError } from '@/shared/lib/moderation';
 
 // load the English dictionary for `leo-profanity`
 filter.loadDictionary('en');
@@ -253,8 +254,20 @@ export async function updateSellerProfile(formData: FormData) {
     is_setup_complete: true
   };
 
-  if (filter.check(profileData.bio))
-    throw new Error('Your bio contains innappropiate language. Please use appropiate language in your bio.');
+  // Enhanced moderation for bio field
+  try {
+    console.log(`🔍 MODERATING SELLER SETUP BIO: "${profileData.bio.substring(0, 50)}${profileData.bio.length > 50 ? '...' : ''}"`);
+    await ensureTextIsSafe(profileData.bio, "setup_bio");
+  } catch (moderationError) {
+    if (moderationError instanceof ModerationError) {
+      console.error('Moderation failed for bio:', moderationError.message);
+      throw new Error(`Your bio contains inappropriate content and was flagged: ${moderationError.categories.join(', ')}. Please revise your bio to describe your services professionally.`);
+    } else if (moderationError instanceof RateLimitError) {
+      console.error('Rate limit error during bio moderation:', moderationError.message);
+      throw new Error('Too many requests - please wait a moment and try again.');
+    }
+    throw moderationError;
+  }
 
   const { error } = await supabase
     .from('profiles')

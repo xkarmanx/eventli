@@ -6,6 +6,7 @@ import { Button } from '@/shared/components/ui/button'
 import { getListings } from '@/features/services/listing_crud'
 import EditListingFormModal from "@/shared/components/ui/EditListingFormModal";
 import { createClient } from '@/shared/lib/supabase/client' // JC: Get user data from database
+import Image from "next/image";
 
 // JC: Define what props this modal needs
 interface EditListingModalProps {
@@ -126,6 +127,12 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
     }
   }
 
+  const handleCancelClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onClose()
+  }
+
   return (
     <>
     {!directEditMode && (
@@ -135,15 +142,18 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto relative transform transition-all duration-300 scale-100">
+      <div className="bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] relative transform transition-all duration-300 scale-100 flex flex-col rounded-2xl overflow-hidden">
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={handleCancelClick}
           className="cursor-pointer absolute top-4 right-4 p-2 text-teal-600 hover:text-white hover:bg-teal-700 rounded-full transition-colors z-10 bg-white border border-gray-300 shadow"
           aria-label="Close modal"
         >
           <X className="w-6 h-6" />
         </button>
+        
+        {/* Scrollable Content */}
+        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
         {/* Modal Content */}
         <div className="p-8">
               <h2 className="text-2xl font-bold mb-6">Edit a Listing</h2>
@@ -173,9 +183,11 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
                       >
                         <div className="flex flex-col sm:flex-row gap-4">
                           <div className="relative overflow-hidden">
-                            <img 
+                            <Image 
                               src={listing.image_url} 
                               alt={listing.title} 
+                              width={128}
+                              height={128}
                               className="w-full sm:w-32 sm:h-32 h-48 object-cover transition-transform duration-300 group-hover:scale-105" 
                             />
                           </div>
@@ -231,6 +243,7 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
                   Close
                 </Button>
               </div>
+        </div>
         </div>
       </div>
     </div>

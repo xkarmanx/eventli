@@ -5,6 +5,7 @@ import { getCustomerBookings } from "@/features/services/bookings_crud";
 import { createClient } from "@/shared/lib/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Loader2, Calendar, MapPin, Users, Clock, Tag, CheckCircle2, XCircle, Hourglass, FileText } from "lucide-react";
+import Image from "next/image";
 
 type BookingStatus = "all" | "pending" | "accepted" | "declined" | "completed";
 
@@ -130,9 +131,11 @@ export default function CustomerBookingsPage() {
               {/* Booking Image */}
               {booking.image && (
                 <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                  <img
+                  <Image
                     src={booking.image}
                     alt={booking.event_type || "Booking image"}
+                    width={128}
+                    height={128}
                     className="object-cover w-full h-full"
                   />
                 </div>

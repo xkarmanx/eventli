@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getPublicListingsAsServices } from '@/features/services/listing_crud'
+import { getListingById } from '@/features/services/listing_crud'
+import { transformListingToService } from '@/shared/lib/listingUtils'
 import ListingDetailsPage from '../../../shared/components/listing/ListingDetailsPage'
 
 interface ListingPageProps {
@@ -11,15 +12,17 @@ export default async function ListingPage({ params }: ListingPageProps) {
   const { id } = resolvedParams
 
   try {
-    // Get all listings and find the one with matching ID
-    const listings = await getPublicListingsAsServices()
-    const listing = listings.find(service => service.id === id)
-
-    if (!listing) {
+    // Get the specific listing with tags and profile data
+    const listing = await getListingById(id)
+    
+    if (!listing || !listing.is_published) {
       notFound()
     }
 
-    return <ListingDetailsPage service={listing} />
+    // Transform to Service format
+    const service = transformListingToService(listing)
+
+    return <ListingDetailsPage service={service} />
   } catch (error) {
     console.error('Error fetching listing:', error)
     notFound()

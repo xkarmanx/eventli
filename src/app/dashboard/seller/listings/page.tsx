@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import AddListingModal from "@/shared/components/ui/AddListingModal";
@@ -59,13 +59,7 @@ export default function ListingsPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (user?.id && !authLoading) {
-      fetchListings();
-    }
-  }, [user?.id, authLoading]);
-
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     if (!user?.id) return;
     
     setLoading(true);
@@ -78,7 +72,13 @@ export default function ListingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id && !authLoading) {
+      fetchListings();
+    }
+  }, [user?.id, authLoading, fetchListings]);
 
   const handleListingUpdate = (updatedListing: any) => {
     setListings(prev => 

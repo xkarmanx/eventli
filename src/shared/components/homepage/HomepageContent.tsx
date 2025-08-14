@@ -15,6 +15,7 @@ interface HomepageContentProps {
     q?: string
     price?: string
     guests?: string
+    eventType?: string
   }
 }
 
@@ -23,8 +24,8 @@ export default function HomepageContent({ initialServices, searchParams }: Homep
   const [filteredServices, setFilteredServices] = useState<Service[]>(initialServices)
   const [locationSearchResults, setLocationSearchResults] = useState<Service[]>(initialServices)
   const [eventSearchResults, setEventSearchResults] = useState<Service[]>(initialServices)
-  const [hasSearched, setHasSearched] = useState(Boolean(searchParams?.q || searchParams?.price || searchParams?.guests)) // JC: Track if user has searched
-  const [hasFiltered, setHasFiltered] = useState(Boolean(searchParams?.price || searchParams?.guests)) // JC: Track if user has filtered
+  const [hasSearched, setHasSearched] = useState(Boolean(searchParams?.q || searchParams?.price || searchParams?.guests || searchParams?.eventType)) // JC: Track if user has searched
+  const [hasFiltered, setHasFiltered] = useState(Boolean(searchParams?.price || searchParams?.guests || searchParams?.eventType)) // JC: Track if user has filtered
 
   // JC: Update states when initialServices changes
   useEffect(() => {
@@ -74,7 +75,7 @@ export default function HomepageContent({ initialServices, searchParams }: Homep
       <CategoryNavigation />
       
       {/* Search Results Header */}
-      {(searchParams?.q || searchParams?.price || searchParams?.guests) && (
+      {(searchParams?.q || searchParams?.price || searchParams?.guests || searchParams?.eventType) && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
             <div className="flex items-center justify-between">
@@ -84,6 +85,11 @@ export default function HomepageContent({ initialServices, searchParams }: Homep
                   {searchParams.q && (
                     <span className="bg-teal-100 text-teal-800 px-2 py-1 rounded-full">
                       &ldquo;{searchParams.q}&rdquo;
+                    </span>
+                  )}
+                  {searchParams.eventType && (
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      Event Type: {searchParams.eventType}
                     </span>
                   )}
                   {searchParams.price && (
