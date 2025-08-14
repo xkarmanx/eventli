@@ -1,4 +1,19 @@
 // Type definitions for service/listing data
+
+// Service type constants
+export const SERVICE_TYPES = {
+  VENUE: 'venue',
+  MUSIC: 'music',
+  CATERING: 'catering',
+  FUNERAL: 'funeral',
+  BIRTHDAY: 'birthday',
+  WEDDING: 'wedding',
+  BABY_SHOWER: 'baby_shower',
+  OTHER: 'other'
+} as const;
+
+export type ServiceType = typeof SERVICE_TYPES[keyof typeof SERVICE_TYPES];
+
 export interface Service {
   id: string;
   seller_id: string;

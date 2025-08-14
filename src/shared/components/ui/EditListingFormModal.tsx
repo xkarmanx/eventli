@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Upload, Trash2, Tag } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { updateListing, uploadListingMedia, insertListingMedia, addListingTags } from "@/features/services/listing_crud";
+import { updateListing, uploadListingMedia, insertListingMedia, addListingTags, setListingType, addKeywordTags, getListingMeta } from "@/features/services/listing_crud";
 // kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
 // kvs: Replaced react-toastify with sonner for consistent toast implementation across the app
 import { toast } from 'sonner';
@@ -11,6 +11,10 @@ import { toast } from 'sonner';
 import { createClient } from '@/shared/lib/supabase/client'
 import { ModerationError, RateLimitError } from '@/shared/lib/moderation-errors';
 import Image from "next/image";
+import { validateFilesClientSide, getMediaLimitsText, MEDIA_LIMITS } from '@/shared/lib/mediaValidation';
+
+// Service type definitions to match server action
+type ServiceType = 'venue' | 'music' | 'catering' | 'funeral' | 'birthday' | 'wedding' | 'baby_shower' | 'other';
 
 // JC: Define what props this edit modal needs
 interface EditListingFormModalProps {
@@ -43,6 +47,13 @@ function sanitizeText(text: string) {
 }
 
 export default function EditListingFormModal({ isOpen, onClose, listing, onUpdated }: EditListingFormModalProps) {
+  // Service type state
+  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType | null>(null);
+  const [customServiceLabel, setCustomServiceLabel] = useState("");
+  const [keywordTags, setKeywordTags] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState("");
+  const [loadingMeta, setLoadingMeta] = useState(false);
+  
   // JC: Pre-populate form fields with existing listing data
   const [title, setTitle] = useState(listing.title || "");
   const [city, setCity] = useState(listing.location?.split(", ")[0] || "");
@@ -109,6 +120,35 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     };
   }, []);
 
+  const loadListingMeta = useCallback(async () => {
+    if (!listing?.id) return;
+    
+    setLoadingMeta(true);
+    try {
+      const meta = await getListingMeta(listing.id);
+      
+      // Load service type from typeTag
+      if (meta.typeTag) {
+        const serviceType = meta.typeTag.service_type as ServiceType;
+        setSelectedServiceType(serviceType);
+        if (serviceType === 'other' && meta.typeTag.is_custom) {
+          setCustomServiceLabel(meta.typeTag.tag);
+        }
+      }
+      
+      // Load keywords from keywordTags
+      if (meta.keywordTags && meta.keywordTags.length > 0) {
+        const keywords = meta.keywordTags.map(tag => tag.tag);
+        setKeywordTags(keywords);
+      }
+    } catch (error) {
+      console.error('Error loading listing metadata:', error);
+      toast.error('Failed to load listing details');
+    } finally {
+      setLoadingMeta(false);
+    }
+  }, [listing?.id]);
+
   useEffect(() => {
     if (!isOpen) return;
     setTitle(listing.title || "");
@@ -127,7 +167,10 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     setTags([]);
     setDescription(listing.description || "");
     setErrors({});
-  }, [isOpen, listing]);
+    
+    // Load listing metadata (service type and keywords)
+    loadListingMeta();
+  }, [isOpen, listing, loadListingMeta]);
 
   if (!isOpen) return null;
 
@@ -160,48 +203,34 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     
     if (selectedFiles.length === 0) return
     
-    // Validate file types and sizes
-    const maxImageSize = 10 * 1024 * 1024; // 10MB
-    const maxVideoSize = 50 * 1024 * 1024; // 50MB
-    const allowedImageTypes = ['image/jpeg','image/png','image/webp','image/gif'];
-    const allowedVideoTypes = ['video/mp4','video/quicktime','video/webm'];
+    // Use centralized validation for immediate feedback
+    const validationResults = validateFilesClientSide(selectedFiles);
     
-    let imageCount = files.filter(f => f.type.startsWith('image/')).length;
-    let videoCount = files.filter(f => f.type.startsWith('video/')).length;
-    
-    for (const file of selectedFiles) {
-      if (file.type.startsWith('image/')) {
-        if (!allowedImageTypes.includes(file.type)) {
-          toast.error(`Unsupported image type: ${file.type}`);
-          return;
-        }
-        if (file.size > maxImageSize) {
-          toast.error(`Image ${file.name} must be less than 10MB`);
-          return;
-        }
-        imageCount++;
-        if (imageCount > 15) {
-          toast.error("Maximum 15 images allowed per listing");
-          return;
-        }
-      } else if (file.type.startsWith('video/')) {
-        if (!allowedVideoTypes.includes(file.type)) {
-          toast.error(`Unsupported video type: ${file.type}`);
-          return;
-        }
-        if (file.size > maxVideoSize) {
-          toast.error(`Video ${file.name} must be less than 50MB`);
-          return;
-        }
-        videoCount++;
-        if (videoCount > 5) {
-          toast.error("Maximum 5 videos allowed per listing");
-          return;
-        }
-      } else {
-        toast.error(`Unsupported file type: ${file.type}`);
+    // Check for validation errors
+    for (const result of validationResults) {
+      if (!result.isValid) {
+        toast.error(result.error);
         return;
       }
+    }
+    
+    // Count current files by type
+    let currentImageCount = files.filter(f => f.type.startsWith('image/')).length;
+    let currentVideoCount = files.filter(f => f.type.startsWith('video/')).length;
+    
+    // Count new files by type
+    let newImageCount = selectedFiles.filter(f => f.type.startsWith('image/')).length;
+    let newVideoCount = selectedFiles.filter(f => f.type.startsWith('video/')).length;
+    
+    // Check total limits
+    if (currentImageCount + newImageCount > MEDIA_LIMITS.MAX_IMAGES_PER_LISTING) {
+      toast.error(`Maximum ${MEDIA_LIMITS.MAX_IMAGES_PER_LISTING} images allowed per listing`);
+      return;
+    }
+    
+    if (currentVideoCount + newVideoCount > MEDIA_LIMITS.MAX_VIDEOS_PER_LISTING) {
+      toast.error(`Maximum ${MEDIA_LIMITS.MAX_VIDEOS_PER_LISTING} videos allowed per listing`);
+      return;
     }
     
     // Add files and create previews
@@ -245,6 +274,20 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
 
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
+  }
+
+  const addKeywordTag = () => {
+    const trimmed = keywordInput.trim().toLowerCase();
+    if (trimmed && !keywordTags.includes(trimmed) && keywordTags.length < 20) {
+      setKeywordTags([...keywordTags, trimmed]);
+      setKeywordInput('');
+    } else if (keywordTags.length >= 20) {
+      toast.error("Maximum 20 keywords allowed");
+    }
+  }
+
+  const removeKeywordTag = (tagToRemove: string) => {
+    setKeywordTags(keywordTags.filter(tag => tag !== tagToRemove));
   }
 
   const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
@@ -326,6 +369,17 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
 
       // Update the basic listing info first
       const updated = await updateListing(listing.id, updates);
+
+      // Update service type if selected
+      if (selectedServiceType) {
+        const label = selectedServiceType === 'other' ? customServiceLabel : undefined;
+        await setListingType(listing.id, { service_type: selectedServiceType, custom_label: label });
+      }
+
+      // Update keyword tags if any
+      if (keywordTags.length > 0) {
+        await addKeywordTags(listing.id, keywordTags);
+      }
 
       // Upload new media files if any
       if (files.length > 0) {
@@ -592,7 +646,7 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
                     {files.length > 0 ? "Add More Files" : "Add Files"}
                   </Button>
                   <span className="text-sm text-gray-500">
-                    Max 15 images & 5 videos (10MB per image, 50MB per video)
+                    {getMediaLimitsText()}
                   </span>
                 </div>
                 
@@ -689,6 +743,109 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
                 </div>
               </div>
             </div>
+            
+            {/* Service Type Selection */}
+            <div>
+              <label className="block font-medium mb-2">
+                Service Type<span className="text-red-500">*</span>
+              </label>
+              {loadingMeta ? (
+                <div className="text-gray-500 text-sm">Loading service type...</div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['wedding', 'birthday', 'funeral', 'venue', 'music', 'catering'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedServiceType(type)}
+                      className={`p-2 rounded-lg border text-center text-sm transition-all ${
+                        selectedServiceType === type
+                          ? 'border-teal-500 bg-teal-50 text-teal-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-medium capitalize">{type}</div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedServiceType('other')}
+                    className={`p-2 rounded-lg border text-center text-sm transition-all ${
+                      selectedServiceType === 'other'
+                        ? 'border-teal-500 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium">Other</div>
+                  </button>
+                </div>
+              )}
+              
+              {selectedServiceType === 'other' && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    placeholder="Enter custom service type"
+                    value={customServiceLabel}
+                    onChange={(e) => setCustomServiceLabel(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500"
+                    maxLength={50}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Keywords Section */}
+            <div>
+              <label className="block font-medium mb-2">
+                Keywords 
+                <span className="text-gray-500 text-sm ml-1">(Help customers find your listing)</span>
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Enter keywords (e.g., outdoor, elegant, budget-friendly)"
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeywordTag())}
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500"
+                  maxLength={30}
+                />
+                <Button
+                  type="button"
+                  onClick={addKeywordTag}
+                  disabled={!keywordInput.trim() || keywordTags.length >= 20}
+                  className="px-3 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:bg-gray-300 text-sm"
+                >
+                  Add
+                </Button>
+              </div>
+              
+              {keywordTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {keywordTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-800 rounded-full text-xs"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeKeywordTag(tag)}
+                        className="hover:text-teal-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              <div className="text-xs text-gray-500 mt-1">
+                {keywordTags.length}/20 keywords
+              </div>
+            </div>
+            
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-description">
                 Description<span className="text-red-500">*</span>

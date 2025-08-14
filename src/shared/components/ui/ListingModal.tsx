@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, MapPin, Users, Clock, Building2, CheckCircle, Utensils, HandPlatter } from 'lucide-react'
+import { X, MapPin, Users, Clock, Building2, CheckCircle, Utensils, HandPlatter, Tag } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/shared/components/ui/button'
 import { Service } from '@/shared/types/service'
@@ -164,6 +164,14 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
                       <p className="text-sm text-gray-600">{service.location}</p>
                     </div>
                   </div>
+
+                  {/* Service Type */}
+                  <div className="flex items-center space-x-3">
+                    <Tag className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-600">Service Type: {service.eventType}</p>
+                    </div>
+                  </div>
                   
                   <div className="flex items-center space-x-3">
                     <HandPlatter className="w-6 h-6 text-gray-400 flex-shrink-0" />
@@ -216,6 +224,23 @@ export default function ListingModal({ isOpen, onClose, service }: ListingModalP
                 </div>
               </div>
             </div>
+
+            {/* Keywords Section */}
+            {service.tags && service.tags.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">Service Tags</h2>
+                <div className="flex flex-wrap gap-2">
+                  {service.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-50 text-teal-700 border border-teal-200"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Lower Section - Description, Price and Booking (Full Width) */}
             <div className="w-full border-t border-gray-200 pt-8">

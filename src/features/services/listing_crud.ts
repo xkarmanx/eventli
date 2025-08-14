@@ -20,6 +20,12 @@ import {
   ModerationError,
   RateLimitError,
 } from "@/shared/lib/moderation";
+// Import centralized media validation
+import { 
+  MEDIA_LIMITS,
+  MediaValidationError 
+} from "@/shared/lib/mediaValidation";
+import { validateMediaForUpload } from "@/shared/lib/mediaValidationServer";
 
 // Types
 type Listing = Database["public"]["Tables"]["listings"]["Row"];
@@ -216,7 +222,7 @@ export async function updateListing(id: string, updates: UpdateListing) {
   // kvs: Revalidate relevant paths after updating a listing
   revalidatePath("/dashboard/seller/listings");
   revalidatePath("/");
-  revalidatePath(`/listings/${id}`);
+  revalidatePath(`/listing/${id}`);
   
   return data as Listing;
 }
@@ -334,7 +340,7 @@ export async function uploadListingImage(file: File, listingId: string) {
 
   // kvs: Revalidate paths after image upload
   revalidatePath("/dashboard/seller/listings");
-  revalidatePath(`/listings/${listingId}`);
+  revalidatePath(`/listing/${listingId}`);
 
   return publicUrlData?.publicUrl;
 }
@@ -367,43 +373,33 @@ export async function uploadListingMedia(files: File[], listingId: string): Prom
   }
 
   // Count existing media for limit enforcement
+  const validationResult = await validateMediaForUpload(files, listingId);
+  if (!validationResult.isValid) {
+    throw new MediaValidationError(validationResult.error!, "VALIDATION_ERROR");
+  }
+
+  // Get existing media for position calculation
   const { data: existingMedia, error: existingErr } = await supabase
     .from("listing_media")
     .select("media_type")
     .eq("listing_id", listingId);
   if (existingErr) throw existingErr;
-  const existingImagesCount = (existingMedia ?? []).filter((m: any) => m.media_type === 'image').length;
-  const existingVideosCount = (existingMedia ?? []).filter((m: any) => m.media_type === 'video').length;
 
-  // Classify incoming files and ensure we don't exceed the limits (15 images and 5 videos per listing)
-  let newImagesCount = 0;
-  let newVideosCount = 0;
-  files.forEach(f => {
-    if (f.type.startsWith('image/')) newImagesCount++;
-    else if (f.type.startsWith('video/')) newVideosCount++;
-  });
-  if (existingImagesCount + newImagesCount > 15) {
-    throw new Error('Maximum of 15 images per listing allowed');
-  }
-  if (existingVideosCount + newVideosCount > 5) {
-    throw new Error('Maximum of 5 videos per listing allowed');
-  }
-
-  const allowedImageTypes = ['image/jpeg','image/png','image/webp','image/gif'];
-  const allowedVideoTypes = ['video/mp4','video/quicktime','video/webm'];
-  const maxImageSize = 10 * 1024 * 1024; // 10MB per image
-  const maxVideoSize = 50 * 1024 * 1024; // 50MB per video
+  const allowedImageTypes = MEDIA_LIMITS.ALLOWED_IMAGE_TYPES;
+  const allowedVideoTypes = MEDIA_LIMITS.ALLOWED_VIDEO_TYPES;
+  const maxImageSize = MEDIA_LIMITS.MAX_IMAGE_SIZE_BYTES;
+  const maxVideoSize = MEDIA_LIMITS.MAX_VIDEO_SIZE_BYTES;
 
   const uploaded: MediaRecord[] = [];
   let position = existingMedia?.length ?? 0;
   for (const file of files) {
     let mediaType: 'image' | 'video';
-    if (allowedImageTypes.includes(file.type)) {
+    if ((allowedImageTypes as readonly string[]).includes(file.type)) {
       if (file.size > maxImageSize) {
         throw new Error("Each image must be less than 10MB");
       }
       mediaType = 'image';
-    } else if (allowedVideoTypes.includes(file.type)) {
+    } else if ((allowedVideoTypes as readonly string[]).includes(file.type)) {
       if (file.size > maxVideoSize) {
         throw new Error("Video must be less than 50MB");
       }
@@ -658,12 +654,29 @@ export async function searchAndFilterListings(
       `)
       .eq("is_published", true);
 
-    // Apply search query if provided (search in title, description, location, event_type)
+    // Apply search query if provided (search in title, description, location, event_type, and listing_tags)
     if (hasSearchQuery) {
       const searchTerm = searchQuery.trim();
-      query = query.or(
-        `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,event_type.ilike.%${searchTerm}%`
-      );
+      
+      // First get listing IDs that have matching tags
+      const { data: listingsWithMatchingTags } = await supabase
+        .from('listing_tags')
+        .select('listing_id')
+        .or(`tag.ilike.%${searchTerm}%,service_type.ilike.%${searchTerm}%`);
+      
+      const tagMatchingIds = listingsWithMatchingTags?.map(lt => lt.listing_id) || [];
+      
+      if (tagMatchingIds.length > 0) {
+        // Search in listing fields OR tag matches
+        query = query.or(
+          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,event_type.ilike.%${searchTerm}%,id.in.(${tagMatchingIds.join(',')})`
+        );
+      } else {
+        // Fallback to just listing fields
+        query = query.or(
+          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,event_type.ilike.%${searchTerm}%`
+        );
+      }
     }
 
     // Apply price range filter
@@ -774,5 +787,208 @@ export async function searchAndFilterListings(
   } catch (error) {
     console.error('Error in searchAndFilterListings:', error);
     return [];
+  }
+}
+
+// Define service type enum values
+type ServiceType = 'venue' | 'music' | 'catering' | 'funeral' | 'birthday' | 'wedding' | 'baby_shower' | 'other';
+
+// Server Action to set listing type
+export async function setListingType(
+  listingId: string, 
+  typeData: { service_type: ServiceType; custom_label?: string }
+) {
+  const supabase = await createClient();
+  
+  // Authentication check
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Authentication required");
+  }
+
+  // Verify listing ownership
+  const { data: listing, error: listingError } = await supabase
+    .from("listings")
+    .select("seller_id")
+    .eq("id", listingId)
+    .single();
+  
+  if (listingError) throw new Error("Listing not found");
+  if (listing.seller_id !== user.id) {
+    throw new Error("Unauthorized: You can only modify your own listings");
+  }
+
+  // Validate service_type
+  const validServiceTypes: ServiceType[] = ['venue', 'music', 'catering', 'funeral', 'birthday', 'wedding', 'baby_shower', 'other'];
+  if (!validServiceTypes.includes(typeData.service_type)) {
+    throw new Error("Invalid service type");
+  }
+
+  // Validate custom_label for 'other' type
+  let tagValue: string;
+  let isCustom: boolean;
+  
+  if (typeData.service_type === 'other') {
+    if (!typeData.custom_label || typeData.custom_label.trim().length < 2 || typeData.custom_label.trim().length > 40) {
+      throw new Error("Custom label must be between 2-40 characters");
+    }
+    tagValue = typeData.custom_label.trim().toLowerCase();
+    isCustom = true;
+  } else {
+    // Convert enum to hyphenated format for tag value
+    tagValue = typeData.service_type.replace('_', '-');
+    isCustom = false;
+  }
+
+  try {
+    // Delete existing type tags for this listing
+    await supabase
+      .from("listing_tags")
+      .delete()
+      .eq("listing_id", listingId)
+      .eq("kind", "type");
+
+    // Insert new type tag
+    const { error: insertError } = await supabase
+      .from("listing_tags")
+      .insert({
+        listing_id: listingId,
+        kind: "type",
+        service_type: typeData.service_type,
+        is_custom: isCustom,
+        tag: tagValue
+      });
+
+    if (insertError) throw insertError;
+
+    // Revalidate relevant paths
+    revalidatePath("/dashboard/seller/listings");
+    revalidatePath(`/listing/${listingId}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting listing type:', error);
+    throw new Error("Failed to set listing type");
+  }
+}
+
+// Server Action to add keyword tags
+export async function addKeywordTags(listingId: string, tags: string[]) {
+  const supabase = await createClient();
+  
+  // Authentication check
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Authentication required");
+  }
+
+  // Verify listing ownership
+  const { data: listing, error: listingError } = await supabase
+    .from("listings")
+    .select("seller_id")
+    .eq("id", listingId)
+    .single();
+  
+  if (listingError) throw new Error("Listing not found");
+  if (listing.seller_id !== user.id) {
+    throw new Error("Unauthorized: You can only modify your own listings");
+  }
+
+  // Normalize tags: trim, lowercase, dedupe
+  const normalizedTags = [...new Set(
+    tags
+      .map(tag => tag.trim().toLowerCase())
+      .filter(tag => tag.length > 0)
+  )];
+
+  if (normalizedTags.length === 0) {
+    return { success: true, inserted: 0 };
+  }
+
+  try {
+    // Prepare insert data
+    const insertsData = normalizedTags.map(tag => ({
+      listing_id: listingId,
+      kind: "keyword" as const,
+      service_type: null,
+      is_custom: false,
+      tag: tag
+    }));
+
+    // Insert keyword tags - use upsert to handle duplicates gracefully
+    const { data, error: insertError } = await supabase
+      .from("listing_tags")
+      .upsert(insertsData, { 
+        onConflict: 'listing_id,tag,kind',
+        ignoreDuplicates: true 
+      })
+      .select();
+
+    if (insertError) {
+      // If upsert fails, try individual inserts and ignore constraint violations
+      let insertedCount = 0;
+      for (const insertData of insertsData) {
+        const { error } = await supabase
+          .from("listing_tags")
+          .insert(insertData);
+        
+        if (!error) {
+          insertedCount++;
+        }
+        // Silently ignore duplicate key violations
+      }
+      
+      // Revalidate paths
+      revalidatePath("/dashboard/seller/listings");
+      revalidatePath(`/listing/${listingId}`);
+      
+      return { success: true, inserted: insertedCount };
+    }
+
+    // Revalidate relevant paths
+    revalidatePath("/dashboard/seller/listings");
+    revalidatePath(`/listing/${listingId}`);
+
+    return { success: true, inserted: data?.length || 0 };
+  } catch (error) {
+    console.error('Error adding keyword tags:', error);
+    throw new Error("Failed to add keyword tags");
+  }
+}
+
+// Server Action to get listing metadata (type, keywords, media)
+export async function getListingMeta(listingId: string) {
+  const supabase = await createClient();
+  
+  try {
+    // Get listing tags
+    const { data: tags, error: tagsError } = await supabase
+      .from("listing_tags")
+      .select("tag, kind, service_type, is_custom")
+      .eq("listing_id", listingId);
+
+    if (tagsError) throw tagsError;
+
+    // Get listing media
+    const { data: media, error: mediaError } = await supabase
+      .from("listing_media")
+      .select("url, media_type, position")
+      .eq("listing_id", listingId)
+      .order("position", { ascending: true });
+
+    if (mediaError) throw mediaError;
+
+    // Separate type and keyword tags
+    const typeTag = tags?.find(tag => tag.kind === 'type') || null;
+    const keywordTags = tags?.filter(tag => tag.kind === 'keyword') || [];
+
+    return {
+      typeTag,
+      keywordTags,
+      media: media || []
+    };
+  } catch (error) {
+    console.error('Error getting listing meta:', error);
+    throw new Error("Failed to get listing metadata");
   }
 }

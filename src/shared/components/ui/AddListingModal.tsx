@@ -5,18 +5,33 @@ import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { X, Upload, Trash2, Tag } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import { createListing, uploadListingMedia, insertListingMedia, addListingTags } from "@/features/services/listing_crud";
+import { createListing, uploadListingMedia, insertListingMedia, addListingTags, setListingType, addKeywordTags } from "@/features/services/listing_crud";
 // kvs: Removed deprecated useSession import from @supabase/auth-helpers-react
 // kvs: Added createClient import for proper Supabase client usage
 import { createClient } from '@/shared/lib/supabase/client'
 import { ModerationError, RateLimitError } from '@/shared/lib/moderation-errors';
 import Image from "next/image";
+import { validateFilesClientSide, getMediaLimitsText, MEDIA_LIMITS } from '@/shared/lib/mediaValidation';
 
 // JC: Define what props this modal needs to work
 interface AddListingModalProps {
   isOpen: boolean
   onClose: () => void
 }
+
+// Service types for the type selection
+const serviceTypes = [
+  { value: 'venue', label: 'Venue' },
+  { value: 'music', label: 'Music' },
+  { value: 'catering', label: 'Catering' },
+  { value: 'funeral', label: 'Funeral' },
+  { value: 'birthday', label: 'Birthday' },
+  { value: 'wedding', label: 'Wedding' },
+  { value: 'baby_shower', label: 'Baby Shower' },
+  { value: 'other', label: 'Other' }
+] as const;
+
+type ServiceType = typeof serviceTypes[number]['value'];
 
 // JC: Available event types for dropdowns
 const eventTypes = [
@@ -41,6 +56,10 @@ function sanitizeText(text: string) {
 }
 
 export default function AddListingModal({ isOpen, onClose }: AddListingModalProps) {
+  // Service type state (first step)
+  const [serviceType, setServiceType] = useState<ServiceType | ''>('')
+  const [customTypeLabel, setCustomTypeLabel] = useState('')
+  
   // JC: Form state variables to store user input
   const [title, setTitle] = useState('')
   const [city, setCity] = useState('')
@@ -123,6 +142,8 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
   useEffect(() => {
     // Reset form when modal closes
     if (!isOpen) {
+      setServiceType('')
+      setCustomTypeLabel('')
       setTitle('')
       setCity('')
       setAddress('')
@@ -172,48 +193,34 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     
     if (selectedFiles.length === 0) return
     
-    // Validate file types and sizes
-    const maxImageSize = 10 * 1024 * 1024; // 10MB
-    const maxVideoSize = 50 * 1024 * 1024; // 50MB
-    const allowedImageTypes = ['image/jpeg','image/png','image/webp','image/gif'];
-    const allowedVideoTypes = ['video/mp4','video/quicktime','video/webm'];
+    // Use centralized validation for immediate feedback
+    const validationResults = validateFilesClientSide(selectedFiles);
     
-    let imageCount = files.filter(f => f.type.startsWith('image/')).length;
-    let videoCount = files.filter(f => f.type.startsWith('video/')).length;
-    
-    for (const file of selectedFiles) {
-      if (file.type.startsWith('image/')) {
-        if (!allowedImageTypes.includes(file.type)) {
-          toast.error(`Unsupported image type: ${file.type}`);
-          return;
-        }
-        if (file.size > maxImageSize) {
-          toast.error(`Image ${file.name} must be less than 10MB`);
-          return;
-        }
-        imageCount++;
-        if (imageCount > 15) {
-          toast.error("Maximum 15 images allowed per listing");
-          return;
-        }
-      } else if (file.type.startsWith('video/')) {
-        if (!allowedVideoTypes.includes(file.type)) {
-          toast.error(`Unsupported video type: ${file.type}`);
-          return;
-        }
-        if (file.size > maxVideoSize) {
-          toast.error(`Video ${file.name} must be less than 50MB`);
-          return;
-        }
-        videoCount++;
-        if (videoCount > 5) {
-          toast.error("Maximum 5 videos allowed per listing");
-          return;
-        }
-      } else {
-        toast.error(`Unsupported file type: ${file.type}`);
+    // Check for validation errors
+    for (const result of validationResults) {
+      if (!result.isValid) {
+        toast.error(result.error);
         return;
       }
+    }
+    
+    // Count current files by type
+    let currentImageCount = files.filter(f => f.type.startsWith('image/')).length;
+    let currentVideoCount = files.filter(f => f.type.startsWith('video/')).length;
+    
+    // Count new files by type
+    let newImageCount = selectedFiles.filter(f => f.type.startsWith('image/')).length;
+    let newVideoCount = selectedFiles.filter(f => f.type.startsWith('video/')).length;
+    
+    // Check total limits
+    if (currentImageCount + newImageCount > MEDIA_LIMITS.MAX_IMAGES_PER_LISTING) {
+      toast.error(`Maximum ${MEDIA_LIMITS.MAX_IMAGES_PER_LISTING} images allowed per listing`);
+      return;
+    }
+    
+    if (currentVideoCount + newVideoCount > MEDIA_LIMITS.MAX_VIDEOS_PER_LISTING) {
+      toast.error(`Maximum ${MEDIA_LIMITS.MAX_VIDEOS_PER_LISTING} videos allowed per listing`);
+      return;
     }
     
     // Add files and create previews
@@ -268,6 +275,10 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
 
   const validate = () => {
     const newErrors: {[key: string]: string} = {}
+    if (!serviceType) newErrors.serviceType = "Service type is required"
+    if (serviceType === 'other' && (!customTypeLabel.trim() || customTypeLabel.trim().length < 2 || customTypeLabel.trim().length > 40)) {
+      newErrors.customTypeLabel = "Custom label must be between 2-40 characters"
+    }
     if (!title.trim()) newErrors.title = "Title is required"
     if (!city.trim()) newErrors.city = "City is required"
     if (!address.trim()) newErrors.address = "Address is required"
@@ -286,6 +297,8 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
 
   const handleConfirmClose = () => {
     if (
+      serviceType ||
+      customTypeLabel ||
       title ||
       city ||
       address ||
@@ -353,15 +366,23 @@ async function handleSubmit(e: React.FormEvent) {
     console.log("listingData", listingData);
     const createdListing = await createListing(listingData);
 
-    // 2. Upload media files if any
+    // 2. Set the listing type (required step)
+    if (createdListing.id) {
+      await setListingType(createdListing.id, {
+        service_type: serviceType as ServiceType,
+        custom_label: serviceType === 'other' ? customTypeLabel : undefined
+      });
+    }
+
+    // 3. Upload media files if any
     if (files.length > 0 && createdListing.id) {
       const mediaRecords = await uploadListingMedia(files, createdListing.id);
       await insertListingMedia(createdListing.id, mediaRecords);
     }
 
-    // 3. Add tags if any
+    // 4. Add keyword tags if any (normalized in component)
     if (tags.length > 0 && createdListing.id) {
-      await addListingTags(createdListing.id, tags);
+      await addKeywordTags(createdListing.id, tags);
     }
 
     onClose();
@@ -444,6 +465,53 @@ async function handleSubmit(e: React.FormEvent) {
         <div className="p-8">
           <h2 className="text-2xl font-bold mb-6">Add a Listing</h2>
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Service Type Selection - First Step */}
+            <div>
+              <label className="block font-medium mb-2">
+                Service Type<span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {serviceTypes.map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setServiceType(type.value)}
+                    className={`p-3 text-sm rounded-lg border-2 transition-all duration-200 ${
+                      serviceType === type.value
+                        ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                    }`}
+                    disabled={submitting}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+              
+              {serviceType === 'other' && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    placeholder="Enter custom service type (2-40 characters)"
+                    value={customTypeLabel}
+                    onChange={(e) => setCustomTypeLabel(e.target.value)}
+                    maxLength={40}
+                    className={`w-full border ${errors.customTypeLabel ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:border-teal-500`}
+                    disabled={submitting}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {customTypeLabel.length}/40 characters
+                  </div>
+                </div>
+              )}
+              
+              {(errors.serviceType || errors.customTypeLabel) && (
+                <div className="text-sm text-red-600 mt-1">
+                  {errors.serviceType || errors.customTypeLabel}
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block font-medium mb-1" htmlFor="listing-title">
                 Title<span className="text-red-500">*</span>
@@ -615,7 +683,7 @@ async function handleSubmit(e: React.FormEvent) {
                     {files.length > 0 ? "Add More Files" : "Upload Files"}
                   </Button>
                   <span className="text-sm text-gray-500">
-                    Max 15 images & 5 videos (10MB per image, 50MB per video)
+                    {getMediaLimitsText()}
                   </span>
                 </div>
                 

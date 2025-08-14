@@ -3,47 +3,72 @@
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { X } from "lucide-react"
+import { SERVICE_TYPES } from "@/shared/types/service"
 
 export default function CategoryNavigation() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentEventType = searchParams.get('eventType')
 
+  // Updated categories to use standardized service types
   const categories = [
+    {
+      name: "All",
+      icon: "/others.svg",
+      eventType: "all" // Special value to show all listings
+    },
     {
       name: "Wedding",
       icon: "/wedding.svg",
-      eventType: "Wedding"
+      eventType: SERVICE_TYPES.WEDDING
     },
     {
       name: "Birthday",
       icon: "/birthday.svg", 
-      eventType: "Birthday"
+      eventType: SERVICE_TYPES.BIRTHDAY
     },
     {
-      name: "Corporate",
-      icon: "/ceremony.svg", // Using ceremony icon for corporate events
-      eventType: "Corporate"
+      name: "Baby Shower",
+      icon: "/ceremony.svg",
+      eventType: SERVICE_TYPES.BABY_SHOWER
     },
     {
       name: "Funeral",
       icon: "/funeral.svg",
-      eventType: "Funeral"
+      eventType: SERVICE_TYPES.FUNERAL
     },
     {
-      name: "Others",
-      icon: "/others.svg",
-      eventType: "Other"
+      name: "Venue",
+      icon: "/ceremony.svg",
+      eventType: SERVICE_TYPES.VENUE
+    },
+    {
+      name: "Music",
+      icon: "/ceremony.svg",
+      eventType: SERVICE_TYPES.MUSIC
+    },
+    {
+      name: "Catering",
+      icon: "/ceremony.svg",
+      eventType: SERVICE_TYPES.CATERING
     }
   ]
 
   const handleCategoryClick = (eventType: string) => {
-    // Create new URLSearchParams with the event type filter
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('eventType', eventType)
-    
-    // Navigate to the home page with the filter applied
-    router.push(`/?${params.toString()}`)
+    if (eventType === "all") {
+      // For "All", remove the eventType filter to show all listings
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('eventType')
+      const queryString = params.toString()
+      router.push(queryString ? `/?${queryString}` : '/')
+    } else {
+      // Create new URLSearchParams with the event type filter
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('eventType', eventType)
+      
+      // Navigate to the home page with the filter applied
+      router.push(`/?${params.toString()}`)
+    }
   }
 
   const handleRemoveFilter = () => {
@@ -78,7 +103,11 @@ export default function CategoryNavigation() {
         {/* Desktop and tablet view */}
         <div className="hidden sm:flex items-center justify-center space-x-8 md:space-x-12 lg:space-x-20">
           {categories.map((category) => {
-            const isActive = currentEventType === category.eventType
+            // For "All" category, it's active when no eventType filter is applied
+            // For other categories, it's active when the current eventType matches
+            const isActive = category.eventType === "all" 
+              ? !currentEventType 
+              : currentEventType === category.eventType
             return (
               <div 
                 key={category.name} 
@@ -114,7 +143,11 @@ export default function CategoryNavigation() {
         <div className="sm:hidden overflow-x-auto scrollbar-hide">
           <div className="flex space-x-6 pb-2" style={{ minWidth: 'max-content' }}>
             {categories.map((category) => {
-              const isActive = currentEventType === category.eventType
+              // For "All" category, it's active when no eventType filter is applied
+              // For other categories, it's active when the current eventType matches
+              const isActive = category.eventType === "all" 
+                ? !currentEventType 
+                : currentEventType === category.eventType
               return (
                 <div 
                   key={category.name} 

@@ -9,6 +9,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Service } from '@/shared/types/service'
 import BookingModal from '@/shared/components/ui/BookingModal'
 import Navbar from '@/shared/components/ui/Navbar'
+import { createClient } from '@/shared/lib/supabase/client'
 
 interface ListingDetailsPageProps {
   service: Service
@@ -19,16 +20,8 @@ export default function ListingDetailsPage({ service }: ListingDetailsPageProps)
   const [isMobile, setIsMobile] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const [images, setImages] = useState<string[]>(service.image ? [service.image] : [])
   const router = useRouter()
-
-  // Sample additional images - in real app, these would come from service.images array
-  const sampleImages = [
-    '/assets/samantha-gades-7J4T1XzpJgU-unsplash.jpg',
-    '/assets/yukiko-kanada-Ou4CQo6jzvU-unsplash.jpg',
-    '/assets/pexels-yankrukov-8867241 1.png'
-  ]
-  
-  const images = [service.image, ...sampleImages].filter(Boolean)
 
   // Check if device is mobile
   useEffect(() => {
@@ -41,6 +34,25 @@ export default function ListingDetailsPage({ service }: ListingDetailsPageProps)
     
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('listing_media')
+        .select('url, media_type, position')
+        .eq('listing_id', service.id)
+        .order('position', { ascending: true })
+      if (!error && data) {
+        const urls = data
+          .filter(m => m.media_type === 'image' && m.url)
+          .map(m => m.url as string)
+        // Start with service.image if present, then DB images (no duplicates)
+        const unique = Array.from(new Set([...(service.image ? [service.image] : []), ...urls]))
+        setImages(unique)
+      }
+    })()
+  }, [service.id, service.image])
 
   const handleRequestBooking = () => {
     if (isMobile) {
@@ -111,12 +123,14 @@ export default function ListingDetailsPage({ service }: ListingDetailsPageProps)
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 {/* Main Image */}
                 <div className="relative h-64 md:h-80 lg:h-96">
-                  <Image
-                    src={images[currentImageIndex]}
-                    alt={service.title}
-                    fill
-                    className="object-cover"
-                  />
+                  {images.length > 0 && (
+                    <Image
+                      src={images[currentImageIndex]}
+                      alt={service.title}
+                      fill
+                      className="object-cover"
+                    />
+                  )}
                   
                   {/* Image Navigation Arrows */}
                   {images.length > 1 && (
@@ -193,10 +207,29 @@ export default function ListingDetailsPage({ service }: ListingDetailsPageProps)
                       <MapPin className="w-5 h-5 mr-2 text-teal-600" />
                       <span className="text-lg">{service.location}</span>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <span className="px-3 py-1 bg-teal-100 text-teal-800 text-sm font-medium rounded-full">
-                        {service.eventType}
-                      </span>
+                    
+                    {/* Service Type and Keywords */}
+                    <div className="space-y-3">
+                      {/* Service Type */}
+                      <div className="flex items-center">
+                        <span className="px-3 py-1 bg-teal-100 text-teal-800 text-sm font-medium rounded-full">
+                          {service.eventType}
+                        </span>
+                      </div>
+                      
+                      {/* Keywords */}
+                      {service.tags && service.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {service.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full border border-gray-200"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
