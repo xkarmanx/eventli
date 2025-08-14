@@ -205,7 +205,6 @@ export default function BookingModal({ isOpen, onClose, service }: BookingModalP
   }
 
 const handleSubmitBooking = async () => {
-
   console.log("service:", service);
   if (!selectedDate) {
     console.log("No date selected");
@@ -220,7 +219,16 @@ const handleSubmitBooking = async () => {
   try {
     //Get the current session
     const { data: { session } } = await supabase.auth.getSession();
-    const customer_id = session?.user?.id || "";
+    
+    if (!session?.user) {
+      import("sonner").then(({ toast }) => {
+        toast.error("You must be logged in to make a booking request");
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    const customer_id = session.user.id;
 
     // Compose booking input
     const eventDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), selectedDate)

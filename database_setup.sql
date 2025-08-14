@@ -135,6 +135,9 @@ CREATE POLICY "Users can update their own profile" ON public.profiles
 CREATE POLICY "Users can insert their own profile" ON public.profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
+CREATE POLICY "Users can delete their own profile" ON public.profiles
+    FOR DELETE USING (auth.uid() = id);
+
 -- Categories table policies (public read, sellers can manage)
 CREATE POLICY "Anyone can view categories" ON public.categories
     FOR SELECT USING (true);
@@ -417,6 +420,18 @@ ADD COLUMN IF NOT EXISTS num_staff INTEGER;
 ALTER TABLE public.listings
 ADD COLUMN IF NOT EXISTS num_guests INTEGER;
 
+-- =============================================================================
+-- [SCHEMA CHANGE] Add boost_priority and boost_expires_at to listings
+-- Added by: [System Update], 2025-08-14
+-- Purpose: To support listing boosting functionality
+-- =============================================================================
+
+ALTER TABLE public.listings
+ADD COLUMN IF NOT EXISTS boost_priority INTEGER DEFAULT 0;
+
+ALTER TABLE public.listings
+ADD COLUMN IF NOT EXISTS boost_expires_at TIMESTAMP WITH TIME ZONE;
+
 
 -- =============================================================================
 -- [SCHEMA CHANGE] Add pending_email & pending_email_requested_at column to profiles
@@ -581,3 +596,217 @@ SELECT cron.schedule(
   '* * * * *',                      -- every minute
   $$CALL update_booking_statuses();$$
 );
+
+
+-- =============================================================================
+-- [SCHEMA ADDITION] Boost system for listing promotion
+-- Added by: [System Update], 2025-08-14
+-- Purpose: To enable paid listing promotion with different boost plans
+-- =============================================================================
+
+-- Create boost_plans table
+CREATE TABLE IF NOT EXISTS public.boost_plans (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    price NUMERIC(10,2) NOT NULL,
+    duration_days INTEGER NOT NULL,
+    priority_level INTEGER NOT NULL,
+    stripe_price_id TEXT UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create boost status enum
+DO $$ BEGIN
+    CREATE TYPE boost_status AS ENUM ('active', 'expired', 'cancelled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Create active_boosts table
+CREATE TABLE IF NOT EXISTS public.active_boosts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    plan_id UUID REFERENCES public.boost_plans(id) ON DELETE SET NULL,
+    stripe_payment_id TEXT UNIQUE,
+    status boost_status DEFAULT 'active',
+    activated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS on boost tables
+ALTER TABLE public.boost_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.active_boosts ENABLE ROW LEVEL SECURITY;
+
+-- Boost system policies
+CREATE POLICY "Allow authenticated users to view boost plans" ON public.boost_plans
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Sellers can view their own boosts" ON public.active_boosts
+    FOR SELECT TO authenticated USING (
+        (SELECT listings.seller_id FROM listings WHERE listings.id = active_boosts.listing_id) = auth.uid()
+    );
+
+CREATE POLICY "Allow service_role to manage all boosts" ON public.active_boosts
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Create indexes for boost system
+CREATE INDEX IF NOT EXISTS idx_boosts_listing_status ON public.active_boosts(listing_id, status);
+CREATE INDEX IF NOT EXISTS idx_listings_boost ON public.listings(boost_priority, boost_expires_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_listing_active_boost ON public.active_boosts(listing_id) 
+    WHERE status = 'active';
+
+
+-- =============================================================================
+-- [SCHEMA ADDITION] Enhanced media and tagging system
+-- Added by: [System Update], 2025-08-14
+-- Purpose: To support multiple media files and flexible tagging for listings
+-- =============================================================================
+
+-- Create listing_media table
+CREATE TABLE IF NOT EXISTS public.listing_media (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    url TEXT NOT NULL,
+    media_type TEXT NOT NULL, -- 'image' or 'video'
+    position INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create tag kind and service type enums
+DO $$ BEGIN
+    CREATE TYPE tag_kind AS ENUM ('type', 'keyword');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE service_type AS ENUM ('catering', 'photography', 'videography', 'music_dj', 'decoration', 'venue', 'planning', 'transportation', 'entertainment', 'other');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Create listing_tags table
+CREATE TABLE IF NOT EXISTS public.listing_tags (
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    tag TEXT NOT NULL,
+    kind tag_kind NOT NULL,
+    service_type service_type,
+    is_custom BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (listing_id, tag, kind)
+);
+
+-- Enable RLS on media and tag tables
+ALTER TABLE public.listing_media ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.listing_tags ENABLE ROW LEVEL SECURITY;
+
+-- Media policies
+CREATE POLICY "media_select_published" ON public.listing_media
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_media.listing_id AND l.is_published = true)
+    );
+
+CREATE POLICY "media_select_owner" ON public.listing_media
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_media.listing_id AND l.seller_id = auth.uid())
+    );
+
+CREATE POLICY "media_insert_owner" ON public.listing_media
+    FOR INSERT WITH CHECK (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_media.listing_id AND l.seller_id = auth.uid())
+    );
+
+CREATE POLICY "media_update_owner" ON public.listing_media
+    FOR UPDATE USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_media.listing_id AND l.seller_id = auth.uid())
+    );
+
+CREATE POLICY "media_delete_owner" ON public.listing_media
+    FOR DELETE USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_media.listing_id AND l.seller_id = auth.uid())
+    );
+
+-- Tag policies (similar structure to media)
+CREATE POLICY "tags_select_published" ON public.listing_tags
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_tags.listing_id AND l.is_published = true)
+    );
+
+CREATE POLICY "tags_select_owner" ON public.listing_tags
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_tags.listing_id AND l.seller_id = auth.uid())
+    );
+
+CREATE POLICY "tags_insert_owner" ON public.listing_tags
+    FOR INSERT WITH CHECK (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_tags.listing_id AND l.seller_id = auth.uid())
+    );
+
+CREATE POLICY "tags_update_owner" ON public.listing_tags
+    FOR UPDATE USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_tags.listing_id AND l.seller_id = auth.uid())
+    );
+
+CREATE POLICY "tags_delete_owner" ON public.listing_tags
+    FOR DELETE USING (
+        EXISTS (SELECT 1 FROM listings l WHERE l.id = listing_tags.listing_id AND l.seller_id = auth.uid())
+    );
+
+-- Create indexes for media and tags
+CREATE INDEX IF NOT EXISTS idx_listing_media_listing_id ON public.listing_media(listing_id);
+CREATE INDEX IF NOT EXISTS idx_listing_media_position ON public.listing_media(position);
+CREATE INDEX IF NOT EXISTS idx_listing_tags_service_type ON public.listing_tags(service_type);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_listing_tag_kind_ci ON public.listing_tags(listing_id, LOWER(tag), kind);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_listing_one_type ON public.listing_tags(listing_id) 
+    WHERE kind = 'type';
+
+
+-- =============================================================================
+-- [VIEW UPDATE] Enhanced seller analytics including boosts
+-- Added by: [System Update], 2025-08-14
+-- Purpose: To include boost analytics in seller dashboard
+-- =============================================================================
+
+-- Drop and recreate seller_analytics view with boost information
+DROP VIEW IF EXISTS public.seller_analytics;
+
+CREATE VIEW public.seller_analytics AS
+SELECT 
+    l.seller_id,
+    COUNT(l.id) as total_listings,
+    COUNT(CASE WHEN l.is_published = true THEN 1 END) as published_listings,
+    COUNT(CASE WHEN ab.status = 'active' THEN 1 END) as boosted_listings,
+    SUM(l.views_count) as total_views,
+    AVG(l.price) as average_price,
+    MAX(l.created_at) as last_listing_date
+FROM public.listings l
+LEFT JOIN public.active_boosts ab ON l.id = ab.listing_id AND ab.status = 'active'
+GROUP BY l.seller_id;
+
+-- Grant permissions on updated view
+GRANT SELECT ON public.seller_analytics TO authenticated;
+
+
+-- =============================================================================
+-- [SETUP COMPLETE] Enhanced EventLi Database
+-- =============================================================================
+
+-- Your enhanced database now supports:
+-- ✅ Complete booking system with automated status management
+-- ✅ Boost system for listing promotion
+-- ✅ Multi-media support for listings
+-- ✅ Flexible tagging system with service types
+-- ✅ Enhanced seller analytics with boost metrics
+-- ✅ Row Level Security on all tables
+-- ✅ Proper indexes for performance
+-- ✅ Data integrity constraints
+
+-- Additional features available:
+-- 🔥 Listing boosting with Stripe payments
+-- 📸 Multiple images/videos per listing
+-- 🏷️ Service type categorization and keyword tags
+-- 📊 Enhanced analytics including boost performance
+-- ⚡ Automatic booking status transitions
+-- 🛡️ Content moderation integration ready

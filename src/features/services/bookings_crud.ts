@@ -1,4 +1,6 @@
-import { createClient } from "@/shared/lib/supabase/client";
+'use server'
+
+import { createClient } from "@/shared/lib/supabase/server";
 import { ensureTextIsSafe } from "@/shared/lib/moderation";
 
 // Booking status types
@@ -20,10 +22,10 @@ export interface CreateBookingInput {
   image?: string; // Optional image URL
 }
 
-const supabase = createClient();
-
 // Create a new booking request
 export async function createBooking(input: CreateBookingInput) {
+  const supabase = await createClient();
+
   // Moderate booking notes if provided
   if (input.notes && input.notes.trim()) {
     console.log(`🔍 MODERATING BOOKING NOTES: "${input.notes.substring(0, 50)}${input.notes.length > 50 ? '...' : ''}"`);
@@ -71,6 +73,8 @@ export async function createBooking(input: CreateBookingInput) {
 
 // Get all bookings for a seller
 export async function getSellerBookings(seller_id: string) {
+  const supabase = await createClient();
+  
   const { data, error } = await supabase
     .from("booking_requests")
     .select(`
@@ -91,6 +95,8 @@ export async function getSellerBookings(seller_id: string) {
 
 // Get all bookings for a customer
 export async function getCustomerBookings(customer_id: string) {
+  const supabase = await createClient();
+  
   const { data, error } = await supabase
     .from("booking_requests")
     .select(`
@@ -112,6 +118,8 @@ export async function getCustomerBookings(customer_id: string) {
 
 // Update booking status (e.g., confirm, cancel, complete)
 export async function updateBookingStatus(booking_id: string, status: BookingStatus) {
+  const supabase = await createClient();
+  
   const { data, error } = await supabase
     .from("booking_requests")
     .update({ status })
@@ -125,6 +133,8 @@ export async function updateBookingStatus(booking_id: string, status: BookingSta
 
 // Get a single booking by ID
 export async function getBookingById(booking_id: string) {
+  const supabase = await createClient();
+  
   const { data, error } = await supabase
     .from("booking_requests")
     .select("*")
