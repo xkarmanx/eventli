@@ -59,8 +59,8 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
   const [city, setCity] = useState(listing.location?.split(", ")[0] || "");
   const [address, setAddress] = useState(listing.location?.split(", ")[1] || "");
   const [priceRange, setPriceRange] = useState(listing.price?.toString() || "");
-  const [eventType, setEventType] = useState(listing.event_type || "");
-  const [customEventType, setCustomEventType] = useState(eventTypes.includes(listing.event_type) ? "" : listing.event_type || "");
+  const [eventType, setEventType] = useState("");
+  const [customEventType, setCustomEventType] = useState("");
   const [servingStyle, setServingStyle] = useState(listing.serving_style || "");
   const [numStaff, setNumStaff] = useState(listing.num_staff?.toString() || "");
   const [numGuests, setNumGuests] = useState(listing.num_guests?.toString() || "");
@@ -155,8 +155,8 @@ export default function EditListingFormModal({ isOpen, onClose, listing, onUpdat
     setCity(listing.location?.split(", ")[0] || "");
     setAddress(listing.location?.split(", ")[1] || "");
     setPriceRange(listing.price?.toString() || "");
-    setEventType(listing.event_type || "");
-    setCustomEventType(eventTypes.includes(listing.event_type) ? "" : listing.event_type || "");
+    setEventType("");
+    setCustomEventType("");
     setServingStyle(listing.serving_style || "");
     setNumStaff(listing.num_staff?.toString() || "");
     setNumGuests(listing.num_guests?.toString() || "");

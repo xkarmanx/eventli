@@ -1,3 +1,5 @@
+import ForgotPasswordForm from '@/features/auth/components/ForgotPasswordForm';
+
 export default function ForgotPasswordPage() {
   return (
     <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
@@ -5,10 +7,7 @@ export default function ForgotPasswordPage() {
       <p className="text-sm text-foreground">
         Enter your email address and we&apos;ll send you a link to reset your password.
       </p>
-      {/* TODO: Add ForgotPasswordForm component */}
-      <div className="p-4 bg-muted rounded-md text-center">
-        Forgot Password Form - Coming Soon
-      </div>
+      <ForgotPasswordForm />
     </div>
   )
 }

@@ -40,10 +40,10 @@ export function Footer() {
                   <Link href="/" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     Browse Services
                   </Link>
-                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                  <Link href="/help-center" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     How It Works
                   </Link>
-                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                  <Link href="/about-us" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     About Us
                   </Link>
                 </div>
@@ -59,7 +59,7 @@ export function Footer() {
                   <Link href="/dashboard" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     Dashboard
                   </Link>
-                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                  <Link href="/support" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     Support
                   </Link>
                 </div>
@@ -99,10 +99,10 @@ export function Footer() {
                   <Link href="/" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     Browse Services
                   </Link>
-                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                  <Link href="/help-center" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     How It Works
                   </Link>
-                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                  <Link href="/about-us" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     About Us
                   </Link>
                 </div>
@@ -118,7 +118,7 @@ export function Footer() {
                   <Link href="/dashboard" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     Dashboard
                   </Link>
-                  <Link href="#" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
+                  <Link href="/support" className="block text-sm text-gray-600 hover:text-teal-600 transition-colors">
                     Support
                   </Link>
                 </div>
@@ -162,13 +162,13 @@ export function Footer() {
             </div>
             
             <div className="flex space-x-6 text-sm">
-              <Link href="#" className="text-gray-600 hover:text-teal-600 transition-colors">
+              <Link href="/privacy-policy" className="text-gray-600 hover:text-teal-600 transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="text-gray-600 hover:text-teal-600 transition-colors">
+              <Link href="/terms-of-service" className="text-gray-600 hover:text-teal-600 transition-colors">
                 Terms of Service
               </Link>
-              <Link href="#" className="text-gray-600 hover:text-teal-600 transition-colors">
+              <Link href="/cookie-policy" className="text-gray-600 hover:text-teal-600 transition-colors">
                 Cookie Policy
               </Link>
             </div>
