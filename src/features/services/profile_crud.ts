@@ -15,12 +15,14 @@ export async function updateProfile(userId: string, updates: any) {
     // publicly exposed site URL from NEXT_PUBLIC_SITE_URL. If it's not
     // provided, fall back to the current window origin.  If the value
     // lacks a protocol, prefix it with https://.
-    const rawSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL as string | undefined) ?? window.location.origin;
+    const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL2
+      ?? process.env.NEXT_PUBLIC_SITE_URL
+      ?? window.location.origin;
     const siteUrl = rawSiteUrl.startsWith("http") ? rawSiteUrl : `https://${rawSiteUrl}`;
 
     const { error: emailError } = await supabase.auth.updateUser(
       { email: newEmail },
-      { emailRedirectTo: `${siteUrl}/auth/callback` }
+      { emailRedirectTo: `${siteUrl}/api/auth/callback` }
     );
 
     if (emailError) throw emailError;

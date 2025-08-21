@@ -74,8 +74,14 @@ type ReCaptchaVerificationResponse = {
 export async function signup(
   formData: FormData
 ): Promise<{ status: 'success' | 'error'; message: string }> {
-  // ✅ ADD: Get the site URL from environment variables for a reliable production URL
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
+  const origin = (await headers()).get('origin');
+  // Choose siteUrl from env or origin and ensure it includes 'http'
+  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL2
+    ?? process.env.NEXT_PUBLIC_SITE_URL
+    ?? origin;
+  const siteUrl = rawSiteUrl?.startsWith('http')
+    ? rawSiteUrl
+    : `https://${rawSiteUrl}`;
   const fromEntries = Object.fromEntries(formData.entries());
   const validated = signupSchema.safeParse(fromEntries);
 
