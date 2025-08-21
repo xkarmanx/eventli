@@ -2,15 +2,25 @@ import { createClient } from "@/shared/lib/supabase/client";
 
 const supabase = createClient();
 
-//CT: Allows users to update their profile information
+// Allows users to update their profile information
+// This function has been updated to ensure the email confirmation link
+// points to the correct production domain rather than always using
+// window.location.origin (which can be localhost during development).
 export async function updateProfile(userId: string, updates: any) {
   // If email is being updated, handle email change
   if (updates.email) {
     const newEmail = updates.email;
 
+    // Determine the correct redirect URL for email confirmation. Prefer the
+    // publicly exposed site URL from NEXT_PUBLIC_SITE_URL. If it's not
+    // provided, fall back to the current window origin.  If the value
+    // lacks a protocol, prefix it with https://.
+    const rawSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL as string | undefined) ?? window.location.origin;
+    const siteUrl = rawSiteUrl.startsWith("http") ? rawSiteUrl : `https://${rawSiteUrl}`;
+
     const { error: emailError } = await supabase.auth.updateUser(
       { email: newEmail },
-      { emailRedirectTo: `${window.location.origin}/auth/callback` }
+      { emailRedirectTo: `${siteUrl}/auth/callback` }
     );
 
     if (emailError) throw emailError;

@@ -90,11 +90,17 @@ CREATE TABLE public.listings (
     image_url TEXT,
     price DECIMAL(10,2) DEFAULT 0,
     location TEXT,
-    is_published BOOLEAN DEFAULT FALSE,
+    is_published BOOLEAN DEFAULT TRUE,
     is_featured BOOLEAN DEFAULT FALSE,
     views_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    event_type TEXT,
+    serving_style TEXT,
+    num_staff INTEGER,
+    num_guests INTEGER,
+    boost_priority INTEGER DEFAULT 0 NOT NULL,
+    boost_expires_at TIMESTAMP WITH TIME ZONE,
     CONSTRAINT valid_price CHECK (price >= 0)
 );
 
@@ -102,27 +108,7 @@ CREATE TABLE public.listings (
 ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
--- 6. CREATE SELLER ANALYTICS VIEW
--- =============================================================================
-
--- Drop the view if it exists
-DROP VIEW IF EXISTS public.seller_analytics;
-
--- Create analytics view for sellers
-CREATE VIEW public.seller_analytics AS
-SELECT 
-    l.seller_id,
-    COUNT(l.id) as total_listings,
-    COUNT(CASE WHEN l.is_published = true THEN 1 END) as published_listings,
-    COUNT(CASE WHEN l.is_featured = true THEN 1 END) as featured_listings,
-    SUM(l.views_count) as total_views,
-    AVG(l.price) as average_price,
-    MAX(l.created_at) as last_listing_date
-FROM public.listings l
-GROUP BY l.seller_id;
-
--- =============================================================================
--- 7. CREATE ROW LEVEL SECURITY POLICIES
+-- 6. CREATE ROW LEVEL SECURITY POLICIES
 -- =============================================================================
 
 -- Profiles table policies
@@ -177,7 +163,7 @@ CREATE POLICY "Service role can manage failed attempts" ON public.failed_login_a
     FOR ALL USING (auth.role() = 'service_role');
 
 -- =============================================================================
--- 8. CREATE FUNCTIONS AND TRIGGERS
+-- 7. CREATE FUNCTIONS AND TRIGGERS
 -- =============================================================================
 
 -- Function to handle new user registration
@@ -221,6 +207,18 @@ CREATE TRIGGER handle_updated_at_listings
     BEFORE UPDATE ON public.listings
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+-- Trigger for boost status synchronization
+DROP TRIGGER IF EXISTS on_active_boost_change ON public.active_boosts;
+CREATE TRIGGER on_active_boost_change
+    AFTER INSERT OR UPDATE ON public.active_boosts
+    FOR EACH ROW EXECUTE FUNCTION public.sync_listing_boost_status();
+
+-- Trigger for profile deletion (delete auth user)
+DROP TRIGGER IF EXISTS delete_auth_user_trigger ON public.profiles;
+CREATE TRIGGER delete_auth_user_trigger
+    AFTER DELETE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.delete_auth_user();
+
 -- Function to increment views count
 CREATE OR REPLACE FUNCTION public.increment_listing_views(listing_id UUID)
 RETURNS void AS $$
@@ -231,8 +229,65 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Function to sync listing boost status when boost status changes
+CREATE OR REPLACE FUNCTION public.sync_listing_boost_status()
+RETURNS trigger AS $$
+DECLARE
+  v_priority_level INT;
+BEGIN
+  -- If a boost becomes ACTIVE
+  IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') AND NEW.status = 'active' THEN
+    -- Get the priority from the plan
+    SELECT priority_level
+    INTO v_priority_level
+    FROM public.boost_plans
+    WHERE id = NEW.plan_id;
+
+    -- Update the corresponding listing
+    UPDATE public.listings
+    SET 
+      boost_priority = v_priority_level,
+      boost_expires_at = NEW.expires_at
+    WHERE id = NEW.listing_id;
+
+  -- If a boost becomes EXPIRED or CANCELLED (from an active state)
+  ELSIF TG_OP = 'UPDATE' AND NEW.status IN ('expired', 'cancelled') AND OLD.status = 'active' THEN
+    -- Reset the listing's boost status
+    UPDATE public.listings
+    SET 
+      boost_priority = 0,
+      boost_expires_at = NULL
+    WHERE id = NEW.listing_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to deactivate expired boosts
+CREATE OR REPLACE FUNCTION public.deactivate_expired_boosts()
+RETURNS void AS $$
+BEGIN
+  -- Find all 'active' boosts where the expiration date has passed
+  -- and update their status to 'expired'. The trigger will handle the rest.
+  UPDATE public.active_boosts
+  SET status = 'expired'
+  WHERE status = 'active' AND expires_at < now();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to delete auth user when profile is deleted
+CREATE OR REPLACE FUNCTION public.delete_auth_user()
+RETURNS trigger AS $$
+BEGIN
+  -- Delete the auth user
+  DELETE FROM auth.users WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- =============================================================================
--- 9. INSERT DEFAULT CATEGORIES
+-- 8. INSERT DEFAULT CATEGORIES
 -- =============================================================================
 
 -- Insert default listing categories
@@ -250,7 +305,7 @@ INSERT INTO public.categories (name, description) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- =============================================================================
--- 10. CREATE INDEXES FOR BETTER PERFORMANCE
+-- 9. CREATE INDEXES FOR BETTER PERFORMANCE
 -- =============================================================================
 
 -- Profiles table indexes
@@ -277,7 +332,7 @@ CREATE INDEX IF NOT EXISTS idx_failed_attempts_email ON public.failed_login_atte
 CREATE INDEX IF NOT EXISTS idx_failed_attempts_created_at ON public.failed_login_attempts(created_at);
 
 -- =============================================================================
--- 11. GRANT NECESSARY PERMISSIONS
+-- 10. GRANT NECESSARY PERMISSIONS
 -- =============================================================================
 
 -- Grant usage on schema
@@ -400,37 +455,6 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
-
--- =============================================================================
--- [SCHEMA CHANGE] Add event_type, serving_style, num_staff, num_guests to listings
--- Added by: [Cody Tran], 2025-06-27
--- Purpose: To support event type, serving style, staff, and guest count in listings
--- =============================================================================
-
-ALTER TABLE public.listings
-ADD COLUMN IF NOT EXISTS event_type TEXT;
-
-ALTER TABLE public.listings
-ADD COLUMN IF NOT EXISTS serving_style TEXT;
-
-ALTER TABLE public.listings
-ADD COLUMN IF NOT EXISTS num_staff INTEGER;
-
-ALTER TABLE public.listings
-ADD COLUMN IF NOT EXISTS num_guests INTEGER;
-
--- =============================================================================
--- [SCHEMA CHANGE] Add boost_priority and boost_expires_at to listings
--- Added by: [System Update], 2025-08-14
--- Purpose: To support listing boosting functionality
--- =============================================================================
-
-ALTER TABLE public.listings
-ADD COLUMN IF NOT EXISTS boost_priority INTEGER DEFAULT 0;
-
-ALTER TABLE public.listings
-ADD COLUMN IF NOT EXISTS boost_expires_at TIMESTAMP WITH TIME ZONE;
 
 
 -- =============================================================================
@@ -611,14 +635,16 @@ CREATE TABLE IF NOT EXISTS public.boost_plans (
     description TEXT,
     price NUMERIC(10,2) NOT NULL,
     duration_days INTEGER NOT NULL,
-    priority_level INTEGER NOT NULL,
-    stripe_price_id TEXT UNIQUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    priority_level INTEGER NOT NULL DEFAULT 0,
+    stripe_price_id TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT boost_plans_price_check CHECK (price >= 0),
+    CONSTRAINT boost_plans_duration_days_check CHECK (duration_days > 0)
 );
 
 -- Create boost status enum
 DO $$ BEGIN
-    CREATE TYPE boost_status AS ENUM ('active', 'expired', 'cancelled');
+    CREATE TYPE boost_status AS ENUM ('pending', 'active', 'expired', 'cancelled');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -626,13 +652,18 @@ END $$;
 -- Create active_boosts table
 CREATE TABLE IF NOT EXISTS public.active_boosts (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
-    plan_id UUID REFERENCES public.boost_plans(id) ON DELETE SET NULL,
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE NOT NULL,
+    plan_id UUID REFERENCES public.boost_plans(id) NOT NULL,
     stripe_payment_id TEXT UNIQUE,
-    status boost_status DEFAULT 'active',
-    activated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    status boost_status DEFAULT 'pending' NOT NULL,
+    activated_at TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT chk_expires_after_start CHECK (
+        (expires_at IS NULL) OR 
+        (activated_at IS NULL) OR 
+        (expires_at > activated_at)
+    )
 );
 
 -- Enable RLS on boost tables
@@ -653,7 +684,7 @@ CREATE POLICY "Allow service_role to manage all boosts" ON public.active_boosts
 
 -- Create indexes for boost system
 CREATE INDEX IF NOT EXISTS idx_boosts_listing_status ON public.active_boosts(listing_id, status);
-CREATE INDEX IF NOT EXISTS idx_listings_boost ON public.listings(boost_priority, boost_expires_at);
+CREATE INDEX IF NOT EXISTS idx_listings_boost ON public.listings(boost_priority DESC, is_published) INCLUDE (created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_listing_active_boost ON public.active_boosts(listing_id) 
     WHERE status = 'active';
 
@@ -667,11 +698,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_listing_active_boost ON public.active_boo
 -- Create listing_media table
 CREATE TABLE IF NOT EXISTS public.listing_media (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE NOT NULL,
     url TEXT NOT NULL,
-    media_type TEXT NOT NULL, -- 'image' or 'video'
-    position INTEGER NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    media_type TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    CONSTRAINT listing_media_media_type_check CHECK (media_type = ANY (ARRAY['image'::text, 'video'::text]))
 );
 
 -- Create tag kind and service type enums
@@ -682,20 +714,27 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE service_type AS ENUM ('catering', 'photography', 'videography', 'music_dj', 'decoration', 'venue', 'planning', 'transportation', 'entertainment', 'other');
+    CREATE TYPE service_type AS ENUM ('venue', 'music', 'catering', 'funeral', 'birthday', 'wedding', 'baby_shower', 'other');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
 -- Create listing_tags table
 CREATE TABLE IF NOT EXISTS public.listing_tags (
-    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE NOT NULL,
     tag TEXT NOT NULL,
-    kind tag_kind NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    kind tag_kind NOT NULL DEFAULT 'keyword',
     service_type service_type,
-    is_custom BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    PRIMARY KEY (listing_id, tag, kind)
+    is_custom BOOLEAN DEFAULT false NOT NULL,
+    PRIMARY KEY (listing_id, tag, kind),
+    CONSTRAINT listing_tags_kind_guard CHECK (
+        ((kind = 'keyword'::tag_kind) AND (service_type IS NULL) AND (is_custom = false)) OR 
+        ((kind = 'type'::tag_kind) AND (
+            ((is_custom = false) AND (service_type IS NOT NULL) AND (tag = replace((service_type)::text, '_'::text, '-'::text))) OR 
+            ((is_custom = true) AND (service_type = 'other'::service_type) AND ((char_length(tag) >= 2) AND (char_length(tag) <= 40)))
+        ))
+    )
 );
 
 -- Enable RLS on media and tag tables
@@ -756,8 +795,8 @@ CREATE POLICY "tags_delete_owner" ON public.listing_tags
 
 -- Create indexes for media and tags
 CREATE INDEX IF NOT EXISTS idx_listing_media_listing_id ON public.listing_media(listing_id);
-CREATE INDEX IF NOT EXISTS idx_listing_media_position ON public.listing_media(position);
-CREATE INDEX IF NOT EXISTS idx_listing_tags_service_type ON public.listing_tags(service_type);
+CREATE INDEX IF NOT EXISTS idx_listing_media_position ON public.listing_media(listing_id, position);
+CREATE INDEX IF NOT EXISTS idx_listing_tags_service_type ON public.listing_tags(service_type) WHERE kind = 'type';
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_listing_tag_kind_ci ON public.listing_tags(listing_id, LOWER(tag), kind);
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_listing_one_type ON public.listing_tags(listing_id) 
     WHERE kind = 'type';
@@ -777,12 +816,11 @@ SELECT
     l.seller_id,
     COUNT(l.id) as total_listings,
     COUNT(CASE WHEN l.is_published = true THEN 1 END) as published_listings,
-    COUNT(CASE WHEN ab.status = 'active' THEN 1 END) as boosted_listings,
+    COUNT(CASE WHEN l.boost_priority > 0 AND l.is_published = true THEN 1 END) as boosted_listings,
     SUM(l.views_count) as total_views,
     AVG(l.price) as average_price,
     MAX(l.created_at) as last_listing_date
 FROM public.listings l
-LEFT JOIN public.active_boosts ab ON l.id = ab.listing_id AND ab.status = 'active'
 GROUP BY l.seller_id;
 
 -- Grant permissions on updated view

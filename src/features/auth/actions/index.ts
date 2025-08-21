@@ -74,7 +74,8 @@ type ReCaptchaVerificationResponse = {
 export async function signup(
   formData: FormData
 ): Promise<{ status: 'success' | 'error'; message: string }> {
-  const origin = (await headers()).get('origin');
+  // ✅ ADD: Get the site URL from environment variables for a reliable production URL
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
   const fromEntries = Object.fromEntries(formData.entries());
   const validated = signupSchema.safeParse(fromEntries);
 
@@ -127,13 +128,13 @@ export async function signup(
     email,
     password,
     options: {
-      // Metadata picked up by `handle_new_user` trigger (or insert manually later)
       data: {
         full_name: fullName,
         role,
-        is_setup_complete: role === 'customer' // customers complete by default
+        is_setup_complete: role === 'customer'
       },
-      emailRedirectTo: `${origin}/api/auth/callback` // enabled email confirmation
+      // ✅ CHANGE: Use the reliable siteUrl instead of the dynamic origin
+      emailRedirectTo: `${siteUrl}/api/auth/callback`
     }
   });
 
@@ -221,12 +222,18 @@ export async function login(
 /* Google OAuth                                                               */
 /* -------------------------------------------------------------------------- */
 export async function signInWithGoogle() {
-  const origin = (await headers()).get('origin');
+  const origin = (await headers()).get('origin') || '';
   const supabase = await createClient();
+
+  // Use configured site URL instead of request origin for the OAuth callback.
+  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL2 ?? process.env.NEXT_PUBLIC_SITE_URL ?? origin;
+  const siteUrl = rawSiteUrl && rawSiteUrl.startsWith('http')
+    ? rawSiteUrl
+    : `https://${rawSiteUrl}`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${origin}/api/auth/callback` }
+    options: { redirectTo: `${siteUrl}/api/auth/callback` }
   });
 
   if (error) {
@@ -234,7 +241,7 @@ export async function signInWithGoogle() {
     redirect(`/login?error=${encodeURIComponent('Could not authenticate with Google')}`);
   }
 
-  if (data.url) redirect(data.url);
+  if (data?.url) redirect(data.url);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -257,7 +264,7 @@ export async function updateSellerProfile(formData: FormData) {
   // Enhanced moderation for bio field
   try {
     console.log(`🔍 MODERATING SELLER SETUP BIO: "${profileData.bio.substring(0, 50)}${profileData.bio.length > 50 ? '...' : ''}"`);
-    await ensureTextIsSafe(profileData.bio, "setup_bio");
+    await ensureTextIsSafe(profileData.bio, 'setup_bio');
   } catch (moderationError) {
     if (moderationError instanceof ModerationError) {
       console.error('Moderation failed for bio:', moderationError.message);
@@ -291,4 +298,80 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath('/', 'layout');
   redirect('/');
+}
+
+/* -------------------------------------------------------------------------- */
+/* Password Reset Request                                                     */
+/* -------------------------------------------------------------------------- */
+/**
+ * Initiate a password reset by sending a reset email to the user.  This will
+ * always respond with a success message even if the email does not exist in the
+ * database in order to avoid revealing which emails are registered.
+ *
+ * The reset link will redirect back to the `/reset-password` route on the
+ * configured site URL where the user can enter a new password.
+ */
+export async function requestPasswordReset(
+  formData: FormData
+): Promise<{ status: 'success' | 'error'; message: string }> {
+  const origin = (await headers()).get('origin') || '';
+  const fromEntries = Object.fromEntries(formData.entries());
+  const email = (fromEntries.email ?? '') as string;
+  if (!email || typeof email !== 'string') {
+    return { status: 'error', message: 'Please provide a valid email address.' };
+  }
+  const supabase = await createClient();
+  // Compute a site URL for the redirect.  Prefer the publicly configured value.
+  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL2 ?? process.env.NEXT_PUBLIC_SITE_URL ?? origin;
+  const siteUrl = rawSiteUrl && rawSiteUrl.startsWith('http')
+    ? rawSiteUrl
+    : `https://${rawSiteUrl}`;
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/reset-password`
+    });
+    if (error) {
+      console.error('Password reset request error:', error);
+      return { status: 'error', message: error.message || 'Failed to send password reset email.' };
+    }
+    return {
+      status: 'success',
+      message: 'If this email exists in our system, you will receive a password reset link shortly.'
+    };
+  } catch (err: any) {
+    console.error('Password reset request error:', err);
+    return { status: 'error', message: err?.message || 'Failed to send password reset email.' };
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Update User Password                                                       */
+/* -------------------------------------------------------------------------- */
+/**
+ * Update the currently authenticated user's password.  Supabase will only allow
+ * this call if the user is logged in or has arrived via a valid password-reset
+ * token (the access token embedded in the reset link).
+ */
+export async function updateUserPassword(
+  formData: FormData
+): Promise<{ status: 'success' | 'error'; message: string }> {
+  const fromEntries = Object.fromEntries(formData.entries());
+  const password = fromEntries.password as string;
+  if (!password || typeof password !== 'string' || password.length < 8) {
+    return { status: 'error', message: 'Password must be at least 8 characters long.' };
+  }
+  const supabase = await createClient();
+  try {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      console.error('Password update error:', error);
+      return { status: 'error', message: error.message || 'Failed to update password.' };
+    }
+    // Invalidate caches so the user sees updated state after password change
+    revalidatePath('/', 'layout');
+    return { status: 'success', message: 'Password updated successfully.' };
+  } catch (err: any) {
+    console.error('Password update error:', err);
+    return { status: 'error', message: err?.message || 'Failed to update password.' };
+  }
 }
