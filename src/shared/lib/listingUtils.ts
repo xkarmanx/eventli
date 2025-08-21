@@ -15,7 +15,7 @@ export function transformListingToService(listing: Listing & {
     formattedPrice = `$${listing.price.toLocaleString('en-US')}`;
   }
   
-  // Extract service type from listing_tags with kind="type" or fallback to event_type
+  // Extract service type from listing_tags with kind="type"
   const getServiceType = (): string => {
     if (listing.listing_tags) {
       const typeTag = listing.listing_tags.find(tag => tag.kind === 'type');
@@ -36,15 +36,8 @@ export function transformListingToService(listing: Listing & {
         }
       }
     }
-    // Fallback to event_type field
-    return formatEventType(listing.event_type);
-  };
-  
-  // Format event type for display (fallback function)
-  const formatEventType = (eventType: string | null): string => {
-    if (!eventType) return "General";
-    // Capitalize first letter and handle common cases
-    return eventType.charAt(0).toUpperCase() + eventType.slice(1).toLowerCase();
+    // Default fallback if no type tag found
+    return "General";
   };
   
   // Extract keyword tags (excluding type tags)

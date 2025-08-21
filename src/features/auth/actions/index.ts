@@ -74,14 +74,7 @@ type ReCaptchaVerificationResponse = {
 export async function signup(
   formData: FormData
 ): Promise<{ status: 'success' | 'error'; message: string }> {
-  const origin = (await headers()).get('origin');
-  // Choose siteUrl from env or origin and ensure it includes 'http'
-  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL2
-    ?? process.env.NEXT_PUBLIC_SITE_URL
-    ?? origin;
-  const siteUrl = rawSiteUrl?.startsWith('http')
-    ? rawSiteUrl
-    : `https://${rawSiteUrl}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
   const fromEntries = Object.fromEntries(formData.entries());
   const validated = signupSchema.safeParse(fromEntries);
 
@@ -228,14 +221,8 @@ export async function login(
 /* Google OAuth                                                               */
 /* -------------------------------------------------------------------------- */
 export async function signInWithGoogle() {
-  const origin = (await headers()).get('origin') || '';
   const supabase = await createClient();
-
-  // Use configured site URL instead of request origin for the OAuth callback.
-  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL2 ?? process.env.NEXT_PUBLIC_SITE_URL ?? origin;
-  const siteUrl = rawSiteUrl && rawSiteUrl.startsWith('http')
-    ? rawSiteUrl
-    : `https://${rawSiteUrl}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -320,18 +307,13 @@ export async function signOut() {
 export async function requestPasswordReset(
   formData: FormData
 ): Promise<{ status: 'success' | 'error'; message: string }> {
-  const origin = (await headers()).get('origin') || '';
   const fromEntries = Object.fromEntries(formData.entries());
   const email = (fromEntries.email ?? '') as string;
   if (!email || typeof email !== 'string') {
     return { status: 'error', message: 'Please provide a valid email address.' };
   }
   const supabase = await createClient();
-  // Compute a site URL for the redirect.  Prefer the publicly configured value.
-  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL2 ?? process.env.NEXT_PUBLIC_SITE_URL ?? origin;
-  const siteUrl = rawSiteUrl && rawSiteUrl.startsWith('http')
-    ? rawSiteUrl
-    : `https://${rawSiteUrl}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${siteUrl}/reset-password`

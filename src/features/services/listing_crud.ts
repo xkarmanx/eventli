@@ -58,9 +58,6 @@ export async function createListing(listing: InsertListing) {
   if (listing.serving_style && typeof listing.serving_style === "string") {
     fieldsToModerate.serving_style = listing.serving_style;
   }
-  if (listing.event_type && typeof listing.event_type === "string") {
-    fieldsToModerate.event_type = listing.event_type;
-  }
 
   try {
     await ensureListingFieldsSafe(fieldsToModerate, "create_listing");
@@ -180,9 +177,6 @@ export async function updateListing(id: string, updates: UpdateListing) {
   }
   if (typeof updates.serving_style === "string") {
     fieldsToModerate.serving_style = updates.serving_style;
-  }
-  if (typeof updates.event_type === "string") {
-    fieldsToModerate.event_type = updates.event_type;
   }
 
   if (Object.keys(fieldsToModerate).length > 0) {
@@ -654,7 +648,7 @@ export async function searchAndFilterListings(
       `)
       .eq("is_published", true);
 
-    // Apply search query if provided (search in title, description, location, event_type, and listing_tags)
+    // Apply search query if provided (search in title, description, location, and listing_tags)
     if (hasSearchQuery) {
       const searchTerm = searchQuery.trim();
       
@@ -669,12 +663,12 @@ export async function searchAndFilterListings(
       if (tagMatchingIds.length > 0) {
         // Search in listing fields OR tag matches
         query = query.or(
-          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,event_type.ilike.%${searchTerm}%,id.in.(${tagMatchingIds.join(',')})`
+          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,id.in.(${tagMatchingIds.join(',')})`
         );
       } else {
         // Fallback to just listing fields
         query = query.or(
-          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,event_type.ilike.%${searchTerm}%`
+          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`
         );
       }
     }
@@ -737,14 +731,13 @@ export async function searchAndFilterListings(
       }
     }
 
-    // Apply event type filter - check both listing_tags with kind='type' and event_type field
+    // Apply event type filter - check listing_tags with kind='type'
     if (filters?.eventType && filters.eventType.trim()) {
       const eventTypeFilter = filters.eventType.trim();
       
-      // Create a more complex query that checks:
+      // Create a more complex query that checks listing_tags with kind='type'
       // 1. listing_tags with kind='type' and service_type matching
       // 2. listing_tags with kind='type' and is_custom=true and tag matching (for custom types)
-      // 3. event_type field matching (fallback)
       
       // Use a subquery approach to check listing_tags
       const { data: listingsWithServiceType } = await supabase
@@ -756,13 +749,11 @@ export async function searchAndFilterListings(
       const listingIdsWithServiceType = listingsWithServiceType?.map(lt => lt.listing_id) || [];
       
       if (listingIdsWithServiceType.length > 0) {
-        // Filter by listings that have matching service type tags OR matching event_type
-        query = query.or(
-          `id.in.(${listingIdsWithServiceType.join(',')}),event_type.ilike.%${eventTypeFilter}%`
-        );
+        // Filter by listings that have matching service type tags
+        query = query.in('id', listingIdsWithServiceType);
       } else {
-        // Fallback to just event_type field matching
-        query = query.ilike('event_type', `%${eventTypeFilter}%`);
+        // No matches found, return empty results
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000'); // Impossible UUID
       }
     }
 

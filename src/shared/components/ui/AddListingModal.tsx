@@ -65,8 +65,6 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
   const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
   const [priceRange, setPriceRange] = useState('')
-  const [eventType, setEventType] = useState('')
-  const [customEventType, setCustomEventType] = useState('')
   const [servingStyle, setServingStyle] = useState('')
   const [numStaff, setNumStaff] = useState('')
   const [numGuests, setNumGuests] = useState('')
@@ -148,8 +146,6 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
       setCity('')
       setAddress('')
       setPriceRange('')
-      setEventType('')
-      setCustomEventType('')
       setServingStyle('')
       setNumStaff('')
       setNumGuests('')
@@ -283,8 +279,6 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     if (!city.trim()) newErrors.city = "City is required"
     if (!address.trim()) newErrors.address = "Address is required"
     if (!priceRange || isNaN(Number(priceRange)) || Number(priceRange) < 1) newErrors.priceRange = "Valid price range is required"
-    if (!eventType) newErrors.eventType = "Event type is required"
-    if (eventType === "Other" && !customEventType.trim()) newErrors.customEventType = "Please specify the event type"
     if (!servingStyle) newErrors.servingStyle = "Serving style is required"
     if (!numStaff || isNaN(Number(numStaff)) || Number(numStaff) < 1) newErrors.numStaff = "Valid number of staff is required"
     if (!numGuests || isNaN(Number(numGuests)) || Number(numGuests) < 1) newErrors.numGuests = "Valid number of guests is required"
@@ -303,8 +297,6 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
       city ||
       address ||
       priceRange ||
-      eventType ||
-      customEventType ||
       servingStyle ||
       numStaff ||
       numGuests ||
@@ -358,7 +350,6 @@ async function handleSubmit(e: React.FormEvent) {
       description,
       price: Number(priceRange),
       location: `${city}, ${address}`,
-      event_type: eventType === "Other" ? customEventType : eventType,
       serving_style: servingStyle,
       num_staff: Number(numStaff),
       num_guests: Number(numGuests),
@@ -576,35 +567,6 @@ async function handleSubmit(e: React.FormEvent) {
                   className={`w-full border ${errors.priceRange ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:border-teal-500`}
                 />
                 {errors.priceRange && <div className="text-sm text-red-600 mt-1">{errors.priceRange}</div>}
-              </div>
-              <div className="w-1/2">
-                <label className="block font-medium mb-1" htmlFor="listing-event-type">
-                  Event Type<span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="listing-event-type"
-                  value={eventType}
-                  onChange={e => setEventType(e.target.value)}
-                  required
-                  className={`w-full border ${errors.eventType ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 bg-white focus:outline-none focus:border-teal-500`}
-                >
-                  <option value="">Select</option>
-                  {eventTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {eventType === "Other" && (
-                  <input
-                    type="text"
-                    placeholder="Please specify"
-                    value={customEventType}
-                    onChange={e => setCustomEventType(sanitizeText(e.target.value))}
-                    className={`mt-2 w-full border ${errors.customEventType ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:border-teal-500`}
-                  />
-                )}
-                {(errors.eventType || errors.customEventType) && (
-                  <div className="text-sm text-red-600 mt-1">
-                    {errors.eventType || errors.customEventType}
-                  </div>
-                )}
               </div>
             </div>
             <div className="flex gap-4">

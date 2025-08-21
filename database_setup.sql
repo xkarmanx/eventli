@@ -95,7 +95,6 @@ CREATE TABLE public.listings (
     views_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    event_type TEXT,
     serving_style TEXT,
     num_staff INTEGER,
     num_guests INTEGER,
