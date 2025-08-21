@@ -132,8 +132,7 @@ export async function signup(
         role,
         is_setup_complete: role === 'customer'
       },
-      // ✅ CHANGE: Use the reliable siteUrl instead of the dynamic origin
-      emailRedirectTo: `${siteUrl}/api/auth/callback`
+      emailRedirectTo: "https://evintli.com/auth/callback?next=/setup-seller"
     }
   });
 
