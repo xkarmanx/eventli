@@ -18269,33 +18269,3 @@ for SECRET in $(gcloud secrets list --format="value(name)"); do
   # Add a newline for better readability
   echo -e "\n"
 
-done
---- Secret: NEXT_PUBLIC_RECAPTCHA_SITE_KEY ---
-6LeQ5W4rAAAAANohkxeRqAK6mJatJz86WqA0onyu
-
---- Secret: NEXT_PUBLIC_SITE_URL ---
-evintli.com
-
---- Secret: NEXT_PUBLIC_SITE_URL2 ---
-https://evintli.com
-
---- Secret: NEXT_PUBLIC_SUPABASE_ANON_KEY ---
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnRkZW11dmZ4eGx0cGNocXVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA0OTM0ODMsImV4cCI6MjA2NjA2OTQ4M30.y5rjupUidFgdhRnkM2mS4WQT6K9i4xjD6qFnW85Kw0g
-
---- Secret: NEXT_PUBLIC_SUPABASE_URL ---
-https://bwrtdemuvfxxltpchqup.supabase.co
-
---- Secret: OPENAI_API_KEY ---
-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
-
---- Secret: RECAPTCHA_SECRET_KEY ---
-6LeQ5W4rAAAAAIL8Djul0Nl9fkIkSKYR9g8iKhMJ
-
---- Secret: STRIPE_SECRET_KEY ---
-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
-
---- Secret: STRIPE_WEBHOOK_SECRET ---
-whsec_7f3d7b1333cdbd480edb74b5f7ca220ce17b3169d7c7eef09401315a10b7d22
-
---- Secret: SUPABASE_SERVICE_ROLE_KEY ---
-yeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnRkZW11dmZ4eGx0cGNocXVwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDQ5MzQ4MywiZXhwIjoyMDY2MDY5NDgzfQ.3RfX_RzdTGHTSG6VSpEk1XiZkdqlLy0Bl7GJUIroaV0
